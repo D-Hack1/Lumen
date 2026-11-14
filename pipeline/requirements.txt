@@ -11,6 +11,8 @@ pyyaml
 requests
 matplotlib
 pillow
+
+# Development and test tooling.
 pytest
 ruff
 black
