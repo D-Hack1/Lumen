@@ -9,7 +9,7 @@ import pytest
 from pyproj import CRS
 from rasterio.transform import from_origin
 
-from lumen_pipeline.common.frames import site_position_km, site_rotation_matrix
+from lumen_pipeline.common.frames import site_position_km, site_rotation_matrix, site_up_vector
 from lumen_pipeline.terrain.dem_io import LUNAR_SPHERICAL_CRS, DemWindow
 from lumen_pipeline.terrain.horizon import (
     _bilinear_sample,
@@ -335,3 +335,80 @@ def test_invalid_inputs_and_projected_native_crs_are_explicit():
     result = _raycast(projected_dem)
     assert result.elevation_deg.shape == (3, 8)
     assert np.isfinite(result.elevation_deg).all()
+
+
+def test_adaptive_peak_refinement_matches_independent_dense_bilinear_reference():
+    """A narrow interpolated ridge must not be lost between ray samples."""
+
+    pixel_m = 2.0
+    size = 401
+    lat_step = math.degrees(pixel_m / 1_737_400.0)
+    lon_step = math.degrees(pixel_m / (1_737_400.0 * math.cos(math.radians(SITE_LAT))))
+    transform = from_origin(
+        SITE_LON - size * lon_step / 2.0,
+        SITE_LAT + size * lat_step / 2.0,
+        lon_step,
+        lat_step,
+    )
+    row_grid, col_grid = np.indices((size, size), dtype=np.float64)
+    longitudes, latitudes = transform @ (col_grid + 0.5, row_grid + 0.5)
+    radial_x = 1_737_400.0 * np.radians(longitudes) * math.cos(math.radians(SITE_LAT))
+    radial_y = 1_737_400.0 * np.radians(latitudes - SITE_LAT)
+    radius = np.hypot(radial_x, radial_y)
+    azimuth = np.degrees(np.arctan2(radial_x, radial_y)) % 360.0
+    ridge = 500.0 * np.exp(-0.5 * ((radius - 100.0) / 2.0) ** 2)
+    ridge *= np.exp(-0.5 * ((((azimuth - 22.5 + 180.0) % 360.0) - 180.0) / 0.15) ** 2)
+    dem = DemWindow(
+        elevation=ridge.astype(np.float32),
+        valid=np.ones(ridge.shape, dtype=bool),
+        transform=transform,
+        crs=LUNAR_SPHERICAL_CRS,
+        bounds=(0.0, 0.0, 0.0, 0.0),
+        resolution_m=(pixel_m, pixel_m),
+        source="independent-reference-ridge",
+        provenance={},
+    )
+
+    result = raycast_horizon(
+        dem,
+        latitude_deg=SITE_LAT,
+        longitude_deg_east=SITE_LON,
+        observer_heights_m=(1.0,),
+        bin_width_deg=45.0,
+        max_range_km=0.2,
+        near_field_pixel_size_m=pixel_m,
+        geometric_growth_factor=1.5,
+        site_elevation_m=0.0,
+    )
+
+    site = site_position_km(SITE_LAT, SITE_LON)
+    rotation = site_rotation_matrix(SITE_LAT, SITE_LON)
+    up = site_up_vector(SITE_LAT, SITE_LON)
+    tangent = rotation.T @ np.array(
+        [math.sin(math.radians(22.5)), math.cos(math.radians(22.5)), 0.0]
+    )
+    dense_max = -math.inf
+    for distance_m in np.arange(6.0, 200.0001, 0.005):
+        arc = distance_m / 1_737_400.0
+        point = up * math.cos(arc) + tangent * math.sin(arc)
+        longitude, latitude = (
+            math.degrees(math.atan2(point[1], point[0])),
+            math.degrees(math.asin(point[2])),
+        )
+        column, row = (~transform) @ (longitude, latitude)
+        left = math.floor(column - 0.5)
+        top = math.floor(row - 0.5)
+        fraction_column = column - (left + 0.5)
+        fraction_row = row - (top + 0.5)
+        elevation = (
+            ridge[top, left] * (1.0 - fraction_column) * (1.0 - fraction_row)
+            + ridge[top, left + 1] * fraction_column * (1.0 - fraction_row)
+            + ridge[top + 1, left] * (1.0 - fraction_column) * fraction_row
+            + ridge[top + 1, left + 1] * fraction_column * fraction_row
+        )
+        terrain = (1_737.4 + elevation / 1000.0) * point
+        local = rotation @ (terrain - (site + up * 0.001))
+        angle = math.degrees(math.atan2(local[2], math.hypot(local[0], local[1])))
+        dense_max = max(dense_max, angle)
+
+    assert abs(float(result.elevation_deg[0, 0]) - dense_max) < 0.01
