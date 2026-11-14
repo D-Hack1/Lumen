@@ -37,3 +37,22 @@ export function loadDispersion(siteId: string): Promise<Dispersion> {
   }
   return p;
 }
+
+export interface DispersionSummary {
+  p50: number;
+  p95: number;
+  max: number;
+  /** Percent of nodes with slope strictly below the tolerance. */
+  pctBelowTolerance: number;
+}
+
+/** Percentiles (linear interpolation, as numpy's default) and the share under the hazard tolerance, from the grid itself. */
+export function summariseDispersion(d: Dispersion, toleranceDeg: number): DispersionSummary {
+  const v = Array.from(d.slopeDeg).sort((a, b) => a - b);
+  const pct = (p: number) => {
+    const x = ((v.length - 1) * p) / 100;
+    const lo = Math.floor(x);
+    return v[lo] + (x - lo) * ((v[Math.min(lo + 1, v.length - 1)] ?? v[lo]) - v[lo]);
+  };
+  return { p50: pct(50), p95: pct(95), max: v[v.length - 1], pctBelowTolerance: (100 * v.filter((x) => x < toleranceDeg).length) / v.length };
+}
