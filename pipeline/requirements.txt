@@ -1,0 +1,16 @@
+spiceypy
+skyfield
+numpy
+scipy
+numba
+rasterio
+pyproj
+shapely
+pyogrio
+pyyaml
+requests
+matplotlib
+pillow
+pytest
+ruff
+black
