@@ -9,7 +9,7 @@ import { DEFAULT_DEFINITIONS } from '../core/evaluate';
 import { bodyAt, makeSite } from '../core/geometry';
 import { loadEphem, type Ephemeris } from '../data/ephem';
 import { setDataMode } from '../data/source';
-import { PUBLIC, stubFetch } from './helpers';
+import { IM2_REFINED, PUBLIC, stubFetch } from './helpers';
 
 const EPHEM_BIN = join(PUBLIC, 'data/ephem/ephem.bin');
 const GOLDEN = join(PUBLIC, 'data/golden/golden_set1.json');
@@ -52,7 +52,7 @@ describe.skipIf(!run)('buildScenarioResult (real IM-2 ephemeris)', () => {
     expect(r.metrics!.sunlitPct.lo).toBeNull(); // no +/- until the uncertainty passes exist
     expect(r.meta!.sigmaSource).toBe('smooth-Moon bound');
     expect(r.meta!.definitionsSummary).toMatch(/DSN not applied/);
-    expect(r.metrics!.sunlitPct.value).toBeCloseTo(golden!.metrics.sunlitPct.value, 6);
+    expect(r.metrics!.sunlitPct.value).toBeCloseTo(IM2_REFINED.sunlitPct, 3); // refined-window method (her Python); Golden Set 1's sample-based 49.2963 differs by 0.003
   });
 
   it('moves to the sunrise state after dark, with "dark for" measured from the last sunset', () => {

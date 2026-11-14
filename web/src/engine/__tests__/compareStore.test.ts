@@ -8,7 +8,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { getCompare, subscribeCompare } from '../compareStore';
 import { setDataMode } from '../data/source';
 import { DEFAULT_SCENARIO, useScenario, type CompareRow } from '../../state/scenarioStore';
-import { PUBLIC, stubFetch } from './helpers';
+import { IM2_REFINED, PUBLIC, REFINED, stubFetch } from './helpers';
 
 const EPHEM_BIN = join(PUBLIC, 'data/ephem/ephem.bin');
 const GOLDEN = join(PUBLIC, 'data/golden/golden_set1.json');
@@ -60,11 +60,11 @@ describe.skipIf(!run)('compare store (real data)', () => {
     await until(() => getCompare().status === 'ready' && getCompare().rows.length === 2);
     const c = getCompare();
     expect(c.baselineId).toBe('A');
-    expect(c.rows[0].result.metrics!.sunlitPct.value!).toBeCloseTo(golden.sunlitPct.value, 4);
-    const BLUE_GHOST_LINK = 97.79629629629629;
-    expect(c.rows[1].result.metrics!.linkPct.value!).toBeCloseTo(BLUE_GHOST_LINK, 9);
+    expect(c.rows[0].result.metrics!.sunlitPct.value!).toBeCloseTo(IM2_REFINED.sunlitPct, 3);
+    const BLUE_GHOST_LINK = REFINED.blue_ghost_m1.linkPct;
+    expect(c.rows[1].result.metrics!.linkPct.value!).toBeCloseTo(BLUE_GHOST_LINK, 2);
     expect(c.rows[0].result.metrics!.linkPct.value!).toBeLessThanOrEqual(golden.earthVisiblePct.value + 1e-9); // the DSN rule can only remove link time
-    expect(c.rows[1].deltaVsBaseline.linkPct!).toBeCloseTo(BLUE_GHOST_LINK - c.rows[0].result.metrics!.linkPct.value!, 9);
+    expect(c.rows[1].deltaVsBaseline.linkPct!).toBeCloseTo(BLUE_GHOST_LINK - c.rows[0].result.metrics!.linkPct.value!, 2);
     expect(c.rows[0].deltaVsBaseline).toEqual({});
   });
 

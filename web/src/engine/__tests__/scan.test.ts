@@ -10,7 +10,7 @@ import { DEFAULT_DEFINITIONS } from '../core/evaluate';
 import { refineCandidate, scanStage1, STAGE1_STEP_MS, type ScanInput } from '../compare/scanEngine';
 import { loadEphem, type Ephemeris } from '../data/ephem';
 import { setDataMode } from '../data/source';
-import { PUBLIC, stubFetch } from './helpers';
+import { IM2_REFINED, PUBLIC, stubFetch } from './helpers';
 
 const EPHEM_BIN = join(PUBLIC, 'data/ephem/ephem.bin');
 const GOLDEN = join(PUBLIC, 'data/golden/golden_set1.json');
@@ -76,8 +76,8 @@ describe.skipIf(!run)('Scan on the real ephemeris', () => {
     expect(s2.siteId).toBe('im2_athena');
     expect(s2.landingUtc).toBe(T0);
     expect(s2.provisional).toBe(false);
-    expect(s2.sunlitPct.value!).toBeCloseTo(g.sunlitPct.value, 4); // exact, from the golden file
-    expect(s2.longestNightH.value!).toBeCloseTo(g.longestNightH.value, 4);
+    expect(s2.sunlitPct.value!).toBeCloseTo(IM2_REFINED.sunlitPct, 3); // refined-window method, from her Python
+    expect(s2.longestNightH.value!).toBeCloseTo(IM2_REFINED.longestNightH, 1);
   });
 
   it('candidates whose window leaves the ephemeris are skipped, not thrown', () => {

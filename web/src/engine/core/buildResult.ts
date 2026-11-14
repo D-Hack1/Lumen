@@ -9,11 +9,11 @@ import { evaluate, stateAt, DEFAULT_DEFINITIONS, type Definitions, type Evaluati
 import { makeSite, type Mat3 } from './geometry';
 import { inEphemerisRange } from './interp';
 import { evaluateVerdict, type VerdictProfile, type VerdictWeights } from './verdict';
-import { longestFalseRunHours } from './metrics';
 import { FINE_STEP_MS, refineTransition } from './events';
 import { energyPerDayWh, powerSeries, type PowerConfig } from './padPower';
 import type { DsnSeries } from '../data/dsn';
 import { Horizon } from './visibility';
+import { toWindowRecord } from './windows';
 
 /** Everything the worker needs, as plain serialisable data (no store, no catalog objects). */
 export interface ScenarioRequest {
@@ -101,25 +101,22 @@ export function buildScenarioResult(eph: Ephemeris, req: ScenarioRequest, dsn: D
     if (i > 0) linkResumeT = refineTransition((t) => stateAt(eph, site, horizon, d, t, dsn).linkUp, Math.max(ev.times[i - 1], tScrub), ev.times[i]);
   }
   const earthNext = ev.earthEvents.find((e) => e.t > tScrub && e.type === (cur.earth.up ? 'earthset' : 'earthrise')) ?? null;
-  const m = ev.metrics;
+  const m = ev.refined.metrics; // canonical demo metrics: refined-window durations (Gowri, G-10 final), not 2-minute sample counts
   const answer: AnswerState = deriveAnswerState({
     tScrub, sunElevDeg: cur.sun.elevationDeg, sunDiskPct: 100 * cur.sun.diskFraction, sunUp: geomSunUp,
     opsMinElevDeg: d.minSunElevationOpsDeg > 0 ? d.minSunElevationOpsDeg : null, sunNext,
     darkSinceMs: !geomSunUp ? (lastSunset?.t ?? null) : null, opsResumeT: resume?.t ?? null,
     earthElevDeg: cur.earth.elevationDeg, earthVisible: cur.earth.up, linkUp: cur.linkUp, dsnAware: ev.dsnApplied, earthNext, linkResumeT,
-    windowSunlitPct: m.sunlitPct, windowLinkPct: val(ev.linkPct),
+    windowSunlitPct: val(m.sunlitPct), windowLinkPct: val(m.linkPct),
   });
 
-  let opsMs = 0;
-  for (let i = 0; i < ev.samples.length - 1; i++) if (ev.samples[i].sun.up && ev.samples[i].linkUp) opsMs += ev.times[i + 1] - ev.times[i];
-  const linkUp = ev.samples.map((s) => s.linkUp);
   const touch = req.touchdownMs != null && inEphemerisRange(eph, req.touchdownMs) ? stateAt(eph, site, horizon, d, req.touchdownMs, dsn) : null;
 
   const metrics: MetricSet = {
     sunElevationDeg: val(cur.sun.elevationDeg), sunClearanceDeg: val(cur.sun.clearanceDeg), sunDiskPct: val(100 * cur.sun.diskFraction),
     earthElevationDeg: val(cur.earth.elevationDeg), dteMarginDeg: val(cur.earth.clearanceDeg),
-    sunlitPct: m.sunlitPct, linkPct: val(ev.linkPct), // Earth visible AND, when the DSN rule applies, a complex above the mask
-    longestNightH: m.longestNightH, longestCommGapH: val(longestFalseRunHours(ev.times, linkUp)), opsHours: val(opsMs / 3_600_000),
+    sunlitPct: val(m.sunlitPct), linkPct: val(m.linkPct), // Earth visible AND, when the DSN rule applies, a complex above the mask
+    longestNightH: val(m.longestNightH), longestCommGapH: val(m.longestCommGapH), opsHours: val(m.opsHours),
     energyPerDayWh: req.power ? val(energyPerDayWh(series.powerW, series.stepMs)) : nulls,
     sunElevationAtTouchdownDeg: touch ? val(touch.sun.elevationDeg) : null,
     padSlopeDeg: req.padSlopeDeg != null ? val(req.padSlopeDeg) : null,
@@ -141,7 +138,7 @@ export function buildScenarioResult(eph: Ephemeris, req: ScenarioRequest, dsn: D
     verdict: verdict.verdict,
     verdictReasons: verdict.reasons,
     viability: { index: verdict.viabilityIndex, components: verdict.components },
-    answer, events, windows: ev.windowRecords, series, metrics,
+    answer, events, windows: ev.refined.windows.map(toWindowRecord), series, metrics,
   };
 }
 

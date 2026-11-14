@@ -11,7 +11,7 @@ import type { ScenarioRequest } from '../core/buildResult';
 import { DEFAULT_DEFINITIONS } from '../core/evaluate';
 import { loadEphem, type Ephemeris } from '../data/ephem';
 import { setDataMode } from '../data/source';
-import { PUBLIC, stubFetch } from './helpers';
+import { IM2_REFINED, PUBLIC, stubFetch } from './helpers';
 
 const EPHEM_BIN = join(PUBLIC, 'data/ephem/ephem.bin');
 const GOLDEN = join(PUBLIC, 'data/golden/golden_set1.json');
@@ -83,7 +83,7 @@ describe.skipIf(!run)('12-month calendar (real data, stage 1)', () => {
     const cell = buildCalendar(eph, { request: req(), days: 2 })[0];
     const refined = refineCandidate(eph, req(), cell);
     expect(refined.provisional).toBe(false);
-    expect(refined.sunlitPct.value!).toBeCloseTo(golden.sunlitPct.value, 4);
+    expect(refined.sunlitPct.value!).toBeCloseTo(IM2_REFINED.sunlitPct, 3);
   });
 });
 
