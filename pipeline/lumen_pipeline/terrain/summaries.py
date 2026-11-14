@@ -34,6 +34,28 @@ def _served_path(path: Path, terrain_root: Path) -> str:
     return f"terrain/{path.relative_to(terrain_root).as_posix()}"
 
 
+def _source_manifest(crop: Any) -> dict[str, Any]:
+    provenance = crop.dem.provenance
+    cache_key = provenance.get("cache_key")
+    cache_manifest = Path(__file__).resolve().parents[2] / "cache" / "dem" / f"{cache_key}.json"
+    cache_sha256 = None
+    if isinstance(cache_key, str) and cache_manifest.is_file():
+        cached = json.loads(cache_manifest.read_text(encoding="utf-8"))
+        cache_sha256 = cached.get("sha256")
+    return {
+        "source_key": crop.source_key,
+        "source_url": crop.source_url,
+        "shape": list(crop.dem.elevation.shape),
+        "resolution_m": list(crop.dem.resolution_m),
+        "crs": provenance.get("source_crs"),
+        "frame": provenance.get("frame"),
+        "vertical_reference": provenance.get("vertical_reference"),
+        "datum_reference": provenance.get("datum_reference"),
+        "cache_key": cache_key,
+        "cache_sha256": cache_sha256,
+    }
+
+
 def write_terrain_summary(
     site_id: str,
     crops: TerrainCrops,
@@ -116,6 +138,11 @@ def write_terrain_summary(
                 "sha256": _sha256(mask.sidecar_path),
             },
         }
+    entry["sources"] = {
+        name: _source_manifest(crop)
+        for name, crop in (("near", crops.near), ("mid", crops.mid), ("far", crops.far))
+        if crop is not None
+    }
     artifacts[site_id] = entry
     manifest["version"] = manifest.get("version", "0.1.0")
     manifest_path.write_text(
