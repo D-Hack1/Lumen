@@ -74,6 +74,11 @@
   border-radius: 50%;
   pointer-events: none;
 }
+/* The hillshade slot: relief shading over the LROC base, under the data layer. */
+.basemap__square > img.basemap__hillshade {
+  mix-blend-mode: multiply;
+  opacity: 0.7;
+}
 .basemap__ring {
   fill: none;
   stroke: var(--c-hairline-strong);

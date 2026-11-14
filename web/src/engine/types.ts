@@ -108,7 +108,10 @@ export interface Series {
   earthDiskPct: Float32Array;
   /** Topocentric Earth range in km (light time = range / c). */
   earthRangeKm: Float32Array;
+  /** Generation of the configured panels on the actual pad (W; per m2 of panel aperture with the assumed panel). 0 when no panel config was given. */
   powerW: Float32Array;
+  /** The same panels and controls on flat ground: the baseline the Touchdown Pad compares against. */
+  flatPowerW: Float32Array;
   sunUp: Uint8Array;
   earthUp: Uint8Array;
   linkUp: Uint8Array;

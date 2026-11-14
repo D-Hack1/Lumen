@@ -34,7 +34,7 @@ uses only what is listed here.
 | `answer` | `AnswerState` | Answer Strip at `tScrub`. State enums per R3 D-14: Sun `sunsetIn \| sunriseIn \| noSunriseBeforeEnd \| staysUpPastEnd \| belowOpsElevation`; Earth `earthsetIn \| earthriseIn \| linkResumesDsn`. Includes `nextEventT`, `nextEventPmMs`, `grazing`, `darkForMs`, `windowSunlitPct`, `windowLinkPct`. |
 | `events` | `EventRecord[]` | `{type: sunset\|shadowExit\|earthset\|earthrise, t, dtMs, grazing, grazingReason: rate\|dt_limit\|vanishes\|null, dtMethod: fast\|exact}` |
 | `windows` | `WindowRecord[]` | `{type: sun\|earth\|link\|ops, start, end, startPmMs, endPmMs, durationH: Bounded, peakElevDeg, flags:{grazing, partialStart, partialEnd}}` |
-| `series` | `Series` | Uniform grid `t0 + i*stepMs`: `sunElevDeg, sunAzDeg, sunClearanceDeg, sunDiskPct, earthElevDeg, earthAzDeg, earthClearanceDeg, earthDiskPct, earthRangeKm, powerW, sunUp, earthUp, linkUp, sigmaBandDeg` (Float32Array / Uint8Array). Azimuth is Earth-referenced at polar sites. |
+| `series` | `Series` | Uniform grid `t0 + i*stepMs`: `sunElevDeg, sunAzDeg, sunClearanceDeg, sunDiskPct, earthElevDeg, earthAzDeg, earthClearanceDeg, earthDiskPct, earthRangeKm, powerW, flatPowerW, sunUp, earthUp, linkUp, sigmaBandDeg` (Float32Array / Uint8Array). Azimuth is Earth-referenced at polar sites. |
 | `metrics` | `MetricSet` | `sunElevationDeg` (hero), `sunClearanceDeg`, `sunDiskPct`, `earthElevationDeg`, `dteMarginDeg`, `sunlitPct`, `linkPct`, `longestNightH`, `longestCommGapH`, `opsHours`, `energyPerDayWh`, `sunElevationAtTouchdownDeg`, `padSlopeDeg`, `psrDistanceKm {km, bearingDeg, areaKm2, source}`. Each is `Bounded`. |
 
 ## Functions
@@ -68,3 +68,8 @@ Sun/Earth azimuth, elevation, range, disk fraction and clearance on a 2-minute g
 
 ### Parity with the Python reference (gate G4, first pass)
 `core/*.ts` are ports of `pipeline/lumen_pipeline/reference/*.py`. Against the real golden set 1 (IM-2, 30 days): worst azimuth error 5e-6°, elevation 1e-6°, events within 0.25 s, windows and metrics identical. CI requires these tests to run (`LUMEN_REQUIRE_PARITY=1`).
+
+## Power (G-10, R3)
+
+`series.powerW` is the generation of the configured panel preset on the actual pad (ground slope from the pad file, off-nominal tilt, yaw; yaw `null` = best of the 15 degree sweep per sample); `series.flatPowerW` is the same panels and controls on flat ground. `metrics.energyPerDayWh` is the mean generation scaled to 24 h.
+Panel physics are NOT defined by R3: the engine uses a declared placeholder (`ASSUMED_PANEL` in `core/padPower.ts`: 1 m2, efficiency 1), so power is **W per m2 of panel aperture**. singleHeading faces reference-north before yaw; trackingMast turns to the Sun azimuth each sample. No battery/SOC is shown (no capacity/load/DoD defaults exist). Replace `ASSUMED_PANEL` when the team fixes real values.
