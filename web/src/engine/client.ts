@@ -6,7 +6,8 @@ import { buildScenarioResult, type ScenarioRequest } from './core/buildResult';
 import { loadEphem } from './data/ephem';
 import { dataMode } from './data/source';
 import type { EngineApi } from './worker';
-import type { ScenarioResult } from './types';
+import { refineCandidate, scanStage1, type ScanInput } from './compare/scanEngine';
+import type { ScanCandidate, ScenarioResult } from './types';
 
 let remote: Comlink.Remote<EngineApi> | null | undefined;
 
@@ -39,4 +40,16 @@ export function latestWins<A extends unknown[], R>(fn: (...a: A) => Promise<R>):
     const r = await fn(...a);
     return mine === latest ? r : null;
   };
+}
+
+/** Scan stage 1 (fast nominal ranking of every candidate). */
+export async function runScanStage1(input: ScanInput): Promise<ScanCandidate[]> {
+  const w = engine();
+  return w ? w.scanStage1(dataMode(), input) : scanStage1(await loadEphem(), input);
+}
+
+/** Scan stage 2 for one candidate (exact evaluation). */
+export async function runRefineCandidate(req: ScenarioRequest, candidate: ScanCandidate): Promise<ScanCandidate> {
+  const w = engine();
+  return w ? w.refineCandidate(dataMode(), req, candidate) : refineCandidate(await loadEphem(), req, candidate);
 }

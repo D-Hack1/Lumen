@@ -179,6 +179,8 @@ export interface ScenarioResult {
   meta: ResultMeta | null;
   verdict: Verdict;
   verdictReasons: string[];
+  /** Viability Index (0-100) and its weighted components, shown side by side. Null when there is nothing to score. */
+  viability: { index: number | null; components: Array<{ id: 'sunlit' | 'link' | 'night' | 'slope'; score: number | null; weight: number }> } | null;
   answer: AnswerState | null;
   events: EventRecord[];
   windows: WindowRecord[];

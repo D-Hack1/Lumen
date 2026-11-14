@@ -175,7 +175,7 @@ def make_ephem():
             fields=["sun_position_km", "sun_velocity_km_s", "earth_position_km", "earth_velocity_km_s"],
             units=["km", "km/s", "km", "km/s"],
             start_utc=iso(T0), end_utc=iso(T0 + (n - 1) * EPH_STEP), count=n, start_et_tdb=START_ET_TDB, step_seconds=EPH_STEP,
-            frame="MOON_ME_DE421", body_order=["sun", "earth"], aberration_correction="LT+S",
+            frame="MOON_ME", spice_frame="MOON_ME_DE421", cadence_s=EPH_STEP, body_order=["sun", "earth"], aberration_correction="LT+S",
             kernel_provenance=[{"filename": "MOCK", "sha256": "0" * 64}],
             mock_cadence_note="mock is 6 h; real is 3600 s. Loaders must read step_seconds.")
 
