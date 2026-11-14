@@ -9,7 +9,7 @@
   "dem_source": "MOCK-DEM",
   "files": {
     "mask": "masks/im2_athena.json",
-    "sigma": "sigma/im2_athena.bin",
+    "sigma": "sigma/im2_athena.json",
     "pad": "pad/im2_athena.json",
     "dispersion": "dispersion/im2_athena.json"
   },

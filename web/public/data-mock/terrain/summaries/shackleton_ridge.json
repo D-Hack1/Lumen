@@ -9,7 +9,7 @@
   "dem_source": "MOCK-DEM",
   "files": {
     "mask": "masks/shackleton_ridge.json",
-    "sigma": "sigma/shackleton_ridge.bin",
+    "sigma": "sigma/shackleton_ridge.json",
     "pad": "pad/shackleton_ridge.json",
     "dispersion": "dispersion/shackleton_ridge.json"
   },
