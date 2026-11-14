@@ -15,6 +15,10 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { FixtureContext, type Fixture } from './app/layout/fixture';
 import { installViewportWatcher } from './app/layout/viewport';
+import { createMonitors } from './engine/perfMonitors';
+import { installPerf, perf } from './engine/perf';
+import { PerfHud } from './perf/PerfHud';
+import { PerfProfiler } from './perf/PerfProfiler';
 import { useScenario } from './state/scenarioStore';
 import { readScenarioFromUrl, startUrlSync } from './state/urlSync';
 import { installTokens } from './ui/tokens';
@@ -30,11 +34,15 @@ async function boot() {
   }
 
   useScenario.getState().hydrate({ ...readScenarioFromUrl(), ...fixture?.scenario });
+  installPerf(window, perf, createMonitors()); // window.__lumenPerf for automated G8 checks (cheap: nothing runs until start())
 
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <FixtureContext.Provider value={fixture}>
-        <App />
+        <PerfProfiler>
+          <App />
+        </PerfProfiler>
+        {(import.meta.env.DEV || params.has('perf')) && <PerfHud />}
       </FixtureContext.Provider>
     </StrictMode>,
   );
