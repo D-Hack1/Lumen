@@ -1,8 +1,13 @@
 import json
 
 import numpy as np
+import yaml
 
-from lumen_pipeline.catalog.build_catalog import EXPECTED_SITE_IDS, build_catalog
+from lumen_pipeline.catalog.build_catalog import (
+    EXPECTED_SITE_IDS,
+    build_catalog,
+    default_sites_path,
+)
 from lumen_pipeline.common.frames import site_rotation_matrix
 
 
@@ -15,7 +20,33 @@ def test_g6_catalog_schema_coordinates_and_pending_terrain(tmp_path):
     assert catalog["coordinate_frame"] == "MOON_ME_DE421"
     assert tuple(site["id"] for site in catalog["sites"]) == EXPECTED_SITE_IDS
     assert json.loads(output.read_text(encoding="utf-8")) == catalog
+    assert set(catalog) == {"schema", "version", "coordinate_frame", "sites"}
     for site in catalog["sites"]:
+        assert set(site) == {
+            "id",
+            "name",
+            "category",
+            "agency",
+            "program",
+            "latitude_deg",
+            "longitude_deg_east",
+            "coordinate_frame",
+            "landing_coords",
+            "target_coords",
+            "coord_note",
+            "touchdown_utc",
+            "touchdown_precision",
+            "last_contact_utc",
+            "reference_axis",
+            "rotation_matrix",
+            "tier",
+            "terrain",
+            "source_url",
+            "source_type",
+            "verification_status",
+            "verified_by",
+            "notes",
+        }
         assert site["coordinate_frame"] == "MOON_ME_DE421"
         assert site["tier"] == "pending"
         assert site["terrain"]["status"] == "pending"
@@ -57,3 +88,23 @@ def test_g6_catalog_is_deterministic(tmp_path):
     first = output.read_bytes()
     build_catalog(output_path=output)
     assert output.read_bytes() == first
+
+
+def test_g6_catalog_allows_missing_optional_metadata(tmp_path):
+    source = yaml.safe_load(default_sites_path().read_text(encoding="utf-8"))
+    athena = next(site for site in source["sites"] if site["id"] == "im2_athena")
+    athena.pop("landing_coords")
+    athena.pop("touchdown_utc")
+    athena.pop("touchdown_precision")
+    athena.pop("last_contact_utc")
+    sites_path = tmp_path / "sites.yaml"
+    sites_path.write_text(yaml.safe_dump(source), encoding="utf-8")
+
+    catalog = build_catalog(sites_path=sites_path, output_path=tmp_path / "sites.json")
+    athena_catalog = next(site for site in catalog["sites"] if site["id"] == "im2_athena")
+
+    assert athena_catalog["landing_coords"] is None
+    assert athena_catalog["target_coords"] is None
+    assert athena_catalog["touchdown_utc"] is None
+    assert athena_catalog["touchdown_precision"] is None
+    assert athena_catalog["last_contact_utc"] is None
