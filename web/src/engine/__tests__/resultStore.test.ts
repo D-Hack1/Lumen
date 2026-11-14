@@ -80,6 +80,20 @@ describe.skipIf(!run)('result store (real data, in-thread engine)', () => {
     expect(jumpTo('sunset')!).toBeLessThan(jumpTo('shadowExit')!);
   });
 
+  it('the Pointing/Pad panel controls reach the engine: power is non-zero, and changing the preset or the tilt recomputes it', async () => {
+    useScenario.setState({ durationDays: 14 });
+    await until(() => getResult().status === 'ready' && getResult().series!.sunUp.length === 14 * 720 + 1);
+    const peak = (r = getResult()) => Math.max(...r.series!.powerW);
+    const fourSide = peak();
+    expect(fourSide).toBeGreaterThan(0);
+    expect(getResult().metrics!.energyPerDayWh.value).toBeGreaterThan(0);
+    useScenario.setState({ panelPreset: 'horizontalDeck', yawDeg: 0 });
+    await until(() => peak() !== fourSide);
+    expect(peak()).toBeLessThan(1361 * Math.sin((8 * Math.PI) / 180)); // a flat deck at a polar site (Sun < 8 deg) cannot make much
+    useScenario.setState({ panelPreset: 'fourSide', yawDeg: null, tilt: { magnitudeDeg: 0, directionDeg: 0 } });
+    await until(() => peak() === fourSide);
+  });
+
   it('a window outside the ephemeris is reported as an error, not a crash', async () => {
     useScenario.setState({ landingUtc: Date.UTC(2035, 0, 1), scrubUtc: Date.UTC(2035, 0, 1) });
     await until(() => getResult().status === 'error');
