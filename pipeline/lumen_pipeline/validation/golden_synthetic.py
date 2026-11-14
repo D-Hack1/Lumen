@@ -38,14 +38,19 @@ def synthetic_golden_payload() -> dict[str, object]:
             "expected": {"events": [], "window": {"partial_start": True, "start_et": 0.0, "end_et": 240.0}},
         },
         {
+            "id": "synthetic_refined_visibility_window",
+            "input": {"site_id": "synthetic_refined_window", "time_scale": "ET seconds", "range_et": [0, 600], "visible_when": "120 <= et < 480"},
+            "expected": {"event_types": ["shadowExit", "sunset"], "window": {"start_et": 120.0, "end_et": 480.0, "partial_start": False, "partial_end": False}},
+        },
+        {
             "id": "synthetic_total_clearance_rate",
             "input": {"site_id": "synthetic_moving_mask", "time_scale": "ET seconds", "range_et": [-20, 220], "elevation_deg": "5 + 0.001 * et", "azimuth_deg": "10 + 0.1 * et", "mask_deg_per_bin": 0.01, "mask_bin_width_deg": 0.1},
             "expected": {"clearance_rate_deg_per_hour": -32.4},
         },
         {
             "id": "synthetic_three_pass_bounds",
-            "input": {"site_id": "synthetic_sigma", "time_scale": "ET seconds", "mask_deg": 1.0, "sigma_deg": 0.2},
-            "expected": {"shifted_masks_deg": [0.8, 1.0, 1.2], "numeric_bounds": [0.8, 1.0, 1.2]},
+            "input": {"site_id": "synthetic_sigma", "time_scale": "ET seconds", "range_et": [0, 720], "mask_deg": 1.0, "sigma_deg": 0.25, "visible_when": "1.5 - abs(et - 360) / 120 >= mask"},
+            "expected": {"shifted_masks_deg": [0.75, 1.0, 1.25], "numeric_bounds": [0.75, 1.0, 1.25], "window_start_et": {"lo": 270.0, "value": 300.0, "hi": 330.0}, "window_end_et": {"lo": 390.0, "value": 420.0, "hi": 450.0}, "window_duration_hours": {"lo": 1.0 / 60.0, "value": 1.0 / 30.0, "hi": 1.0 / 20.0}, "sunlit_pct": {"lo": 100.0 / 12.0, "value": 100.0 / 6.0, "hi": 25.0}},
         },
         {
             "id": "synthetic_exact_event_uncertainty",
@@ -63,6 +68,11 @@ def synthetic_golden_payload() -> dict[str, object]:
             "expected": {"flat_or_downhill_effective_deg": -1.0, "cross_slope_effective_deg": -1.0, "uphill_effective_deg": 6.25},
         },
         {
+            "id": "synthetic_guarded_span_spike",
+            "input": {"site_id": "synthetic_span_spike", "time_scale": "ET seconds", "range_et": [0, 3600], "mask_bin_width_deg": 0.3, "spike_bin": 100, "spike_elevation_deg": 100.0, "azimuth_deg": "29.7 + et / 3600", "envelope_azimuth_centre_deg": 29.7, "envelope_azimuth_half_width_deg": 1.1},
+            "expected": {"sample_count": 31, "event_types": ["sunset", "shadowExit"], "endpoint_states_equal": True},
+        },
+        {
             "id": "synthetic_tier_c_smooth_moon",
             "input": {"site_id": "synthetic_tier_c", "time_scale": "ET seconds", "observer_height_m": 2.0, "terrain_mode": "smooth_moon"},
             "expected": {"terrain_sigma": None, "label": "smooth-Moon bound"},
@@ -75,7 +85,12 @@ def synthetic_golden_payload() -> dict[str, object]:
         {
             "id": "synthetic_power_eclipse_soc",
             "input": {"site_id": "synthetic_power", "time_scale": "ET seconds", "times_et": [0.0, 3600.0], "panel_normal": [0.0, 0.0, 1.0], "panel_area_m2": 2.0, "panel_efficiency": 0.25, "sun_distance_km": 149597870.7, "disk_fractions": [1.0, 0.0], "load_w": [10.0, 10.0], "battery_capacity_wh": 1000.0, "usable_depth_of_discharge": 1.0, "initial_soc_fraction": 0.5},
-            "expected": {"generation_w": [680.5, 0.0], "net_w": [670.5, -10.0], "stored_energy_wh": [500.0, 830.25]},
+            "expected": {"generation_w": [680.5, 0.0], "net_w": [670.5, -10.0], "stored_energy_wh": [500.0, 830.25], "energyPerDayWh": 8166.0},
+        },
+        {
+            "id": "synthetic_dsn_link_modes",
+            "input": {"site_id": "synthetic_dsn", "time_scale": "ET seconds", "range_et": [0, 1200], "station_order": ["DSS-14", "DSS-43", "DSS-63"], "station_elevations_deg": [[20.0, 0.0, 20.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]], "cadence_s": 600, "interpolation": "linear", "dsn_mask_deg": 5.0, "earth_visible": True},
+            "expected": {"dsn_off": {"link_pct": 100.0, "longest_comm_gap_hours": 0.0}, "dsn_aware": {"event_types": ["link_down", "link_recovery"], "event_times_et": [450.0, 750.0], "link_pct": 75.0, "longest_comm_gap_hours": 1.0 / 12.0}},
         },
     ]
     return {

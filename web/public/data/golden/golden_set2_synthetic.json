@@ -105,6 +105,30 @@
     },
     {
       "expected": {
+        "event_types": [
+          "shadowExit",
+          "sunset"
+        ],
+        "window": {
+          "end_et": 480.0,
+          "partial_end": false,
+          "partial_start": false,
+          "start_et": 120.0
+        }
+      },
+      "id": "synthetic_refined_visibility_window",
+      "input": {
+        "range_et": [
+          0,
+          600
+        ],
+        "site_id": "synthetic_refined_window",
+        "time_scale": "ET seconds",
+        "visible_when": "120 <= et < 480"
+      }
+    },
+    {
+      "expected": {
         "clearance_rate_deg_per_hour": -32.4
       },
       "id": "synthetic_total_clearance_rate",
@@ -124,22 +148,47 @@
     {
       "expected": {
         "numeric_bounds": [
-          0.8,
+          0.75,
           1.0,
-          1.2
+          1.25
         ],
         "shifted_masks_deg": [
-          0.8,
+          0.75,
           1.0,
-          1.2
-        ]
+          1.25
+        ],
+        "sunlit_pct": {
+          "hi": 25.0,
+          "lo": 8.333333333333334,
+          "value": 16.666666666666668
+        },
+        "window_duration_hours": {
+          "hi": 0.05,
+          "lo": 0.016666666666666666,
+          "value": 0.03333333333333333
+        },
+        "window_end_et": {
+          "hi": 450.0,
+          "lo": 390.0,
+          "value": 420.0
+        },
+        "window_start_et": {
+          "hi": 330.0,
+          "lo": 270.0,
+          "value": 300.0
+        }
       },
       "id": "synthetic_three_pass_bounds",
       "input": {
         "mask_deg": 1.0,
-        "sigma_deg": 0.2,
+        "range_et": [
+          0,
+          720
+        ],
+        "sigma_deg": 0.25,
         "site_id": "synthetic_sigma",
-        "time_scale": "ET seconds"
+        "time_scale": "ET seconds",
+        "visible_when": "1.5 - abs(et - 360) / 120 >= mask"
       }
     },
     {
@@ -191,6 +240,31 @@
     },
     {
       "expected": {
+        "endpoint_states_equal": true,
+        "event_types": [
+          "sunset",
+          "shadowExit"
+        ],
+        "sample_count": 31
+      },
+      "id": "synthetic_guarded_span_spike",
+      "input": {
+        "azimuth_deg": "29.7 + et / 3600",
+        "envelope_azimuth_centre_deg": 29.7,
+        "envelope_azimuth_half_width_deg": 1.1,
+        "mask_bin_width_deg": 0.3,
+        "range_et": [
+          0,
+          3600
+        ],
+        "site_id": "synthetic_span_spike",
+        "spike_bin": 100,
+        "spike_elevation_deg": 100.0,
+        "time_scale": "ET seconds"
+      }
+    },
+    {
+      "expected": {
         "label": "smooth-Moon bound",
         "terrain_sigma": null
       },
@@ -218,6 +292,7 @@
     },
     {
       "expected": {
+        "energyPerDayWh": 8166.0,
         "generation_w": [
           680.5,
           0.0
@@ -258,6 +333,61 @@
           3600.0
         ],
         "usable_depth_of_discharge": 1.0
+      }
+    },
+    {
+      "expected": {
+        "dsn_aware": {
+          "event_times_et": [
+            450.0,
+            750.0
+          ],
+          "event_types": [
+            "link_down",
+            "link_recovery"
+          ],
+          "link_pct": 75.0,
+          "longest_comm_gap_hours": 0.08333333333333333
+        },
+        "dsn_off": {
+          "link_pct": 100.0,
+          "longest_comm_gap_hours": 0.0
+        }
+      },
+      "id": "synthetic_dsn_link_modes",
+      "input": {
+        "cadence_s": 600,
+        "dsn_mask_deg": 5.0,
+        "earth_visible": true,
+        "interpolation": "linear",
+        "range_et": [
+          0,
+          1200
+        ],
+        "site_id": "synthetic_dsn",
+        "station_elevations_deg": [
+          [
+            20.0,
+            0.0,
+            20.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "station_order": [
+          "DSS-14",
+          "DSS-43",
+          "DSS-63"
+        ],
+        "time_scale": "ET seconds"
       }
     }
   ],

@@ -4,7 +4,15 @@ import math
 import numpy as np
 import pytest
 
-from lumen_pipeline.reference.events import Event, detect_events
+from lumen_pipeline.reference.bounds import WindowSpec, evaluate_with_bounds
+from lumen_pipeline.reference.dsn import DsnSeries, evaluate_link_windows
+from lumen_pipeline.reference.events import (
+    EnvelopeBounds,
+    Event,
+    detect_events,
+    sample_times_guarded,
+)
+from lumen_pipeline.reference.metrics import first_pass_metrics, power_series_metrics
 from lumen_pipeline.reference.power import Panel, evaluate_power_series
 from lumen_pipeline.reference.uncertainty import (
     exact_event_uncertainty,
@@ -15,7 +23,7 @@ from lumen_pipeline.reference.uncertainty import (
     total_clearance_rate_deg_per_hour,
 )
 from lumen_pipeline.reference.visibility import Horizon, availability
-from lumen_pipeline.reference.windows import merge_windows
+from lumen_pipeline.reference.windows import merge_windows, windows_from_events
 from lumen_pipeline.validation.golden_synthetic import (
     build_synthetic_golden_set,
     synthetic_golden_payload,
@@ -24,6 +32,11 @@ from lumen_pipeline.validation.golden_synthetic import (
 
 def _case(payload, case_id):
     return next(case for case in payload["cases"] if case["id"] == case_id)
+
+
+def _pair_nearest(event, candidates):
+    matching = (candidate for candidate in candidates if candidate.type == event.type)
+    return min(matching, key=lambda candidate: abs(candidate.et - event.et), default=None)
 
 
 def test_synthetic_golden_set_schema_and_determinism(tmp_path):
@@ -74,9 +87,17 @@ def test_synthetic_golden_events_uncertainty_and_slope_edges():
     rate = total_clearance_rate_deg_per_hour(100.0, lambda et: (5.0 + 0.001 * et, 10.0 + 0.1 * et), horizon)
     assert rate == pytest.approx(_case(payload, "synthetic_total_clearance_rate")["expected"]["clearance_rate_deg_per_hour"])
 
-    sigma_horizon = Horizon(np.full(3600, 1.0))
-    bounds = numeric_bounds(three_pass_bounds(sigma_horizon, 0.2, lambda current: current.elevation_at(0.0)))
-    assert bounds == pytest.approx(_case(payload, "synthetic_three_pass_bounds")["expected"]["numeric_bounds"])
+    bounds_case = _case(payload, "synthetic_three_pass_bounds")
+    bounds_input = bounds_case["input"]
+    sigma_horizon = Horizon(np.full(3600, bounds_input["mask_deg"]))
+    bounds = numeric_bounds(
+        three_pass_bounds(
+            sigma_horizon,
+            bounds_input["sigma_deg"],
+            lambda current: current.elevation_at(0.0),
+        )
+    )
+    assert bounds == pytest.approx(bounds_case["expected"]["numeric_bounds"])
 
     exact = exact_event_uncertainty(Event("sunset", 100.0), Event("sunset", 80.0), Event("sunset", 120.0))
     assert exact.delta_t_seconds == _case(payload, "synthetic_exact_event_uncertainty")["expected"]["delta_t_seconds"]
@@ -116,3 +137,154 @@ def test_synthetic_golden_power_eclipse_soc_vector():
     assert result.generation_w.tolist() == pytest.approx(expected["generation_w"])
     assert result.net_w.tolist() == pytest.approx(expected["net_w"])
     assert result.stored_energy_wh.tolist() == pytest.approx(expected["stored_energy_wh"])
+    assert power_series_metrics(input_data["times_et"], result).generated_energy_per_day_wh == pytest.approx(
+        expected["energyPerDayWh"]
+    )
+    metrics = first_pass_metrics(
+        input_data["times_et"],
+        [True, False],
+        [True, True],
+        [1.0, 1.0],
+        [1.0, 1.0],
+        [1.0, 1.0],
+        [1.0, 1.0],
+        input_data["disk_fractions"],
+        power=result,
+    )
+    assert metrics["energyPerDayWh"]["value"] == pytest.approx(expected["energyPerDayWh"])
+
+
+def test_synthetic_golden_refined_windows_and_three_pass_bounds():
+    payload = synthetic_golden_payload()
+    refined = _case(payload, "synthetic_refined_visibility_window")
+    expected_window = refined["expected"]["window"]
+    predicate = lambda et: 120.0 <= et < 480.0
+    events = detect_events(0.0, 600.0, predicate, down="sunset", up="shadowExit")
+    windows = windows_from_events(
+        "sun",
+        0.0,
+        600.0,
+        False,
+        events,
+        down_event="sunset",
+        up_event="shadowExit",
+        peak_elevation_deg=lambda _start, _end: 1.0,
+    )
+
+    assert [event.type for event in events] == refined["expected"]["event_types"]
+    assert [event.et for event in events] == pytest.approx(
+        [expected_window["start_et"], expected_window["end_et"]], abs=10.0
+    )
+    assert len(windows) == 1
+    assert windows[0].start_et == pytest.approx(expected_window["start_et"], abs=10.0)
+    assert windows[0].end_et == pytest.approx(expected_window["end_et"], abs=10.0)
+    assert (windows[0].partial_start, windows[0].partial_end) == (
+        expected_window["partial_start"],
+        expected_window["partial_end"],
+    )
+
+    bounds_case = _case(payload, "synthetic_three_pass_bounds")
+    bounds_expected = bounds_case["expected"]
+    bounds_input = bounds_case["input"]
+    horizon = Horizon(np.full(3600, bounds_input["mask_deg"]))
+    spec = WindowSpec(
+        "sun",
+        "sun_down",
+        "sun_up",
+        lambda et, shifted: 1.5 - abs(et - 360.0) / 120.0 >= shifted.effective_at(0.0),
+        lambda _start, _end, _horizon: 1.0,
+    )
+    result = evaluate_with_bounds(
+        *bounds_input["range_et"],
+        horizon,
+        bounds_input["sigma_deg"],
+        [spec],
+        pair_event=_pair_nearest,
+    )
+    bounded_window = result.windows["sun"][0]
+
+    assert result.lower.events["sun"][0].et == pytest.approx(270.0, abs=10.0)
+    assert bounded_window.start_et.lo == pytest.approx(bounds_expected["window_start_et"]["lo"], abs=10.0)
+    assert bounded_window.start_et.value == pytest.approx(bounds_expected["window_start_et"]["value"], abs=10.0)
+    assert bounded_window.start_et.hi == pytest.approx(bounds_expected["window_start_et"]["hi"], abs=10.0)
+    assert bounded_window.end_et.lo == pytest.approx(bounds_expected["window_end_et"]["lo"], abs=10.0)
+    assert bounded_window.end_et.value == pytest.approx(bounds_expected["window_end_et"]["value"], abs=10.0)
+    assert bounded_window.end_et.hi == pytest.approx(bounds_expected["window_end_et"]["hi"], abs=10.0)
+    assert bounded_window.duration_hours.lo == pytest.approx(bounds_expected["window_duration_hours"]["lo"], abs=20.0 / 3600.0)
+    assert bounded_window.duration_hours.value == pytest.approx(bounds_expected["window_duration_hours"]["value"], abs=20.0 / 3600.0)
+    assert bounded_window.duration_hours.hi == pytest.approx(bounds_expected["window_duration_hours"]["hi"], abs=20.0 / 3600.0)
+    for key, expected in bounds_expected["sunlit_pct"].items():
+        assert getattr(result.metrics["sunlitPct"], key) == pytest.approx(expected, abs=3.0)
+
+
+def test_synthetic_golden_dsn_modes_and_guarded_span_spike():
+    payload = synthetic_golden_payload()
+    dsn_case = _case(payload, "synthetic_dsn_link_modes")
+    dsn_input = dsn_case["input"]
+    series = DsnSeries(
+        0.0,
+        dsn_input["cadence_s"],
+        tuple(dsn_input["station_order"]),
+        np.asarray(dsn_input["station_elevations_deg"], dtype=float),
+    )
+    off = evaluate_link_windows(
+        *dsn_input["range_et"],
+        lambda _et: dsn_input["earth_visible"],
+        lambda _start, _end: 0.0,
+        dsn_mode="off",
+        dsn=None,
+        dsn_mask_deg=dsn_input["dsn_mask_deg"],
+        interpolation=dsn_input["interpolation"],
+        down_event="link_down",
+        up_event="link_recovery",
+    )
+    on = evaluate_link_windows(
+        *dsn_input["range_et"],
+        lambda _et: dsn_input["earth_visible"],
+        lambda _start, _end: 0.0,
+        dsn_mode="dsnAware",
+        dsn=series,
+        dsn_mask_deg=dsn_input["dsn_mask_deg"],
+        interpolation=dsn_input["interpolation"],
+        down_event="link_down",
+        up_event="link_recovery",
+    )
+    expected = dsn_case["expected"]
+
+    assert off.link_pct == pytest.approx(expected["dsn_off"]["link_pct"])
+    assert off.longest_comm_gap_hours == pytest.approx(expected["dsn_off"]["longest_comm_gap_hours"])
+    assert [event.type for event in on.events] == expected["dsn_aware"]["event_types"]
+    assert [event.et for event in on.events] == pytest.approx(expected["dsn_aware"]["event_times_et"], abs=10.0)
+    assert on.link_pct == pytest.approx(expected["dsn_aware"]["link_pct"], abs=1.0)
+    assert on.longest_comm_gap_hours == pytest.approx(
+        expected["dsn_aware"]["longest_comm_gap_hours"], abs=10.0 / 3600.0
+    )
+
+    spike_case = _case(payload, "synthetic_guarded_span_spike")
+    spike_input = spike_case["input"]
+    mask = np.zeros(1200)
+    mask[spike_input["spike_bin"]] = spike_input["spike_elevation_deg"]
+    horizon = Horizon(mask, bin_width_deg=spike_input["mask_bin_width_deg"])
+    envelope = lambda _left, _right: EnvelopeBounds(
+        0.5,
+        0.5,
+        spike_input["envelope_azimuth_centre_deg"],
+        spike_input["envelope_azimuth_half_width_deg"],
+        0.0,
+        True,
+    )
+    azimuth_at = lambda et: 29.7 + et / 3600.0
+    visible_at = lambda et: 0.5 >= horizon.effective_at(azimuth_at(et))
+    sample_times = sample_times_guarded(*spike_input["range_et"], horizon, envelope)
+    events = detect_events(
+        *spike_input["range_et"],
+        visible_at,
+        down="sunset",
+        up="shadowExit",
+        horizon=horizon,
+        envelope_bounds=envelope,
+    )
+
+    assert len(sample_times) == spike_case["expected"]["sample_count"]
+    assert visible_at(sample_times[0]) is visible_at(sample_times[-1]) is spike_case["expected"]["endpoint_states_equal"]
+    assert [event.type for event in events] == spike_case["expected"]["event_types"]
