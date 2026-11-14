@@ -13,6 +13,7 @@ import { useCopyFn } from '../../state/copy';
 import { getScenario, useScenario } from '../../state/scenarioStore';
 import { Badge, type BadgeTone } from '../../ui/Badge';
 import { Segmented } from '../../ui/Segmented';
+import { useFlipReorder } from './flip';
 import './compareResults.css';
 
 const TONE: Record<ScanCandidate['verdict'], BadgeTone> = { GO: 'go', MARGINAL: 'marginal', 'NO-GO': 'nogo', PENDING: 'pending' };
@@ -43,6 +44,8 @@ export function ScanPanel() {
 
   const rows = worst ? WORST_CASE_SCAN : (res?.candidates ?? []);
   const stage = worst ? 2 : (res?.stage ?? 0);
+  const tbody = useRef<HTMLTableSectionElement>(null);
+  useFlipReorder(tbody, rows.map((c) => `${c.siteId}-${c.landingUtc}`), stage as 0 | 1 | 2);
   const nameOf = (id: string) => sites.find((s) => s.id === id)?.name ?? id;
 
   return (
@@ -70,9 +73,9 @@ export function ScanPanel() {
               <th className="rt__act" />
             </tr>
           </thead>
-          <tbody>
+          <tbody ref={tbody}>
             {rows.map((c, i) => (
-              <tr key={`${c.siteId}-${c.landingUtc}`} data-provisional={c.provisional} data-bounds={c.boundsStatus}>
+              <tr key={`${c.siteId}-${c.landingUtc}`} data-flip-key={`${c.siteId}-${c.landingUtc}`} data-provisional={c.provisional} data-bounds={c.boundsStatus}>
                 <td className="rt__rank">{i + 1}</td>
                 <td className="rt__site" title={`${day(c.landingUtc)} · ${nameOf(c.siteId)}`}>
                   {day(c.landingUtc)} {'·'} {nameOf(c.siteId)}
