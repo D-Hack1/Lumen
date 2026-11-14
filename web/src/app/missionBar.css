@@ -119,10 +119,49 @@
   color: var(--c-text);
 }
 
+/* Disabled jump (no such event before window end): still focusable so its tooltip explains why. */
+.mb-jump[aria-disabled='true'] {
+  color: var(--c-text-faint);
+  border-style: dashed;
+  background: transparent;
+}
+.mb-jump[aria-disabled='true']:active {
+  transform: none;
+}
+.mb-jump[aria-disabled='true'] .mb-kbd {
+  color: var(--c-text-faint);
+}
+
+/* Verdict chip: a button whose layers (old + new chip) share one grid cell and crossfade in opacity only. */
+.mb-verdict {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-md);
+  background: none;
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+.mb-verdict:active {
+  transform: scale(0.97);
+}
+.mb-verdict__stack {
+  display: inline-grid;
+}
+.mb-verdict__layer {
+  grid-area: 1 / 1;
+  display: inline-flex;
+}
+.mb-verdict__layer[data-leaving] {
+  pointer-events: none;
+}
 .mb-verdict__chip {
   min-width: 76px;
   justify-content: center;
-  animation: lumen-fade-in var(--dur-fast) var(--ease-out);
+}
+.mb-verdict__prov {
+  font-weight: var(--fw-regular);
+  opacity: 0.85;
 }
 
 /* ---------- collapse rules (widest → narrowest) ---------- */
