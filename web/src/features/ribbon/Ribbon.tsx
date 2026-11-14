@@ -7,13 +7,14 @@ import { useCopy } from '../../state/copy';
 import { RibbonPanorama } from './RibbonPanorama';
 import { RibbonLens } from './RibbonLens';
 import { RibbonTransport } from './RibbonTransport';
+import { COACH, coachAnchor } from '../shared/coachAnchors';
 
 export function Ribbon() {
   const [lensOpen, setLensOpen] = useState(true);
   const title = useCopy('ribbon.title');
 
   return (
-    <div className="ribbon" style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+    <div className="ribbon" {...coachAnchor(COACH.ribbon)} style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
       <div className="ribbon__header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span className="num" style={{ fontSize: 'var(--fs-sm)', color: 'var(--c-text-muted)' }}>
           {title}

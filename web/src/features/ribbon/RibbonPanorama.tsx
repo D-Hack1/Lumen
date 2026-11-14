@@ -10,6 +10,8 @@ import { useResult } from '../../engine/hooks';
 import { crosshairBus } from '../../state/buses';
 import { color } from '../../ui/tokens';
 import { LayeredCanvas } from '../shared/LayeredCanvas';
+import { COACH, coachAnchor, placeAnchor, POINT_ANCHOR_STYLE } from '../shared/coachAnchors';
+import { useVisualCopy, visualCopy } from '../shared/visualCopy';
 import { buildPanoramaScale, maskElevRange, nearestHeightIndex, type PanoramaScale } from '../shared/ribbonGeometry';
 import { useSiteMask } from './useSiteMask';
 
@@ -28,6 +30,10 @@ export function RibbonPanorama() {
   const heightM = useScenario((s) => s.heightM);
   const mask = useSiteMask(result.meta?.siteId ?? null);
   const heightIdx = nearestHeightIndex(heightM);
+  const vc = useVisualCopy();
+  const sunAnchor = useRef<HTMLDivElement>(null);
+  const earthAnchor = useRef<HTMLDivElement>(null);
+  const horizonAnchor = useRef<HTMLDivElement>(null);
 
   // Scale is shared between the static silhouette and the per-frame overlay markers; recomputed in drawStatic,
   // read (not recomputed) in drawOverlay so both agree on the same pixel mapping within a frame. A real ref
@@ -35,11 +41,15 @@ export function RibbonPanorama() {
   const scaleRef = useRef<PanoramaScale | null>(null);
 
   return (
-    <div style={{ height: '100%', minHeight: 0 }}>
-      <div style={{ height: '100%' }}>
+    <div style={{ height: '100%', minHeight: 0 }} {...coachAnchor(COACH.ribbonPanorama)}>
+      <div style={{ height: '100%', position: 'relative' }}>
+        {/* Coachmark point anchors: follow the drawn markers / horizon, moved by the draws (no React state). */}
+        <div ref={sunAnchor} {...coachAnchor(COACH.ribbonSunMarker)} style={POINT_ANCHOR_STYLE} aria-hidden />
+        <div ref={earthAnchor} {...coachAnchor(COACH.ribbonEarthMarker)} style={POINT_ANCHOR_STYLE} aria-hidden />
+        <div ref={horizonAnchor} {...coachAnchor(COACH.ribbonHorizon)} style={POINT_ANCHOR_STYLE} aria-hidden />
         <LayeredCanvas
           className="ribbon-panorama"
-          staticKey={`${mask.mask ? mask.mask.siteId : 'none'}:${heightIdx}:${series ? series.t0 : 0}`}
+          staticKey={`${mask.mask ? mask.mask.siteId : 'none'}:${heightIdx}:${series ? series.t0 : 0}:${vc.persona}`}
           drawStatic={(ctx, w, h) => {
             const { min, max } = mask.mask ? maskElevRange(mask.mask, heightIdx) : { min: -2, max: 6 };
             const scale = buildPanoramaScale(w, h, min, max);
@@ -98,8 +108,10 @@ export function RibbonPanorama() {
             ctx.fillStyle = color.textFaint;
             ctx.font = '10px var(--font-mono)';
             ctx.textAlign = 'left';
-            ctx.fillText(`V ×${scale.exaggeration.toFixed(1)} · not to scale`, 6, 12);
-            if (mask.unavailable) ctx.fillText('no terrain mask (Tier C / smooth-Moon bound)', 6, h - 6);
+            const c = visualCopy();
+            ctx.fillText(c.t('ribbon.vtag', { n: c.persona === 'educator' ? Math.round(scale.exaggeration) : scale.exaggeration.toFixed(1) }), 6, 12);
+            if (mask.unavailable) ctx.fillText(c.t('ribbon.noMask'), 6, h - 6);
+            placeAnchor(horizonAnchor.current, w / 2, scale.elevToY(0));
           }}
           drawOverlay={(ctx) => {
             const scale = scaleRef.current;
@@ -113,6 +125,29 @@ export function RibbonPanorama() {
             };
             drawBody(tScrub, false);
             if (tHover != null) drawBody(tHover, true);
+
+            // Anchors follow the scrub-time markers; Educator also gets direct text callouts on the markers.
+            const i = sampleIndex(series, tScrub);
+            const sx = scale.azToX(series.sunAzDeg[i]);
+            const sy = scale.elevToY(series.sunElevDeg[i]);
+            const ex = scale.azToX(series.earthAzDeg[i]);
+            const ey = scale.elevToY(series.earthElevDeg[i]);
+            placeAnchor(sunAnchor.current, sx, sy, { w: scale.w, h: scale.h });
+            placeAnchor(earthAnchor.current, ex, ey, { w: scale.w, h: scale.h });
+            const c = visualCopy();
+            if (c.persona === 'educator') {
+              ctx.font = '11px var(--font-sans, sans-serif)';
+              ctx.textBaseline = 'bottom';
+              const label = (text: string, x: number, y: number, fill: string) => {
+                const right = x > scale.w - 60;
+                ctx.textAlign = right ? 'right' : 'left';
+                ctx.fillStyle = fill;
+                ctx.fillText(text, x + (right ? -8 : 8), y - 6);
+              };
+              label(c.t('ribbon.sun'), sx, sy, color.sun);
+              label(c.t('ribbon.earth'), ex, ey, color.earth);
+              ctx.textBaseline = 'alphabetic';
+            }
           }}
           overlayBuses={OVERLAY_BUSES}
         />
