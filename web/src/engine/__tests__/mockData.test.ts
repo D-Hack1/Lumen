@@ -2,25 +2,14 @@
 // Smoke test: the mock dataset loads through the real loaders and has the shapes the contract promises.
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { stubFetch, PUBLIC } from './helpers';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadCatalog } from '../data/catalog';
 import { loadLayers } from '../data/layers';
 import { dataUrl, fetchJson, checkVersion } from '../data/source';
 import { mockScenarioResult } from '../mock/mockResult';
 
-const ROOT = join(__dirname, '..', '..', '..', 'public');
-
-beforeAll(() => {
-  globalThis.fetch = (async (url: string) => {
-    try {
-      const buf = await readFile(join(ROOT, url));
-      const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
-      return { ok: true, status: 200, json: async () => JSON.parse(buf.toString()), arrayBuffer: async () => ab } as unknown as Response;
-    } catch {
-      return { ok: false, status: 404 } as unknown as Response;
-    }
-  }) as typeof fetch;
-});
+beforeAll(() => stubFetch());
 
 describe('mock dataset', () => {
   it('switches to data-mock by default', () => {
@@ -31,6 +20,7 @@ describe('mock dataset', () => {
     const c = await loadCatalog();
     expect(c.sites.length).toBe(4);
     expect(c.sites.every((s) => s.mock)).toBe(true);
+    expect(c.sites.find((s) => s.id === 'im2_athena')?.lat).toBeCloseTo(-84.7906, 4); // latitude_deg mapped
     expect(c.sites.find((s) => s.tier === 'C')?.sigmaSource).toMatch(/smooth/);
     const sp = c.sparklines[c.sites[0].id];
     expect(sp.sunlitPct.length).toBe(400);
@@ -46,7 +36,7 @@ describe('mock dataset', () => {
 
   it('ephem.bin size matches its header', async () => {
     const h = await fetchJson<{ count: number; byte_length: number }>('ephem/ephem.json', [1]);
-    const buf = await readFile(join(ROOT, 'data-mock/ephem/ephem.bin'));
+    const buf = await readFile(join(PUBLIC, 'data-mock/ephem/ephem.bin'));
     expect(buf.length).toBe(h.byte_length);
     expect(h.byte_length).toBe(h.count * 12 * 4);
   });
