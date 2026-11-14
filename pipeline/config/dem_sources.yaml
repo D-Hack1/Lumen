@@ -1,2 +1,143 @@
 # Owner: Shiva Shakthi
-# DEM URLs, products, bounding boxes.
+# Verified DEM products and source-selection metadata.
+#
+# Storage dtype, scale, offset, nodata, and vertical-reference details remain
+# pending label verification unless explicitly stated below.
+
+schema_version: "0.1.0"
+
+products:
+  polar_5m_lola_pgda_81:
+    name: "Polar 5 m LOLA 87-90S mosaic"
+    provider: "PGDA"
+    product_id: 81
+    source_page: "https://pgda.gsfc.nasa.gov/products/81"
+    resolution_m: 5.0
+    latitude_coverage: "87S-90S"
+    format: "GeoTIFF"
+    dem_url: "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/87S/ldem_87s_5mpp.tif"
+    slope_url: "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/87S/ldsm_87s_5mpp.tif"
+    error_url: null
+    frame: null
+    datum_reference: null
+    availability_status: "verified_product"
+    verification_status: "source_page_and_urls_provided"
+    notes: "Do not classify as COG without verification. No _ERR URL is claimed."
+
+  site_specific_5m_lola_pgda_78:
+    name: "Site-specific 5 m LOLA products"
+    provider: "PGDA"
+    product_id: 78
+    source_page: "https://pgda.gsfc.nasa.gov/products/78"
+    resolution_m: 5.0
+    latitude_coverage: "site-specific"
+    format: "GeoTIFF"
+    dem_url: null
+    slope_url: null
+    error_url: null
+    frame: null
+    datum_reference: null
+    availability_status: "catalogue_product"
+    verification_status: "site_urls_pending_selection"
+    product_semantics:
+      surface_dem: true
+      slope: true
+      total_z_uncertainty: true
+      slope_uncertainty: true
+      clone_count: 100
+    notes: >
+      Register the exact site product URLs after selecting the covered site.
+      Product 78 supplies total Z uncertainty and clone products; do not
+      invent an _ERR URL.
+
+  polar_20m_lola_pgda_90:
+    name: "Polar 20 m LOLA 80-90S mosaic"
+    provider: "PGDA"
+    product_id: 90
+    source_page: "https://pgda.gsfc.nasa.gov/products/90"
+    resolution_m: 20.0
+    latitude_coverage: "80S-90S"
+    format: "GeoTIFF"
+    dem_url: "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDEM_80S_20MPP_ADJ.TIF"
+    error_url: "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDEM_80S_20MPP_ADJ_ERR.TIF"
+    slope_url: "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDSM_80S_20MPP_ADJ.TIF"
+    frame: "MOON_ME / DE421"
+    datum_reference: null
+    format_metadata:
+      cog: true
+      elevation_unit: "m"
+      slope_unit: "deg"
+      coordinate_system: "south-polar stereographic"
+    availability_status: "verified_product"
+    verification_status: "source_page_and_urls_provided"
+
+  regional_240m_lola_pgda_90:
+    name: "Regional 240 m LOLA 60-90S mosaic"
+    provider: "PGDA"
+    product_id: 90
+    source_page: "https://pgda.gsfc.nasa.gov/products/90"
+    resolution_m: 240.0
+    latitude_coverage: "60S-90S"
+    format: "GeoTIFF"
+    dem_url: "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDEM_60S_240MPP_ADJ.TIF"
+    error_url: "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDEM_60S_240MPP_ADJ_ERR.TIF"
+    slope_url: "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDSM_60S_240MPP_ADJ.TIF"
+    frame: "MOON_ME / DE421"
+    datum_reference: null
+    format_metadata:
+      cog: true
+      elevation_unit: "m"
+      slope_unit: "deg"
+      coordinate_system: "south-polar stereographic"
+    availability_status: "verified_product"
+    verification_status: "source_page_and_urls_provided"
+
+  chandrayaan3_lroc_vikramsite_dtm:
+    name: "LROC pre-landing Vikram-site DTM"
+    provider: "LROC"
+    resolution_m: 3.0
+    latitude_coverage: "Vikram landing site"
+    format: "GeoTIFF"
+    dem_url: "https://pds.mcp.nasa.gov/data/store/img/lunar_reconnaissance_orbiter/pds4/lroc/lro-l-lroc-5-rdr/LROLRC_2001/DATA/SDP/NAC_DTM/VIKRAMSITE1/NAC_DTM_VIKRAMSITE1.TIF"
+    error_url: null
+    slope_url: null
+    source_page: "https://data.lroc.im-ldi.com/lroc/view_rdr/NAC_DTM_VIKRAMSITE1"
+    frame: null
+    datum_reference: null
+    availability_status: "candidate"
+    verification_status: "frame_and_datum_pending"
+    notes: "Do not use as the active source until the label verifies frame and vertical datum."
+
+  chandrayaan3_lola_30m_pgda_90:
+    name: "LOLA 30 m product covering 69.37S"
+    provider: "PGDA"
+    product_id: 90
+    source_page: "https://pgda.gsfc.nasa.gov/products/90"
+    resolution_m: 30.0
+    latitude_coverage: "75S-90S"
+    format: "GeoTIFF"
+    dem_url: "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDEM_75S_30MPP_ADJ.TIF"
+    error_url: "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDEM_75S_30MPP_ADJ_ERR.TIF"
+    slope_url: "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDSM_75S_30MPP_ADJ.TIF"
+    frame: "MOON_ME / DE421"
+    datum_reference: null
+    format_metadata:
+      cog: true
+      elevation_unit: "m"
+      slope_unit: "deg"
+      coordinate_system: "south-polar stereographic"
+    availability_status: "verified_product"
+    verification_status: "source_page_and_urls_provided"
+
+selection_ladders:
+  chandrayaan3_statio_shiv_shakti:
+    site_id: "statio_shiv_shakti"
+    order:
+      - chandrayaan3_lroc_vikramsite_dtm
+      - regional_240m_lola_pgda_90
+    active_source: null
+    rule: >
+      Preserve this order. The first source that is obtained and passes frame,
+      datum, coverage, and processing verification is selected. Record the
+      actual selected source; do not report the preferred source unless it was
+      obtained and processed.
