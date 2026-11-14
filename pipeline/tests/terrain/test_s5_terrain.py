@@ -114,6 +114,35 @@ def test_cy3_ladder_prefers_dedicated_then_mid_then_regional():
     assert all(crop.dem.provenance["synthetic"] for crop in (crops.near, crops.mid, crops.far))
 
 
+def test_shackleton_ladder_prefers_ten_metre_near_source():
+    """Synthetic products exercise the ladder; they do not verify production suitability."""
+
+    specs = _crop_specs("shackleton_ridge")
+    assert "polar_10m_lola_pgda_90" in specs[0].source_keys
+
+    products = {
+        "polar_10m_lola_pgda_90": _product("polar_10m_lola_pgda_90", 10.0, "83S-90S"),
+        "polar_20m_lola_pgda_90": _product("polar_20m_lola_pgda_90", 20.0, "83S-90S"),
+        "regional_240m_lola_pgda_90": _product("regional_240m_lola_pgda_90", 240.0, "60S-90S"),
+    }
+    crops = build_crops(
+        "shackleton_ridge",
+        latitude_deg=-89.54,
+        longitude_deg_east=129.0,
+        reader=_Reader(_dem(-89.54, 129.0)),
+        products=products,
+        allow_unavailable=False,
+    )
+
+    assert crops.near is not None
+    assert crops.near.source_key == "polar_10m_lola_pgda_90"
+    assert crops.mid is not None
+    assert crops.mid.source_key == "polar_20m_lola_pgda_90"
+    assert crops.far is not None
+    assert crops.far.source_key == "regional_240m_lola_pgda_90"
+    assert all(crop.dem.provenance["synthetic"] for crop in (crops.near, crops.mid, crops.far))
+
+
 def test_cy3_ladder_falls_back_to_regional_only_when_verified():
     """Regional 240m can serve mid/far, never the CY-3 near field."""
 

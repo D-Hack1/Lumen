@@ -307,6 +307,28 @@ def _validate_header(payload: bytes) -> None:
         raise ValueError("Tier-A mask header float fields do not match the contract")
 
 
+def _crop_metadata(crop: TerrainCrop) -> dict[str, Any]:
+    provenance = crop.dem.provenance
+    return {
+        "source_key": crop.source_key,
+        "source_url": crop.source_url,
+        "shape": list(crop.dem.elevation.shape),
+        "resolution_m": list(crop.dem.resolution_m),
+        "crs": provenance.get("source_crs"),
+        "frame": provenance.get("frame"),
+        "vertical_reference": provenance.get("vertical_reference"),
+        "datum_reference": provenance.get("datum_reference"),
+        "unit": provenance.get("unit"),
+        "scale": provenance.get("scale"),
+        "offset": provenance.get("offset"),
+        "nodata": None
+        if not isinstance(provenance.get("nodata"), (int, float))
+        or not math.isfinite(float(provenance["nodata"]))
+        else provenance["nodata"],
+        "cache_key": provenance.get("cache_key"),
+    }
+
+
 def _write_mask(binary_path: Path, elevation: np.ndarray, distance: np.ndarray) -> None:
     _validate_mask_arrays(elevation, distance)
     binary_path.parent.mkdir(parents=True, exist_ok=True)
@@ -433,6 +455,11 @@ def generate_tier_a_mask(
         },
         "near_zone_model": "fitted_local_plane",
         "dem_source": crops.near.source_key,
+        "dem_crops": {
+            "near": _crop_metadata(crops.near),
+            "mid": _crop_metadata(crops.mid) if crops.mid is not None else None,
+            "far": _crop_metadata(crops.far) if crops.far is not None else None,
+        },
         "provenance": {
             "median_filter_reason": near.median_filter_reason,
         },
