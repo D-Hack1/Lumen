@@ -4,6 +4,7 @@ import numpy as np
 
 from lumen_pipeline.ephem.ephemeris import hermite_position
 from lumen_pipeline.reference.events import detect_events
+from lumen_pipeline.reference.interp import Ephemeris
 from lumen_pipeline.reference.visibility import Horizon, availability
 from lumen_pipeline.reference.windows import merge_windows
 from lumen_pipeline.validation.golden import build_golden_set, default_ephemeris_path
@@ -21,6 +22,17 @@ def test_hermite_interpolation_recovers_constant_velocity_motion():
     positions = hermite_position(nodes, 0.0, 900.0)
 
     np.testing.assert_allclose(positions, [[900.0, 0.0, 0.0], [0.0, 910.0, 0.0]])
+
+
+def test_ephemeris_loader_reports_git_lfs_pointer_before_reshape(tmp_path):
+    binary = tmp_path / "ephem.bin"
+    binary.write_text("version https://git-lfs.github.com/spec/v1\noid sha256:deadbeef\nsize 3366144\n")
+    binary.with_suffix(".json").write_text(
+        json.dumps({"frame": "MOON_ME_DE421", "step_seconds": 3600, "shape": [70128, 12], "start_et_tdb": 0})
+    )
+
+    with np.testing.assert_raises_regex(ValueError, "Git LFS pointer"):
+        Ephemeris.from_file(binary)
 
 
 def test_flat_horizon_visibility_boundaries_are_not_invented():

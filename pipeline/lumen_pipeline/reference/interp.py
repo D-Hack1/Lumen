@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -32,7 +33,21 @@ class Ephemeris:
         metadata = json.loads(binary.with_suffix(".json").read_text(encoding="utf-8"))
         if metadata["frame"] != "MOON_ME_DE421" or metadata["step_seconds"] != STEP_SECONDS:
             raise ValueError("unsupported ephemeris frame or cadence")
-        nodes = np.fromfile(binary, dtype="<f4").reshape(metadata["shape"])
+        shape = tuple(metadata["shape"])
+        expected_bytes = math.prod(shape) * np.dtype("<f4").itemsize
+        actual_bytes = binary.stat().st_size
+        prefix = binary.read_bytes()[:64]
+        if prefix.startswith(b"version https://git-lfs.github.com/spec/v1"):
+            raise ValueError(
+                "ephemeris binary is a Git LFS pointer; run `git lfs pull` before loading "
+                f"{binary}"
+            )
+        if actual_bytes != expected_bytes:
+            raise ValueError(
+                f"ephemeris binary size is {actual_bytes} bytes, expected {expected_bytes} for shape {shape}; "
+                "the artifact is truncated or Git LFS content was not fetched"
+            )
+        nodes = np.fromfile(binary, dtype="<f4").reshape(shape)
         if nodes.shape[1] != 12:
             raise ValueError("ephemeris nodes must contain 12 fields")
         return cls(nodes, float(metadata["start_et_tdb"]), metadata["frame"])
