@@ -1,2 +1,33 @@
-# Owner: Gowri
-# pytest + ruff on pipeline/.
+name: Backend CI
+
+on:
+  push:
+    paths:
+      - "pipeline/**"
+      - ".github/workflows/ci-backend.yml"
+  pull_request:
+    paths:
+      - "pipeline/**"
+      - ".github/workflows/ci-backend.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: pipeline
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pipeline/pyproject.toml
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e ".[dev]"
+      - run: ruff check .
+      # Pytest exits 5 when the bootstrap suite has no tests yet.
+      - run: pytest || test $? -eq 5
