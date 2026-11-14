@@ -1,5 +1,6 @@
 // Owner: Ebin
 // Tiny area/line chart for site cards (Abhinav's SiteCard imports this). Static only — no Fast Lane overlay.
+// Redraw key includes a content signature, so changed values (e.g. a shifted window) redraw without callers re-keying.
 import { color } from '../../ui/tokens';
 import { LayeredCanvas } from '../shared/LayeredCanvas';
 
@@ -12,11 +13,18 @@ export interface SparklineProps {
   className?: string;
 }
 
+/** Cheap content signature (FNV-1a over the values), so a shifted window with the same length still redraws. */
+function signature(values: ArrayLike<number>): number {
+  let h = 2166136261;
+  for (let i = 0; i < values.length; i++) h = Math.imul(h ^ (Math.round(values[i] * 4) & 0xffff), 16777619);
+  return h >>> 0;
+}
+
 export function Sparkline({ values, highlight, tone = 'sun', className }: SparklineProps) {
   return (
     <LayeredCanvas
       className={['sparkline', className].filter(Boolean).join(' ')}
-      staticKey={`${values.length}:${tone}:${highlight?.join(',')}`}
+      staticKey={`${values.length}:${signature(values)}:${tone}:${highlight?.join(',')}`}
       drawStatic={(ctx, w, h) => {
         const n = values.length;
         if (n < 2) return;

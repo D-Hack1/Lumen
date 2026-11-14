@@ -88,7 +88,8 @@ export const radius = { sm: 2, md: 4, lg: 6, pill: 999 } as const;
 // Transform + opacity only. No overshoot. Exit ≤ enter. Reduced motion → ≤ 80 ms opacity.
 export const motion = {
   durFast: 120, // press, chip, verdict crossfade, layer opacity
-  durBase: 180, // popover, segmented thumb, tab indicator, inset open
+  durBase: 180, // segmented thumb, tab indicator, inset open
+  durPopover: 150, // popover enter (Definitions ✎, verdict); exit uses durFast (exit ≤ enter)
   durDrawer: 260, // Quick-Start drawer
   durView: 150, // view crossfade (≤ 150 ms)
   durRow: 160, // compare row add/remove
@@ -208,8 +209,9 @@ export function rightColumnTabs(w: number, h: number): boolean {
 }
 
 // ---------- CSS generation ----------
-// Digits stay attached to the word (surface1, not surface-1): every stylesheet uses --c-surface1..4. A test (cssVars.test.ts) guards this.
-const kebab = (s: string) => s.replace(/[A-Z]+/g, (m) => '-' + m.toLowerCase()).replace(/^-/, '');
+// camelCase → kebab; digits stay attached (surface2 → surface2, textOnAccent → text-on-accent). Splitting digits
+// (`surface-2`) silently broke every var(--c-surface1…4) reference until Phase 3 — tokens.test.ts and cssVars.test.ts guard it now.
+export const kebab = (s: string) => s.replace(/[A-Z]+/g, (m) => '-' + m.toLowerCase()).replace(/^-/, '');
 const px = (n: number) => `${n}px`;
 
 export function buildTokenCss(): string {
