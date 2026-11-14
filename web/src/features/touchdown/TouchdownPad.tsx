@@ -14,7 +14,11 @@ import { padDragBus } from '../../state/buses';
 import { useCopyFn } from '../../state/copy';
 import { Segmented } from '../../ui/Segmented';
 import { Slider } from '../../ui/Slider';
+import { Badge } from '../../ui/Badge';
+import { Chip } from '../../ui/Chip';
+import { AngleDial } from './AngleDial';
 import { SlopeCompass } from './SlopeCompass';
+import { usePad } from './usePad';
 import { PanelPowerBars } from './PanelPowerBars';
 
 const HEIGHTS: MastHeightM[] = [1, 2, 5, 10];
@@ -28,7 +32,12 @@ export function TouchdownPad() {
   const setPreset = useScenario((s) => s.setPanelPreset);
   const tilt = useScenario((s) => s.tilt);
   const setTilt = useScenario((s) => s.setTilt);
+  const yaw = useScenario((s) => s.yawDeg);
+  const setYaw = useScenario((s) => s.setYaw);
+  const maxSlope = useScenario((s) => s.profile.maxPadSlopeDeg);
   const t = useCopyFn();
+  const siteRef = useScenario((s) => s.site);
+  const { pad } = usePad(siteRef.kind === 'site' ? siteRef.id : null);
   const tiltLabelRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
@@ -39,23 +48,46 @@ export function TouchdownPad() {
     return padDragBus.subscribe((v) => paint(v.tiltMagDeg));
   }, []);
 
-  const padSlope = result.metrics?.padSlopeDeg?.value ?? null;
-  const sunAz = result.answer?.sun.elevDeg != null ? result.series?.sunAzDeg[0] ?? null : null;
-  const earthAz = result.series?.earthAzDeg[0] ?? null;
+  const slope = pad?.slopeDeg ?? result.metrics?.padSlopeDeg?.value ?? null;
+  const downhill = pad?.downhillAspectDeg ?? null;
+  const series = result.series;
 
-  // Flat power baseline vs current preset — placeholder split until Nived's power.ts lands (Phase 2).
-  const totalW = result.metrics?.energyPerDayWh?.value ?? 0;
-  const panels = [
-    { label: '+X side', watts: totalW * 0.28, baselineWatts: totalW * 0.25 },
-    { label: '+Y side', watts: totalW * 0.22, baselineWatts: totalW * 0.25 },
-    { label: '−X side', watts: totalW * 0.24, baselineWatts: totalW * 0.25 },
-    { label: '−Y side', watts: totalW * 0.26, baselineWatts: totalW * 0.25 },
-  ];
+  // Pad risk flag: nominal slope vs the profile limit; p95 over dispersion catches "fine at the aim point, not
+  // after a realistic miss" (PLAN_FINAL §5.6). Never colour alone — Badge carries a glyph.
+  const risk: { tone: 'go' | 'marginal' | 'nogo' | 'pending'; text: string } =
+    slope == null
+      ? { tone: 'pending', text: 'pad slope n/a' }
+      : slope > maxSlope
+        ? { tone: 'nogo', text: `pad slope ${slope.toFixed(1)}° > ${maxSlope}°` }
+        : pad && pad.dispersionSlopeStats.p95 > maxSlope
+          ? { tone: 'marginal', text: `p95 ${pad.dispersionSlopeStats.p95.toFixed(1)}° > ${maxSlope}° after dispersion` }
+          : { tone: 'go', text: `pad slope ${slope.toFixed(1)}° ≤ ${maxSlope}°` };
 
   return (
-    <div className="touchdown-pad" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-4)', height: '100%', minHeight: 0 }}>
-      <div style={{ height: 120 }}>
-        <SlopeCompass slopeDeg={padSlope} downhillAzimuthDeg={null} sunAzDeg={sunAz} earthAzDeg={earthAz} />
+    <div className="touchdown-pad" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-3)', height: '100%', minHeight: 0, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', gap: 'var(--sp-3)', height: 92, flexShrink: 0 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <SlopeCompass slopeDeg={slope} downhillAzimuthDeg={downhill} series={series} />
+        </div>
+        <AngleDial field="yawDeg" label="Yaw" value={yaw ?? 0} onCommit={setYaw} />
+        <AngleDial
+          field="tiltDirDeg"
+          label="Tilt dir"
+          value={tilt.directionDeg}
+          onCommit={(deg) => setTilt({ ...tilt, directionDeg: deg })}
+          disabled={tilt.magnitudeDeg === 0}
+        />
+      </div>
+
+      <div style={{ display: 'flex', gap: 'var(--sp-2)', flexWrap: 'wrap', alignItems: 'center' }}>
+        <Badge tone={risk.tone}>{risk.text}</Badge>
+        {pad && <Badge tone="neutral" glyph={null}>slope @ {pad.planeFit.baselineM} m baseline</Badge>}
+        {pad && (
+          <Badge tone="blocked">{pad.underResolved ? 'near zone N⁺ under-resolved' : `near zone ≥ ${pad.dMinM} m`}</Badge>
+        )}
+        <Chip selected={yaw == null} onChange={(on) => setYaw(on ? null : 0)} title="Auto = best of the 15° yaw sweep">
+          Yaw auto
+        </Chip>
       </div>
 
       <Segmented<PanelPreset>
@@ -90,7 +122,7 @@ export function TouchdownPad() {
       </div>
 
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-        <PanelPowerBars panels={panels} />
+        <PanelPowerBars preset={preset} series={series} slopeDeg={slope ?? 0} downhillAzDeg={downhill ?? 0} />
       </div>
     </div>
   );
