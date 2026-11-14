@@ -137,6 +137,11 @@ def test_tilted_plane_recovers_slope_and_aspects():
     assert fit.uphill_azimuth_deg == pytest.approx(45.0, abs=0.01)
     assert fit.downhill_aspect_deg == pytest.approx(225.0, abs=0.01)
     assert np.linalg.norm(fit.normal_local) == pytest.approx(1.0)
+    assert np.linalg.norm(fit.normal_me) == pytest.approx(1.0)
+    # normal_me is normal_local expressed in MOON_ME; rotating it back must
+    # exactly recover normal_local (same basis change used in fit_ground_plane).
+    rotation = site_rotation_matrix(LATITUDE, LONGITUDE)
+    assert rotation @ np.asarray(fit.normal_me) == pytest.approx(fit.normal_local, abs=1e-9)
 
 
 def test_twenty_metre_fit_records_140_metre_window():
@@ -202,9 +207,17 @@ def test_pad_json_records_statistics_baseline_and_under_resolution(tmp_path):
     path = write_pad_statistics(statistics, output_root=tmp_path / "terrain")
     record = json.loads(path.read_text(encoding="utf-8"))
 
+    # Contract 0.1.0 (contracts/data_terrain_misc.md §1.2 / web/src/engine/data/pad.ts).
+    assert record["version"] == "0.1.0"
+    assert record["producer"] == "lumen_pipeline.terrain.pad"
+    assert record["d_min_m"] == pytest.approx(15.0)
     assert record["plane_fit"]["window_px"] == [7, 7]
-    assert record["plane_fit"]["window_m"] == [35.0, 35.0]
-    assert record["plane_fit"]["slope_baseline_badge"] == "slope at 30m baseline"
-    assert record["dispersion_slope"]["unit"] == "deg"
-    assert record["dispersion_slope"]["maximum_deg"] == 5.0
-    assert record["footprint"]["under_resolved"] is True
+    assert record["plane_fit"]["window_dim_m"] == [35.0, 35.0]
+    assert record["plane_fit"]["baseline_m"] == pytest.approx(30.0)
+    assert record["plane_fit"]["dem_source"] == "synthetic_test_dem"
+    assert record["dispersion_slope_stats"]["unit"] == "deg"
+    assert record["dispersion_slope_stats"]["max"] == 5.0
+    assert record["under_resolved"] is True
+    normal = record["ground_normal_me"]
+    assert len(normal) == 3
+    assert math.hypot(*normal) == pytest.approx(1.0, abs=1e-6)

@@ -1,0 +1,33 @@
+{
+  "dem_source": "polar_10m_lola_pgda_90",
+  "dispersion_available": false,
+  "files_present": {
+    "dispersion_bin": null,
+    "dispersion_json": null,
+    "mask_bin": null,
+    "mask_json": null,
+    "pad_json": "terrain/pad/im2_athena.json",
+    "sigma_bin": null,
+    "sigma_json": null
+  },
+  "git_commit": "3893813395c2e5f764d79c9f93fddbc4c8d959ab",
+  "mask_available": false,
+  "near_field_res_m": 10.0,
+  "pad_available": true,
+  "pad_headline": {
+    "downhill_aspect_deg": 14.810387874609091,
+    "slope_deg": 2.8089403305548246,
+    "under_resolved": null,
+    "uphill_az_deg": 194.8103878746091
+  },
+  "psr": null,
+  "run_timestamp_utc": "2026-11-14T23:47:06.577039Z",
+  "sigma_available": false,
+  "site_id": "im2_athena",
+  "tier": "pending",
+  "unavailable": {
+    "far": "Read failed. See previous exception for details.",
+    "mid": "Read failed. See previous exception for details."
+  },
+  "version": "0.1.0"
+}
