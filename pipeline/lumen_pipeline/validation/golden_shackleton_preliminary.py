@@ -13,8 +13,7 @@ from pathlib import Path
 
 import numpy as np
 
-from lumen_pipeline.common.timeutil import et_to_utc, utc_to_et
-from lumen_pipeline.ephem.kernels import loaded_kernels
+from lumen_pipeline.common.timeutil import utc_to_ephemeris_index
 from lumen_pipeline.reference.events import detect_events, sample_times
 from lumen_pipeline.reference.interp import Ephemeris
 from lumen_pipeline.reference.visibility import Horizon, availability
@@ -59,6 +58,15 @@ def _load_mask() -> tuple[np.ndarray, np.ndarray, dict[str, object], bytes]:
     return elevation, distance, metadata, payload
 
 
+def _ephemeris_et(ephemeris: Ephemeris, metadata: dict[str, object], timestamp: str) -> float:
+    """Map a grid-aligned UTC fixture timestamp through the pinned ephemeris sidecar."""
+    cadence_s = metadata["cadence_s"]
+    start_utc = metadata["start_utc"]
+    if not isinstance(cadence_s, int) or not isinstance(start_utc, str):
+        raise TypeError("ephemeris sidecar lacks a usable UTC grid")
+    return ephemeris.start_et + utc_to_ephemeris_index(start_utc, timestamp, cadence_s) * cadence_s
+
+
 def _visibility(body: str, geometry: object, horizon: Horizon) -> dict[str, float | bool]:
     fraction, clearance, visible = availability(
         body,
@@ -80,50 +88,52 @@ def preliminary_golden_payload() -> dict[str, object]:
     elevation, distance, metadata, binary = _load_mask()
     ephemeris_path = _data_root() / "ephem" / "ephem.bin"
     ephemeris = Ephemeris.from_file(ephemeris_path)
+    ephemeris_metadata = json.loads(ephemeris_path.with_suffix(".json").read_text(encoding="utf-8"))
     horizons = [Horizon(row, observer_height_m=height) for height, row in zip(HEIGHTS_M, elevation, strict=True)]
-    with loaded_kernels():
-        visibility_cases = []
-        for timestamp in REPRESENTATIVE_TIMESTAMPS:
-            et = utc_to_et(timestamp)
-            bodies = {
-                body: ephemeris.body_at(body, et, LATITUDE_DEG, LONGITUDE_DEG_EAST)
-                for body in ("sun", "earth")
-            }
-            visibility_cases.append(
-                {
-                    "id": f"shackleton_ridge_visibility_{timestamp[:10]}",
-                    "input": {"utc": timestamp, "observer_heights_m": list(HEIGHTS_M)},
-                    "expected": {
-                        body: {
-                            "azimuth_deg": geometry.azimuth_deg,
-                            "elevation_deg": geometry.elevation_deg,
-                            "distance_km": geometry.distance_km,
-                            "by_height_m": {
-                                str(int(height)): _visibility(body, geometry, horizon)
-                                for height, horizon in zip(HEIGHTS_M, horizons, strict=True)
-                            },
-                        }
-                        for body, geometry in bodies.items()
-                    },
-                }
-            )
-
-        start_et, end_et = (utc_to_et(timestamp) for timestamp in EVENT_RANGE_UTC)
-        event_horizon = horizons[-1]
-        visible_at = lambda et: _visibility(
-            "sun", ephemeris.body_at("sun", et, LATITUDE_DEG, LONGITUDE_DEG_EAST), event_horizon
-        )["visible"]
-        times = sample_times(start_et, end_et)
-        events = detect_events(start_et, end_et, visible_at, down="sunset", up="shadowExit")
-        event_case = {
-            "id": "shackleton_ridge_sun_event_consistency_30d_10m",
-            "input": {"start_utc": EVENT_RANGE_UTC[0], "end_utc": EVENT_RANGE_UTC[1], "observer_height_m": 10.0},
-            "expected": {
-                "sample_count": len(times),
-                "sample_visible_count": sum(bool(visible_at(time)) for time in times),
-                "events": [{"type": event.type, "utc": et_to_utc(event.et, precision=0)} for event in events],
-            },
+    visibility_cases = []
+    for timestamp in REPRESENTATIVE_TIMESTAMPS:
+        et = _ephemeris_et(ephemeris, ephemeris_metadata, timestamp)
+        bodies = {
+            body: ephemeris.body_at(body, et, LATITUDE_DEG, LONGITUDE_DEG_EAST)
+            for body in ("sun", "earth")
         }
+        visibility_cases.append(
+            {
+                "id": f"shackleton_ridge_visibility_{timestamp[:10]}",
+                "input": {"utc": timestamp, "observer_heights_m": list(HEIGHTS_M)},
+                "expected": {
+                    body: {
+                        "azimuth_deg": geometry.azimuth_deg,
+                        "elevation_deg": geometry.elevation_deg,
+                        "distance_km": geometry.distance_km,
+                        "by_height_m": {
+                            str(int(height)): _visibility(body, geometry, horizon)
+                            for height, horizon in zip(HEIGHTS_M, horizons, strict=True)
+                        },
+                    }
+                    for body, geometry in bodies.items()
+                },
+            }
+        )
+
+    start_et, end_et = (_ephemeris_et(ephemeris, ephemeris_metadata, timestamp) for timestamp in EVENT_RANGE_UTC)
+    event_horizon = horizons[-1]
+    visible_at = lambda et: _visibility(
+        "sun", ephemeris.body_at("sun", et, LATITUDE_DEG, LONGITUDE_DEG_EAST), event_horizon
+    )["visible"]
+    times = sample_times(start_et, end_et)
+    events = detect_events(start_et, end_et, visible_at, down="sunset", up="shadowExit")
+    if events:
+        raise ValueError("preliminary zero-visibility fixture unexpectedly contains Sun events")
+    event_case = {
+        "id": "shackleton_ridge_sun_event_consistency_30d_10m",
+        "input": {"start_utc": EVENT_RANGE_UTC[0], "end_utc": EVENT_RANGE_UTC[1], "observer_height_m": 10.0},
+        "expected": {
+            "sample_count": len(times),
+            "sample_visible_count": sum(bool(visible_at(time)) for time in times),
+            "events": [],
+        },
+    }
 
     interpolation_case = {
         "id": "shackleton_ridge_horizon_interpolation",
