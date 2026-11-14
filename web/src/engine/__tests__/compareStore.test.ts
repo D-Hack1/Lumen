@@ -1,6 +1,7 @@
 // Owner: Nived
 // Seam: the shared Compare store (subscribeCompare / getCompare) driven by the scenario store's compareRows.
-// Oracle for the numbers: Gowri's golden set 1 (IM-2 sunlit 49.2963 %) and the Blue Ghost fact (Earth always up => link 100 %).
+// Oracle for the numbers: Gowri's golden set 1 (IM-2 sunlit 49.2963 %) and the Blue Ghost fact (Earth is always up there, so the link is exactly the
+// DSN rule: 97.7963 % over these 30 days, computed independently with numpy on dsn.bin: >= 1 complex above 10 deg, 2-minute grid, interval-weighted).
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -60,8 +61,10 @@ describe.skipIf(!run)('compare store (real data)', () => {
     const c = getCompare();
     expect(c.baselineId).toBe('A');
     expect(c.rows[0].result.metrics!.sunlitPct.value!).toBeCloseTo(golden.sunlitPct.value, 4);
-    expect(c.rows[1].result.metrics!.linkPct.value).toBe(100);
-    expect(c.rows[1].deltaVsBaseline.linkPct!).toBeCloseTo(100 - golden.earthVisiblePct.value, 3);
+    const BLUE_GHOST_LINK = 97.79629629629629;
+    expect(c.rows[1].result.metrics!.linkPct.value!).toBeCloseTo(BLUE_GHOST_LINK, 9);
+    expect(c.rows[0].result.metrics!.linkPct.value!).toBeLessThanOrEqual(golden.earthVisiblePct.value + 1e-9); // the DSN rule can only remove link time
+    expect(c.rows[1].deltaVsBaseline.linkPct!).toBeCloseTo(BLUE_GHOST_LINK - c.rows[0].result.metrics!.linkPct.value!, 9);
     expect(c.rows[0].deltaVsBaseline).toEqual({});
   });
 

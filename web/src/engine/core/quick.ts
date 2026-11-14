@@ -5,6 +5,7 @@
 import type { Ephemeris } from '../data/ephem';
 import { fmtDeg } from '../format';
 import type { EventRecord, QuickAnswerInput, QuickAnswerResult, SiteRecord } from '../types';
+import type { DsnSeries } from '../data/dsn';
 import { buildScenarioResult } from './buildResult';
 import { DEFAULT_DEFINITIONS, stateAt } from './evaluate';
 import { makeSite } from './geometry';
@@ -43,22 +44,25 @@ function failed(error: string): QuickAnswerResult {
   };
 }
 
-export function buildQuickAnswer(eph: Ephemeris, input: QuickAnswerInput, sites: SiteRecord[]): QuickAnswerResult {
+/** Quick Answer's definitions: the defaults, with the DSN-aware link ON (PLAN default) when the DSN series is available. */
+const quickDefinitions = (dsn: DsnSeries | null) => (dsn ? { ...DEFAULT_DEFINITIONS, dsnMaskDeg: 10 } : DEFAULT_DEFINITIONS);
+
+export function buildQuickAnswer(eph: Ephemeris, input: QuickAnswerInput, sites: SiteRecord[], dsn: DsnSeries | null = null): QuickAnswerResult {
   if (!(Math.abs(input.lat) <= 90) || !(Math.abs(input.lon) <= 360)) return failed('Latitude must be within ±90° and longitude within ±360°.');
   if (!(input.durationDays > 0)) return failed('Duration must be positive.');
   const match = matchSite(sites, input.lat, input.lon);
   const res = buildScenarioResult(eph, {
     siteId: match?.id ?? null, tier: 'C', nearFieldResM: null, latDeg: input.lat, lonDegEast: input.lon, heightM: input.heightM,
     rotation: match?.rotationMatrix ?? null, touchdownMs: null, padSlopeDeg: null, psr: match?.psr ?? null,
-    startMs: input.utc, durationDays: input.durationDays, tScrubMs: input.utc, definitions: DEFAULT_DEFINITIONS,
+    startMs: input.utc, durationDays: input.durationDays, tScrubMs: input.utc, definitions: quickDefinitions(dsn),
     profile: { minSunlitPct: 0, minLinkHours: 0, maxLongestNightH: Number.MAX_VALUE, maxPadSlopeDeg: 90 },
     weights: { sunlit: 1, link: 1, night: 1, slope: 1 }, dataVersions: { catalog: 1 },
-  });
+  }, dsn);
   if (res.status !== 'ready' || !res.answer || !res.series || !res.metrics) return failed(res.error ?? 'No result.');
 
   // Range is not part of the render series, so take it from one direct evaluation at the requested instant.
   const site = makeSite(input.lat, input.lon, input.heightM, match?.rotationMatrix ?? undefined);
-  const now = stateAt(eph, site, new Horizon({ observerHeightM: input.heightM }), DEFAULT_DEFINITIONS, input.utc);
+  const now = stateAt(eph, site, new Horizon({ observerHeightM: input.heightM }), quickDefinitions(dsn), input.utc, dsn);
   const next = (type: EventRecord['type']) => res.events.find((e) => e.type === type && e.t > input.utc) ?? null;
   const a = res.answer;
   const m = res.metrics;
