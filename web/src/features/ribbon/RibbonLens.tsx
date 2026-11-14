@@ -2,15 +2,22 @@
 // Horizon Lens — equal angular-scale window (~12°×6°) around the selected body, TRUE-SCALE disks (Sun 0.53°,
 // Earth 1.9°, ratio ≈ 3.6:1), clipped by the terrain silhouette so the visible disk area matches the engine's
 // disk fraction (guide §3.2, conflict C-1, check V-6). x is scaled by cos(el) so angular distances stay true.
-import { useState } from 'react';
+// Bodies are real NASA imagery (Sun: SDO, Earth: EPIC) decoded once to ImageBitmaps (bodyImages.ts) and drawn on
+// the overlay canvas, clipped by the terrain silhouette. Earth gets phase shading from the engine's Sun/Earth
+// directions at t_scrub and is rotated to the site's sky (upside-down from the south pole) — lensGeometry.ts.
+// Fast Lane: no React state, no CSS on these draws; redraws only via the frame bus (crosshairBus / image-ready).
+// If an image is missing the Lens falls back to the flat procedural disk (phase shading still applies).
+import { useRef, useState } from 'react';
 import { useScenario } from '../../state/scenarioStore';
-import { useResult } from '../../engine/hooks';
+import { useCatalog, useResult } from '../../engine/hooks';
 import { crosshairBus } from '../../state/buses';
 import { color } from '../../ui/tokens';
 import { Segmented } from '../../ui/Segmented';
 import { LayeredCanvas } from '../shared/LayeredCanvas';
 import { nearestHeightIndex } from '../shared/ribbonGeometry';
 import { useSiteMask } from './useSiteMask';
+import { bodyImageReady, ensureBodyBitmap, getBodyBitmap } from './bodyImages';
+import { earthAppearance, visibleDiskFraction } from './lensGeometry';
 
 const SUN_DEG = 0.53;
 const EARTH_DEG = 1.9;
@@ -18,7 +25,9 @@ const WINDOW_H_DEG = 6;
 const WINDOW_W_DEG = 12;
 
 // Module-level so the array reference is stable across renders (LayeredCanvas resubscribes when it changes).
-const OVERLAY_BUSES = [crosshairBus] as const;
+const OVERLAY_BUSES = [crosshairBus, bodyImageReady] as const;
+
+const EARTH_SHADE = 'rgba(4, 7, 12, 0.86)'; // night side: near-black with a trace of earthshine
 
 type Body = 'sun' | 'earth';
 
@@ -33,6 +42,14 @@ export function RibbonLens() {
   const heightM = useScenario((s) => s.heightM);
   const mask = useSiteMask(result.meta?.siteId ?? null);
   const heightIdx = nearestHeightIndex(heightM);
+  const { sites } = useCatalog();
+  const siteRef = useScenario((s) => s.site);
+  // Latitude orients Earth's pole in the local sky; read inside drawOverlay via a ref (no re-render on change).
+  const lat = siteRef.kind === 'point' ? siteRef.lat : (sites.find((x) => x.id === siteRef.id)?.lat ?? -90);
+  const latRef = useRef(lat);
+  latRef.current = lat;
+  ensureBodyBitmap('sun_sdo');
+  ensureBodyBitmap('earth_epic');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
@@ -73,6 +90,12 @@ export function RibbonLens() {
             ctx.rect(0, 0, w, h);
             ctx.clip();
 
+            const terrainYAtX = (xp: number) => {
+              const bodyAz = az + (xp - w / 2) / pxPerDegH;
+              const m = mask.mask;
+              const te = m ? m.elevDeg[heightIdx * m.azimuthCount + (Math.floor((((bodyAz % 360) + 360) % 360) / m.binWidthDeg) % m.azimuthCount)] : -0.09;
+              return yAt(Number.isFinite(te) ? te : -0.09);
+            };
             const skyPath = new Path2D();
             const cols = 64;
             skyPath.moveTo(0, 0);
@@ -95,23 +118,63 @@ export function RibbonLens() {
             ctx.restore();
 
             // Disk, clipped to the sky region only — the visible area is what makes it "disk-fraction honest".
-            ctx.save();
-            ctx.clip(skyPath);
-            const r = (diskDeg / 2) * pxPerDegV;
+            const r = Math.max(1, (diskDeg / 2) * pxPerDegV);
             const cx = xAt(az);
             const cy = yAt(el);
+            ctx.save();
+            ctx.clip(skyPath);
             if (body === 'sun') {
-              const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(1, r));
-              grad.addColorStop(0, color.sun);
-              grad.addColorStop(1, '#c97e12');
-              ctx.fillStyle = grad;
+              const img = getBodyBitmap('sun_sdo');
+              ctx.beginPath();
+              ctx.arc(cx, cy, r, 0, Math.PI * 2);
+              if (img) {
+                ctx.save();
+                ctx.clip();
+                ctx.drawImage(img, cx - r, cy - r, 2 * r, 2 * r);
+                ctx.restore();
+              } else {
+                const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+                grad.addColorStop(0, color.sun);
+                grad.addColorStop(1, '#c97e12');
+                ctx.fillStyle = grad;
+                ctx.fill();
+              }
             } else {
-              ctx.fillStyle = color.earth;
+              const ap = earthAppearance(series.sunAzDeg[i], series.sunElevDeg[i], series.earthAzDeg[i], series.earthElevDeg[i], latRef.current);
+              const img = getBodyBitmap('earth_epic');
+              ctx.save();
+              ctx.translate(cx, cy);
+              ctx.beginPath();
+              ctx.arc(0, 0, r, 0, Math.PI * 2);
+              ctx.clip();
+              // 1) the Earth, pole oriented to the local sky
+              ctx.save();
+              ctx.rotate(ap.imageRotation);
+              if (img) ctx.drawImage(img, -r, -r, 2 * r, 2 * r);
+              else {
+                ctx.fillStyle = color.earth;
+                ctx.fillRect(-r, -r, 2 * r, 2 * r);
+              }
+              ctx.restore();
+              // 2) night side: bright limb toward the Sun, terminator x = cos(ε)·√(r²−y²) in the Sun-aligned frame
+              ctx.rotate(ap.sunAngle);
+              ctx.fillStyle = EARTH_SHADE;
+              ctx.beginPath();
+              ctx.arc(0, 0, r, -Math.PI / 2, Math.PI / 2, true); // left limb, top → bottom
+              const cosEps = Math.cos((ap.elongationDeg * Math.PI) / 180);
+              const steps = 24;
+              for (let k = 0; k <= steps; k++) {
+                const y = r - (2 * r * k) / steps;
+                ctx.lineTo(cosEps * Math.sqrt(Math.max(0, r * r - y * y)), y);
+              }
+              ctx.closePath();
+              ctx.fill();
+              ctx.restore();
             }
-            ctx.beginPath();
-            ctx.arc(cx, cy, Math.max(1, r), 0, Math.PI * 2);
-            ctx.fill();
             ctx.restore();
+
+            // V-6 check: area actually visible above the terrain vs the engine's disk fraction.
+            const drawnPct = visibleDiskFraction(cx, cy, r, terrainYAtX) * 100;
 
             // Terrain edge stroke.
             ctx.strokeStyle = color.terrainEdge;
@@ -123,7 +186,7 @@ export function RibbonLens() {
             ctx.fillStyle = color.text;
             ctx.font = '11px var(--font-mono)';
             ctx.textAlign = 'left';
-            ctx.fillText(`${body === 'sun' ? 'Sun' : 'Earth'} disk ${diskPct.toFixed(0)}% (engine)`, 6, h - 8);
+            ctx.fillText(`${body === 'sun' ? 'Sun' : 'Earth'} disk ${diskPct.toFixed(0)}% (engine) · drawn ${drawnPct.toFixed(0)}%`, 6, h - 8);
             ctx.fillStyle = color.textFaint;
             ctx.fillText('true scale · clipped by terrain', 6, 12);
           }}
@@ -132,6 +195,9 @@ export function RibbonLens() {
           }}
           overlayBuses={OVERLAY_BUSES}
         />
+      </div>
+      <div style={{ fontSize: 'var(--fs-2xs)', color: color.textFaint, padding: '2px 4px', lineHeight: 1.2 }}>
+        Sun: NASA/SDO · Earth: NASA EPIC/DSCOVR
       </div>
     </div>
   );
