@@ -31,7 +31,12 @@ class Ephemeris:
     def from_file(cls, path: str | Path) -> Ephemeris:
         binary = Path(path)
         metadata = json.loads(binary.with_suffix(".json").read_text(encoding="utf-8"))
-        if metadata["frame"] != "MOON_ME_DE421" or metadata["step_seconds"] != STEP_SECONDS:
+        if (
+            metadata["frame"] != "MOON_ME"
+            or metadata.get("spice_frame") != "MOON_ME_DE421"
+            or metadata["step_seconds"] != STEP_SECONDS
+            or metadata.get("cadence_s") != STEP_SECONDS
+        ):
             raise ValueError("unsupported ephemeris frame or cadence")
         shape = tuple(metadata["shape"])
         expected_bytes = math.prod(shape) * np.dtype("<f4").itemsize
@@ -50,7 +55,7 @@ class Ephemeris:
         nodes = np.fromfile(binary, dtype="<f4").reshape(shape)
         if nodes.shape[1] != 12:
             raise ValueError("ephemeris nodes must contain 12 fields")
-        return cls(nodes, float(metadata["start_et_tdb"]), metadata["frame"])
+        return cls(nodes, float(metadata["start_et_tdb"]), metadata["spice_frame"])
 
     def positions_at(self, et: float) -> np.ndarray:
         return hermite_position(self.nodes, self.start_et, et)
