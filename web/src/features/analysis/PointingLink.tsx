@@ -7,6 +7,7 @@ import { useEffect, useRef } from 'react';
 import { useResult } from '../../engine/hooks';
 import { crosshairBus } from '../../state/buses';
 import { color } from '../../ui/tokens';
+import { DsnLanes } from './DsnLanes';
 
 function sampleAt(series: NonNullable<ReturnType<typeof useResult>['series']>, t: number) {
   const i = Math.max(0, Math.min(series.sunElevDeg.length - 1, Math.round((t - series.t0) / series.stepMs)));
@@ -76,8 +77,8 @@ export function PointingLink() {
           </div>
         ))}
       </dl>
-      <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', color: color.textFaint, fontSize: 'var(--fs-sm)' }}>
-        DSN lanes (Goldstone / Canberra / Madrid) land in Phase 3 once `dsn.bin` is wired through the engine.
+      <div style={{ flex: 2, minWidth: 0, minHeight: 0 }}>
+        <DsnLanes />
       </div>
     </div>
   );

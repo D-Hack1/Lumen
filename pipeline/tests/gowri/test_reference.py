@@ -28,7 +28,7 @@ def test_ephemeris_loader_reports_git_lfs_pointer_before_reshape(tmp_path):
     binary = tmp_path / "ephem.bin"
     binary.write_text("version https://git-lfs.github.com/spec/v1\noid sha256:deadbeef\nsize 3366144\n")
     binary.with_suffix(".json").write_text(
-        json.dumps({"frame": "MOON_ME_DE421", "step_seconds": 3600, "shape": [70128, 12], "start_et_tdb": 0})
+        json.dumps({"frame": "MOON_ME", "spice_frame": "MOON_ME_DE421", "step_seconds": 3600, "cadence_s": 3600, "shape": [70128, 12], "start_et_tdb": 0})
     )
 
     with np.testing.assert_raises_regex(ValueError, "Git LFS pointer"):
