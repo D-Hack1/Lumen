@@ -32,10 +32,16 @@ pytest
 ```
 cd web
 npm install
-npm run dev
+npm run dev            # http://localhost:5173 (mock data by default: VITE_LUMEN_DATA=mock|real)
+npm test               # Vitest unit tests
+npm run e2e:install    # once: Playwright Chromium
+npm run e2e            # zero-scroll check at V1–V4b with the worst-case fixture (?fixture=worst-case)
+npm run lint && npm run typecheck
 ```
+
+Layout, slot ids, density modes and the hot-path rules for teammates: `docs/ui_guide.md`.
 
 ## Status
 
-Repository scaffold only — see the per-person "Order of work" tables in
+Frontend Phase 1 (foundations) in progress — see `plan/FRONTEND_BUILD_GUIDE.md` §6 and the per-person "Order of work" tables in
 `plan/WORK_DISTRIBUTION (1).md` for the build sequence and checkpoints (CP0–CP3).

@@ -1,2 +1,85 @@
 // Owner: Abhinav
-// Planner and Educator persona copy strings.
+// Planner and Educator persona copy. Every visible label in every component comes from here via useCopy(key).
+// Phase 1: shell + slot labels. Answer Strip state copy (D-14) arrives in Phase 2; keys go in
+// contracts/frontend_content.md.
+export type CopyTable = Record<string, string>;
+
+export const planner: CopyTable = {
+  'app.name': 'LUMEN',
+  'app.tagline': 'Lunar Mission ENvironment Navigator',
+
+  'view.cockpit': 'Cockpit',
+  'view.cockpit.long': 'Mission Cockpit',
+  'view.compare': 'Compare',
+  'view.compare.long': 'Scenario Compare & Slip',
+  'view.methodology': 'Methodology',
+  'view.methodology.long': 'Methodology & Validation',
+
+  'mb.landing': 'Landing',
+  'mb.landing.long': 'Landing date & time (UTC)',
+  'mb.duration': 'Mission duration',
+  'mb.met': 'MET',
+  'mb.jump.sunset': 'Sunset',
+  'mb.jump.sunset.long': 'Next Sunset',
+  'mb.jump.earthset': 'Earthset',
+  'mb.jump.earthset.long': 'Next Earthset',
+  'mb.jump.earthrise': 'Earthrise',
+  'mb.jump.earthrise.long': 'Next Earthrise',
+  'mb.jump.shadowExit': 'Shadow exit',
+  'mb.jump.shadowExit.long': 'Next Shadow Exit',
+  'mb.jump.touchdown': 'T0',
+  'mb.jump.touchdown.long': 'Touchdown (T0)',
+  'mb.jump.none': 'No such event in this window',
+  'mb.verdict': 'Verdict',
+  'mb.persona': 'Persona',
+  'persona.planner': 'Planner',
+  'persona.planner.long': 'Mission Planner',
+  'persona.educator': 'Educator',
+  'persona.educator.long': 'Educator / Explorer',
+  'mb.share': 'Share',
+  'mb.share.long': 'Share Scenario URL',
+  'mb.share.toast': 'Scenario link copied — opens this exact site, date, attitude and view.',
+  'mb.share.failed': 'Could not copy automatically — the link is in the address bar.',
+
+  'verdict.GO': 'GO',
+  'verdict.MARGINAL': 'MARGINAL',
+  'verdict.NO-GO': 'NO-GO',
+  'verdict.PENDING': 'PENDING',
+
+  'slot.search': 'Site search & filters',
+  'slot.map': 'South Pole Basemap',
+  'slot.siteList': 'Site cards',
+  'slot.answer': 'Answer Strip',
+  'slot.definitions': 'Definitions Bar',
+  'slot.ribbon': 'SKYLINE Ribbon',
+  'slot.analysis': 'Analysis tabs',
+  'slot.barcode': 'Survival Barcode',
+  'slot.slip': 'Slip Bar',
+  'slot.metricDeck': 'Metric Deck',
+  'slot.touchdown': 'Touchdown Pad',
+  'slot.profileBattery': 'Profile & Battery',
+  'slot.scenarioRows': 'Scenario rows A–D',
+  'slot.missionProfile': 'Mission Profile',
+  'slot.compareSlip': 'Global slip',
+  'slot.compareTabs': 'Centre view',
+  'slot.compareVisual': 'Compare visual',
+  'slot.scan': 'Scan',
+  'slot.deltaTable': 'Delta vs baseline',
+  'slot.compareWindows': 'Windows Table (selected row)',
+  'slot.methodology': 'Methodology & Validation',
+  'right.metrics': 'Metrics',
+  'right.touchdown': 'Touchdown',
+  'compare.aligned': 'Aligned Barcodes',
+  'compare.season': 'Season Strip',
+  'compare.calendar': 'Calendar',
+};
+
+/** Educator overrides — only keys whose wording differs. */
+export const educator: CopyTable = {
+  'mb.met': 'Time since landing',
+  'mb.share.toast': 'Link copied — anyone who opens it sees exactly this view.',
+  'verdict.GO': 'Looks good',
+  'verdict.MARGINAL': 'Borderline',
+  'verdict.NO-GO': 'Not viable',
+  'verdict.PENDING': 'Working…',
+};

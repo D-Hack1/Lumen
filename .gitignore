@@ -75,6 +75,10 @@ yarn-error.log*
 pnpm-debug.log*
 .eslintcache
 *.tsbuildinfo
+# Playwright (screenshots under web/e2e/screens/ ARE committed, per guide §5.1)
+test-results/
+playwright-report/
+blob-report/
 
 # ─────────────────────────────────────────────
 # Editors / OS

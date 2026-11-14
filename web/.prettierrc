@@ -1,2 +1,7 @@
-# Owner: Abhinav
-# Formatting rules fixed at H0.
+{
+  "singleQuote": true,
+  "semi": true,
+  "trailingComma": "all",
+  "printWidth": 120,
+  "endOfLine": "lf"
+}
