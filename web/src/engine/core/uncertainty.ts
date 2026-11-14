@@ -156,7 +156,14 @@ export function numericBounds(p: ThreePassBounds<number>): [number, number, numb
 }
 
 /** Exact path: half the spread of the three event times. A shifted pass in which the event disappears => "vanishes". */
-export function exactEventUncertainty(nominal: EventRecord, lowerMaskEvent: EventRecord | null, upperMaskEvent: EventRecord | null): EventUncertainty {
+/** Anything with a time (epoch ms): an EventRecord or a generic transition event. */
+export interface Timed {
+  t: number;
+}
+/** The uncertainty fields an event carries. */
+type Annotatable = Pick<EventRecord, 'dtMs' | 'dtMethod' | 'grazing' | 'grazingReason'>;
+
+export function exactEventUncertainty(nominal: Timed, lowerMaskEvent: Timed | null, upperMaskEvent: Timed | null): EventUncertainty {
   if (lowerMaskEvent == null || upperMaskEvent == null) return { deltaTSeconds: null, clearanceRateDegPerHour: null, dtMethod: 'exact', grazingReason: 'vanishes' };
   const times = [lowerMaskEvent.t, nominal.t, upperMaskEvent.t];
   const deltaTSeconds = (Math.max(...times) - Math.min(...times)) / 2 / MS;
@@ -169,7 +176,7 @@ export function exactEventUncertaintyFromMasks(nominal: EventRecord, horizon: Ho
 }
 
 /** The event record with its uncertainty fields filled in (contract: dt_method, grazing_reason). A non-finite delta t has no +/-. */
-export function annotateEvent(event: EventRecord, u: EventUncertainty): EventRecord {
+export function annotateEvent<E extends Annotatable>(event: E, u: EventUncertainty): E {
   return {
     ...event,
     dtMs: u.deltaTSeconds != null && Number.isFinite(u.deltaTSeconds) ? u.deltaTSeconds * MS : null,

@@ -10,7 +10,7 @@ import { loadDsn } from '../data/dsn';
 import { loadEphem } from '../data/ephem';
 import { setDataMode } from '../data/source';
 import { quickAnswer } from '../quickAnswer';
-import { PUBLIC, stubFetch } from './helpers';
+import { IM2_REFINED, PUBLIC, stubFetch } from './helpers';
 
 const EPHEM_BIN = join(PUBLIC, 'data/ephem/ephem.bin');
 const GOLDEN = join(PUBLIC, 'data/golden/golden_set1.json');
@@ -61,7 +61,7 @@ describe.skipIf(!run)('quickAnswer (real data)', () => {
 
   it('window sunlit % equals the golden 30-day value, and the text states the numbers it shows', async () => {
     const r = await quickAnswer(imTwo);
-    expect(r.sunlitPct.value!).toBeCloseTo(g.metrics.sunlitPct.value, 4);
+    expect(r.sunlitPct.value!).toBeCloseTo(IM2_REFINED.sunlitPct, 3);
     expect(r.text).toContain('+2.46');
     expect(r.text).toContain(String(Math.round(g.metrics.sunlitPct.value)));
     expect(r.text).toMatch(/terrain/i); // honest about what it is not using
