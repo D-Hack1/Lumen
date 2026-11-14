@@ -55,17 +55,21 @@
   white-space: nowrap;
 }
 .rt .rt__rank {
-  width: 28px;
+  width: 26px;
   color: var(--c-text-faint);
 }
 .rt .rt__site {
-  width: 34%;
+  width: 31%;
 }
 .rt .rt__verdict {
-  width: 118px;
+  width: 86px;
+}
+.rt .rt__num {
+  width: 15%;
 }
 .rt .rt__act {
-  width: 92px;
+  width: 64px;
+  padding-left: 0;
 }
 .rt tr[data-provisional='true'] td {
   color: var(--c-text-muted);
@@ -73,6 +77,10 @@
 .scan__load {
   height: 22px;
   padding: 0 var(--sp-2);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--c-text);
   background: var(--c-surface3);
   border: 1px solid var(--c-hairline-strong);

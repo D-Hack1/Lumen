@@ -29,7 +29,9 @@
   "count": 11689,
   "start_et_tdb": 725803268.1839136,
   "step_seconds": 21600,
-  "frame": "MOON_ME_DE421",
+  "frame": "MOON_ME",
+  "spice_frame": "MOON_ME_DE421",
+  "cadence_s": 21600,
   "body_order": [
     "sun",
     "earth"

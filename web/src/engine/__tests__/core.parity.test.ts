@@ -83,7 +83,8 @@ describe.skipIf(!run)('golden set 1: IM-2, smooth sphere, 30 days (real data)', 
     expect(eph.stepSeconds).toBe(3600);
     expect(eph.count).toBe(70128);
     expect(eph.startMs).toBe(Date.UTC(2023, 0, 1));
-    expect(eph.frame).toBe('MOON_ME_DE421');
+    expect(eph.frame).toBe('MOON_ME'); // public frame name (Gowri #21); the SPICE frame is MOON_ME_DE421
+    expect(eph.spiceFrame).toBe('MOON_ME_DE421');
   });
 
   it('Hermite positions are float64-clean at a node and between nodes', () => {
