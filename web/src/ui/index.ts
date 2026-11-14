@@ -11,4 +11,6 @@ export { Badge, type BadgeProps, type BadgeTone } from './Badge';
 export { InfoBadge, type InfoBadgeProps } from './InfoBadge';
 export { Segmented, type SegmentedOption, type SegmentedProps } from './Segmented';
 export { Slider, type SliderProps } from './Slider';
+export { Tooltip, type TooltipProps } from './Tooltip';
+export { Popover, type PopoverProps } from './Popover';
 export { ToastViewport, toast, dismissToast, type ToastItem } from './Toast';

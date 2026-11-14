@@ -347,3 +347,38 @@
   line-height: 1;
   padding: 0 var(--sp-2);
 }
+
+/* ---------- Tooltip (text variant): hint only, never intercepts the pointer ---------- */
+.ui-tooltip--text {
+  max-width: 340px;
+  padding: var(--sp-3) var(--sp-4);
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: normal;
+  pointer-events: none;
+}
+
+/* ---------- Popover: surface + hairline (no blur, no big shadow — may sit over live canvases) ---------- */
+.ui-popover {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 40;
+  max-width: min(360px, calc(100vw - 8px));
+  max-height: calc(100vh - 8px);
+  overflow: auto;
+  padding: var(--sp-5);
+  background: var(--c-surface2);
+  border: 1px solid var(--c-hairline-strong);
+  border-radius: var(--r-lg);
+  color: var(--c-text);
+  font-size: var(--fs-sm);
+  white-space: normal;
+}
+.ui-popover:focus {
+  outline: none;
+}
+.ui-popover:focus-visible {
+  outline: 2px solid var(--c-focus);
+  outline-offset: 1px;
+}
