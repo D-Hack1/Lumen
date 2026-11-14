@@ -9,19 +9,7 @@ import { useResult } from '../../engine/hooks';
 import { crosshairBus } from '../../state/buses';
 import { color } from '../../ui/tokens';
 import { DsnLanes } from './DsnLanes';
-
-export function sampleAt(series: NonNullable<ReturnType<typeof useResult>['series']>, t: number) {
-  const i = Math.max(0, Math.min(series.sunElevDeg.length - 1, Math.round((t - series.t0) / series.stepMs)));
-  return {
-    sunElevDeg: series.sunElevDeg[i],
-    sunAzDeg: series.sunAzDeg[i],
-    earthElevDeg: series.earthElevDeg[i],
-    earthAzDeg: series.earthAzDeg[i],
-    earthDiskPct: series.earthDiskPct[i],
-    earthRangeKm: series.earthRangeKm[i],
-    linkUp: series.linkUp[i],
-  };
-}
+import { sampleAt } from './pointingSample';
 
 export function PointingLink() {
   const result = useResult();
