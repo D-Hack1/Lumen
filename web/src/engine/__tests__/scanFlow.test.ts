@@ -4,7 +4,9 @@
 import { existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { startScan } from '../compare/scan';
+import { startScan, STAGE2_MAX_TOTAL } from '../compare/scan';
+import { selectForStage2 } from '../compare/stage2';
+import { getScenario, useScenario } from '../../state/scenarioStore';
 import { setDataMode } from '../data/source';
 import type { ScanParams, ScanResult } from '../types';
 import { PUBLIC, stubFetch } from './helpers';
@@ -21,7 +23,7 @@ describe.skipIf(!run)('startScan (real data)', () => {
   });
   afterAll(() => setDataMode(null));
 
-  it('emits stage 1 (all provisional), then stage 2 with the top 10 refined, ending done', async () => {
+  it('emits stage 1 (all provisional), then stage 2 refining at least the top 10, ending done', async () => {
     const updates: ScanResult[] = [];
     const final = await startScan(params, (r) => updates.push(r)).done;
     expect(updates[0].stage).toBe(1);
@@ -31,7 +33,8 @@ describe.skipIf(!run)('startScan (real data)', () => {
     expect(final.stage).toBe(2);
     expect(final.done).toBe(true);
     const refined = final.candidates.filter((c) => !c.provisional);
-    expect(refined.length).toBe(10);
+    expect(refined.length).toBeGreaterThanOrEqual(10); // the top 10, plus any candidate within 10% of a threshold (D-15)
+    expect(refined.length).toBeLessThanOrEqual(STAGE2_MAX_TOTAL);
     expect(final.candidates.length).toBe(31);
     expect(new Set(final.candidates.map((c) => c.landingUtc)).size).toBe(31); // no candidate lost or duplicated
   });
@@ -60,4 +63,39 @@ describe.skipIf(!run)('startScan (real data)', () => {
     expect(updates.length).toBe(1); // stage 1 was delivered, and nothing after the cancel
     expect(updates[0].stage).toBe(1);
   });
+
+  it('stage 2 also refines every candidate within 10% of a hard threshold, not just the top 10 (D-15)', async () => {
+    const before = getScenario().profile;
+    useScenario.setState({ profile: { ...before, minSunlitPct: 60 } }); // many candidates now sit within 10% of 60 %
+    try {
+      const updates: ScanResult[] = [];
+      const final = await startScan(params, (r) => updates.push(r)).done;
+      const stage1 = updates[0].candidates;
+      const profile = getScenario().profile;
+      const expected = selectForStage2(stage1, profile, params.durationDays * 24, { topN: 10, maxTotal: STAGE2_MAX_TOTAL });
+      expect(expected.length).toBeGreaterThan(10); // the premise: near-threshold candidates exist beyond the top 10
+      const refined = new Set(final.candidates.filter((c) => !c.provisional).map((c) => c.landingUtc));
+      expect(refined.size).toBe(expected.length);
+      for (const e of expected) expect(refined.has(e.landingUtc)).toBe(true);
+    } finally {
+      useScenario.setState({ profile: before });
+    }
+  });
+
+  it('G13 latency: stage 1 <= 100 ms and the first stage-2 row <= 300 ms for a 60-day sweep (CI slack via LUMEN_PERF_SLACK)', async () => {
+    const slack = Number(process.env.LUMEN_PERF_SLACK ?? 1);
+    const sweep: ScanParams = { ...params, plusMinusDays: 30 }; // 61 landing dates
+    await startScan(sweep, () => undefined).done; // warm-up: ephemeris + catalog cached, JIT warm
+    const t0 = performance.now();
+    let stage1Ms = -1;
+    let firstStage2Ms = -1;
+    await startScan(sweep, (r) => {
+      const dt = performance.now() - t0;
+      if (r.stage === 1 && stage1Ms < 0) stage1Ms = dt;
+      if (r.stage === 2 && firstStage2Ms < 0) firstStage2Ms = dt;
+    }).done;
+    expect(stage1Ms, `stage 1 arrived after ${stage1Ms.toFixed(0)} ms`).toBeLessThanOrEqual(100 * slack);
+    expect(firstStage2Ms, `first stage-2 row arrived after ${firstStage2Ms.toFixed(0)} ms`).toBeLessThanOrEqual(300 * slack);
+  });
 });
+
