@@ -101,7 +101,7 @@
     10.0
   ],
   "median_filter_kernel_px": 3,
-  "median_filter_radius_m": 100.0,
+  "median_filter_region_radius_m": 100.0,
   "median_filter_status": "applied",
   "near_field_resolution_m": 10.0,
   "near_zone_model": "fitted_local_plane",
