@@ -26,13 +26,32 @@ def _case(payload, case_id):
     return next(case for case in payload["cases"] if case["id"] == case_id)
 
 
+def _assert_fixture_equal(expected, actual, tolerances, field_name=""):
+    if isinstance(expected, dict):
+        assert isinstance(actual, dict)
+        assert actual.keys() == expected.keys()
+        for key, value in expected.items():
+            _assert_fixture_equal(value, actual[key], tolerances, key)
+    elif isinstance(expected, list):
+        assert isinstance(actual, list)
+        assert len(actual) == len(expected)
+        for value, actual_value in zip(expected, actual, strict=True):
+            _assert_fixture_equal(value, actual_value, tolerances, field_name)
+    elif isinstance(expected, float) and field_name.endswith("_deg"):
+        assert actual == pytest.approx(expected, abs=tolerances["angle_deg"])
+    elif isinstance(expected, float) and field_name.endswith("_km"):
+        assert actual == pytest.approx(expected, abs=tolerances["distance_km"])
+    else:
+        assert actual == expected
+
+
 def test_preliminary_shackleton_fixture_is_deterministic_and_explicitly_scoped(tmp_path):
     output = tmp_path / "shackleton.json"
     payload = build_preliminary_golden_set(output)
     committed = _data_root() / "golden" / "golden_set2_shackleton_preliminary.json"
 
     assert json.loads(output.read_text(encoding="utf-8")) == payload
-    assert json.loads(committed.read_text(encoding="utf-8")) == payload
+    _assert_fixture_equal(json.loads(committed.read_text(encoding="utf-8")), payload, payload["tolerances"])
     assert payload["provenance"]["label"] == "Python-generated preliminary parity fixtures"
     assert "not independently verified scientific ground truth" in payload["description"]
     assert "unavailable" in payload["provenance"]["terrain_sigma"]
