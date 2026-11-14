@@ -53,7 +53,11 @@ def sample_times(start_et: float, end_et: float) -> list[float]:
         raise ValueError("event range must have positive duration")
     count = int((end_et - start_et) // FINE_STEP_SECONDS)
     times = [start_et + index * FINE_STEP_SECONDS for index in range(count + 1)]
-    if times[-1] != end_et:
+    # ET magnitudes make repeated 120-second additions differ from an exact
+    # endpoint by a few microseconds; that is not a partial sampling interval.
+    if math.isclose(times[-1], end_et, rel_tol=0.0, abs_tol=1e-3):
+        times[-1] = end_et
+    else:
         times.append(end_et)
     return times
 

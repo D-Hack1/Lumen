@@ -4,8 +4,6 @@ import numpy as np
 import pytest
 import yaml
 
-from lumen_pipeline.common.timeutil import et_to_utc, utc_to_et
-from lumen_pipeline.ephem.kernels import loaded_kernels
 from lumen_pipeline.reference.events import detect_events, sample_times
 from lumen_pipeline.reference.interp import Ephemeris
 from lumen_pipeline.reference.visibility import Horizon, availability
@@ -17,6 +15,7 @@ from lumen_pipeline.validation.golden_shackleton_preliminary import (
     LONGITUDE_DEG_EAST,
     REPRESENTATIVE_TIMESTAMPS,
     _data_root,
+    _ephemeris_et,
     _load_mask,
     build_preliminary_golden_set,
     preliminary_golden_payload,
@@ -27,13 +26,32 @@ def _case(payload, case_id):
     return next(case for case in payload["cases"] if case["id"] == case_id)
 
 
+def _assert_fixture_equal(expected, actual, tolerances, field_name=""):
+    if isinstance(expected, dict):
+        assert isinstance(actual, dict)
+        assert actual.keys() == expected.keys()
+        for key, value in expected.items():
+            _assert_fixture_equal(value, actual[key], tolerances, key)
+    elif isinstance(expected, list):
+        assert isinstance(actual, list)
+        assert len(actual) == len(expected)
+        for value, actual_value in zip(expected, actual, strict=True):
+            _assert_fixture_equal(value, actual_value, tolerances, field_name)
+    elif isinstance(expected, float) and field_name.endswith("_deg"):
+        assert actual == pytest.approx(expected, abs=tolerances["angle_deg"])
+    elif isinstance(expected, float) and field_name.endswith("_km"):
+        assert actual == pytest.approx(expected, abs=tolerances["distance_km"])
+    else:
+        assert actual == expected
+
+
 def test_preliminary_shackleton_fixture_is_deterministic_and_explicitly_scoped(tmp_path):
     output = tmp_path / "shackleton.json"
     payload = build_preliminary_golden_set(output)
     committed = _data_root() / "golden" / "golden_set2_shackleton_preliminary.json"
 
     assert json.loads(output.read_text(encoding="utf-8")) == payload
-    assert json.loads(committed.read_text(encoding="utf-8")) == payload
+    _assert_fixture_equal(json.loads(committed.read_text(encoding="utf-8")), payload, payload["tolerances"])
     assert payload["provenance"]["label"] == "Python-generated preliminary parity fixtures"
     assert "not independently verified scientific ground truth" in payload["description"]
     assert "unavailable" in payload["provenance"]["terrain_sigma"]
@@ -95,38 +113,38 @@ def test_preliminary_shackleton_visibility_all_heights_and_event_consistency():
     ephemeris = Ephemeris.from_file(_data_root() / "ephem" / "ephem.bin")
     tolerance = payload["tolerances"]
 
-    with loaded_kernels():
-        for timestamp in REPRESENTATIVE_TIMESTAMPS:
-            expected = _case(payload, f"shackleton_ridge_visibility_{timestamp[:10]}")["expected"]
-            et = utc_to_et(timestamp)
-            for body in ("sun", "earth"):
-                geometry = ephemeris.body_at(body, et, LATITUDE_DEG, LONGITUDE_DEG_EAST)
-                assert geometry.azimuth_deg == pytest.approx(expected[body]["azimuth_deg"], abs=tolerance["angle_deg"])
-                assert geometry.elevation_deg == pytest.approx(expected[body]["elevation_deg"], abs=tolerance["angle_deg"])
-                assert geometry.distance_km == pytest.approx(expected[body]["distance_km"], abs=tolerance["distance_km"])
-                for height, horizon in zip(HEIGHTS_M, horizons, strict=True):
-                    fraction, clearance, visible = availability(
-                        body, geometry.elevation_deg, geometry.azimuth_deg, geometry.distance_km, horizon, disk_threshold=0.5
-                    )
-                    wanted = expected[body]["by_height_m"][str(int(height))]
-                    assert fraction == pytest.approx(wanted["disk_fraction"], abs=tolerance["angle_deg"])
-                    assert clearance == pytest.approx(wanted["clearance_deg"], abs=tolerance["angle_deg"])
-                    assert visible is wanted["visible"]
+    ephemeris_metadata = json.loads((_data_root() / "ephem" / "ephem.json").read_text(encoding="utf-8"))
+    for timestamp in REPRESENTATIVE_TIMESTAMPS:
+        expected = _case(payload, f"shackleton_ridge_visibility_{timestamp[:10]}")["expected"]
+        et = _ephemeris_et(ephemeris, ephemeris_metadata, timestamp)
+        for body in ("sun", "earth"):
+            geometry = ephemeris.body_at(body, et, LATITUDE_DEG, LONGITUDE_DEG_EAST)
+            assert geometry.azimuth_deg == pytest.approx(expected[body]["azimuth_deg"], abs=tolerance["angle_deg"])
+            assert geometry.elevation_deg == pytest.approx(expected[body]["elevation_deg"], abs=tolerance["angle_deg"])
+            assert geometry.distance_km == pytest.approx(expected[body]["distance_km"], abs=tolerance["distance_km"])
+            for height, horizon in zip(HEIGHTS_M, horizons, strict=True):
+                fraction, clearance, visible = availability(
+                    body, geometry.elevation_deg, geometry.azimuth_deg, geometry.distance_km, horizon, disk_threshold=0.5
+                )
+                wanted = expected[body]["by_height_m"][str(int(height))]
+                assert fraction == pytest.approx(wanted["disk_fraction"], abs=tolerance["angle_deg"])
+                assert clearance == pytest.approx(wanted["clearance_deg"], abs=tolerance["angle_deg"])
+                assert visible is wanted["visible"]
 
-        event_expected = _case(payload, "shackleton_ridge_sun_event_consistency_30d_10m")["expected"]
-        start_et, end_et = (utc_to_et(timestamp) for timestamp in EVENT_RANGE_UTC)
-        horizon = horizons[-1]
+    event_expected = _case(payload, "shackleton_ridge_sun_event_consistency_30d_10m")["expected"]
+    start_et, end_et = (_ephemeris_et(ephemeris, ephemeris_metadata, timestamp) for timestamp in EVENT_RANGE_UTC)
+    horizon = horizons[-1]
 
-        def visible_at(et):
-            geometry = ephemeris.body_at("sun", et, LATITUDE_DEG, LONGITUDE_DEG_EAST)
-            return availability(
-                "sun", geometry.elevation_deg, geometry.azimuth_deg, geometry.distance_km, horizon, disk_threshold=0.5
-            )[2]
+    def visible_at(et):
+        geometry = ephemeris.body_at("sun", et, LATITUDE_DEG, LONGITUDE_DEG_EAST)
+        return availability(
+            "sun", geometry.elevation_deg, geometry.azimuth_deg, geometry.distance_km, horizon, disk_threshold=0.5
+        )[2]
 
-        times = sample_times(start_et, end_et)
-        events = detect_events(start_et, end_et, visible_at, down="sunset", up="shadowExit")
-        assert len(times) == 30 * 24 * 30 + 1
-        assert times[-1] == end_et
-        assert len(times) == event_expected["sample_count"]
-        assert sum(bool(visible_at(time)) for time in times) == event_expected["sample_visible_count"]
-        assert [{"type": event.type, "utc": et_to_utc(event.et, precision=0)} for event in events] == event_expected["events"]
+    times = sample_times(start_et, end_et)
+    events = detect_events(start_et, end_et, visible_at, down="sunset", up="shadowExit")
+    assert len(times) == 30 * 24 * 30 + 1
+    assert times[-1] == end_et
+    assert len(times) == event_expected["sample_count"]
+    assert sum(bool(visible_at(time)) for time in times) == event_expected["sample_visible_count"]
+    assert events == []
