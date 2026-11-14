@@ -2,7 +2,7 @@
 // Loader: terrain/masks/<id>.{bin,json} (data_masks.md v1.0.0). Strict: rejects malformed headers/metadata, keeps NaN.
 import { RangeExtrema } from './rangeExtrema';
 import { AZIMUTH_COUNT, BIN_WIDTH_DEG, HEIGHTS_M, HEIGHT_COUNT, RAY_RANGE_KM, parseLumenHeader, readFloat32LE } from './lumenBinary';
-import { DataError, fetchBuffer, fetchJson } from './source';
+import { DataError, dataMode, dataUrl, fetchBuffer, fetchJson } from './source';
 
 export const MASK_CONTRACT_VERSION = '1.0.0';
 
@@ -136,4 +136,36 @@ export function loadMask(siteId: string): Promise<Mask> {
     p.catch(() => cache.delete(siteId));
   }
   return p;
+}
+
+const absent = new Set<string>();
+
+/**
+ * The site's real terrain mask, or null when there is none to use: no site id, mock data mode (mock masks are fake terrain), or a mask that is
+ * missing/invalid (the engine then keeps the smooth-Moon bound and says so). A missing mask is remembered so it is not re-fetched every evaluation.
+ */
+export async function loadMaskOrNull(siteId: string | null | undefined): Promise<Mask | null> {
+  if (!siteId || dataMode() !== 'real') return null;
+  const key = `${dataUrl('')}${siteId}`;
+  if (absent.has(key)) return null;
+  try {
+    return await loadMask(siteId);
+  } catch {
+    absent.add(key);
+    return null;
+  }
+}
+
+/** The usable masks for a batch of requests, keyed by site id (sites without one are simply absent). */
+export async function loadMasksFor(requests: ReadonlyArray<{ siteId: string | null }>): Promise<Map<string, Mask>> {
+  const out = new Map<string, Mask>();
+  for (const id of new Set(requests.map((r) => r.siteId))) {
+    const m = await loadMaskOrNull(id);
+    if (m && id) out.set(id, m);
+  }
+  return out;
+}
+
+export function __resetMaskAbsentForTests(): void {
+  absent.clear();
 }

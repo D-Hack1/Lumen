@@ -29,6 +29,8 @@ export interface VerdictInput {
   weights: VerdictWeights;
   /** 'bounded': lo/hi are real uncertainty bounds. 'optimistic': smooth-Moon horizon, so values are best cases (never GO). */
   boundsKind: 'bounded' | 'optimistic';
+  /** What the 'optimistic' values were computed on, for the reason text only. Default 'smooth-moon'; 'mask' = real terrain mask but no sigma yet. */
+  basis?: 'smooth-moon' | 'mask';
 }
 
 export type RequirementId = 'sunlit' | 'link' | 'night' | 'slope';
@@ -121,7 +123,8 @@ export function evaluateVerdict(input: VerdictInput): VerdictResult {
     const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
     // Combined line goes first among the "cannot confirm" reasons, ahead of the per-requirement "no data yet" lines.
     const firstUnknown = reasons.findIndex((r) => r.endsWith('no data yet.'));
-    const line = `${list} ${names.length === 1 ? 'passes' : 'pass'} only on the smooth-Moon bound; terrain data is needed to confirm.`;
+    const tail = input.basis === 'mask' ? 'only at the nominal terrain mask; terrain uncertainty (σ) is needed to confirm.' : 'only on the smooth-Moon bound; terrain data is needed to confirm.';
+    const line = `${list} ${names.length === 1 ? 'passes' : 'pass'} ${tail}`;
     if (firstUnknown === -1) reasons.push(line);
     else reasons.splice(firstUnknown, 0, line);
   }
