@@ -7,37 +7,41 @@ import type { SiteRecord, Sparkline } from '../types';
 const VERSIONS = [1];
 
 interface RawCoords {
-  latitude_deg: number;
-  longitude_deg_east: number;
+  lat: number;
+  lon: number;
   source: string;
 }
 
-const coords = (c: RawCoords) => ({ lat: c.latitude_deg, lon: c.longitude_deg_east, source: c.source });
+const coords = (c: RawCoords) => ({ lat: c.lat, lon: c.lon, source: c.source });
 
+/** pipeline/catalog/build_catalog.py output. Terrain details live under `terrain` and are null until the terrain run lands. */
 interface RawSite {
   id: string;
   name: string;
   category: SiteRecord['category'];
   agency: string | null;
-  date: string | null;
-  as_published_date: string | null;
+  program?: string | null;
   latitude_deg: number;
   longitude_deg_east: number;
-  landing_coords: RawCoords;
+  /** null for records that only have a target (e.g. published targets); the site lat/lon is used then. */
+  landing_coords: RawCoords | null;
   target_coords: RawCoords | null;
   coord_note: string | null;
   touchdown_utc: string | null;
   touchdown_precision: 'minute' | 'second' | null;
   last_contact_utc: string | null;
   tier: SiteRecord['tier'];
-  near_field_res_m: number | null;
-  sigma: { source: string; default_deg: number | null };
-  pad: { slope_deg: number } | null;
-  psr: { distance_km: number; bearing_deg: number; nearest_psr_area_km2: number; source: 'published' | 'derived' } | null;
-  sparkline_index: number;
+  rotation_matrix?: number[][];
+  terrain?: {
+    status?: string;
+    near_field_res_m?: number | null;
+    sigma?: { source: string; default_deg: number | null } | null;
+    pad?: { slope_deg: number } | null;
+    psr?: { distance_km: number; bearing_deg: number; nearest_psr_area_km2: number; source: 'published' | 'derived' } | null;
+  };
   source_url: string | null;
   verification_status: string;
-  provenance_notes: string | null;
+  notes?: string | null;
 }
 
 export interface Catalog {
@@ -57,36 +61,38 @@ export function loadCatalog(): Promise<Catalog> {
 
 async function doLoad(): Promise<Catalog> {
   const raw = await fetchJson<{ mock?: boolean; sites: RawSite[] }>('catalog/sites.json', VERSIONS);
-  const sites: SiteRecord[] = raw.sites.map((s) => ({
-    id: s.id,
-    name: s.name,
-    category: s.category,
-    agency: s.agency,
-    date: s.date,
-    asPublishedDate: s.as_published_date,
-    lat: s.latitude_deg,
-    lon: s.longitude_deg_east,
-    landingCoords: coords(s.landing_coords),
-    targetCoords: s.target_coords ? coords(s.target_coords) : null,
-    coordNote: s.coord_note,
-    touchdownUtc: s.touchdown_utc ? Date.parse(s.touchdown_utc) : null,
-    touchdownPrecision: s.touchdown_precision,
-    lastContactUtc: s.last_contact_utc ? Date.parse(s.last_contact_utc) : null,
-    tier: s.tier,
-    nearFieldResM: s.near_field_res_m,
-    sigmaSource: s.sigma.source,
-    sigmaDefaultDeg: s.sigma.default_deg,
-    padSlopeDeg: s.pad?.slope_deg ?? null,
-    psr: s.psr
-      ? { distanceKm: s.psr.distance_km, bearingDeg: s.psr.bearing_deg, areaKm2: s.psr.nearest_psr_area_km2, source: s.psr.source }
-      : null,
-    sparklineIndex: s.sparkline_index,
-    sourceUrl: s.source_url,
-    verificationStatus: s.verification_status,
-    provenanceNotes: s.provenance_notes,
-    mock: raw.mock === true,
-  }));
-  return { sites, sparklines: await loadSparklines() };
+  const sites: SiteRecord[] = raw.sites.map((s, i) => {
+    const t = s.terrain ?? {};
+    return {
+      id: s.id,
+      name: s.name,
+      category: s.category,
+      agency: s.agency ?? s.program ?? null,
+      date: s.touchdown_utc ? s.touchdown_utc.slice(0, 10) : null,
+      asPublishedDate: null,
+      lat: s.latitude_deg,
+      lon: s.longitude_deg_east,
+      landingCoords: s.landing_coords ? coords(s.landing_coords) : { lat: s.latitude_deg, lon: s.longitude_deg_east, source: 'site coordinates' },
+      targetCoords: s.target_coords ? coords(s.target_coords) : null,
+      coordNote: s.coord_note,
+      touchdownUtc: s.touchdown_utc ? Date.parse(s.touchdown_utc) : null,
+      touchdownPrecision: s.touchdown_precision,
+      lastContactUtc: s.last_contact_utc ? Date.parse(s.last_contact_utc) : null,
+      tier: s.tier,
+      nearFieldResM: t.near_field_res_m ?? null,
+      sigmaSource: t.sigma?.source ?? (s.tier === 'C' ? 'smooth-Moon bound' : 'pending'),
+      sigmaDefaultDeg: t.sigma?.default_deg ?? null,
+      padSlopeDeg: t.pad?.slope_deg ?? null,
+      psr: t.psr ? { distanceKm: t.psr.distance_km, bearingDeg: t.psr.bearing_deg, areaKm2: t.psr.nearest_psr_area_km2, source: t.psr.source } : null,
+      sparklineIndex: i,
+      sourceUrl: s.source_url,
+      verificationStatus: s.verification_status,
+      provenanceNotes: s.notes ?? null,
+      rotationMatrix: s.rotation_matrix && s.rotation_matrix.length === 3 ? (s.rotation_matrix as SiteRecord['rotationMatrix']) : null,
+      mock: raw.mock === true,
+    };
+  });
+  return { sites, sparklines: await loadSparklines().catch(() => ({})) }; // sparklines.bin is not produced yet in real mode
 }
 
 /** catalog/sparklines.{bin,json}: uint8 percent, shape [site, series(sunlit,link), day]. `sites` + `start_utc` are DRAFT extras. */

@@ -1,12 +1,13 @@
 // Owner: Nived
-// Loader: golden/golden_set{1,2}.json. DRAFT: data_golden.md gives only the content, not the file layout, so only the
-// envelope (version, cases[], tolerances) is assumed. Parity tests must skip while `cases` is empty.
+// Loader: golden/golden_set{1,2}.json (envelope written by pipeline/validation/golden.py: version, set, tolerances, provenance,
+// cases[]). The case body is kept opaque here; core.parity.test.ts reads set 1 directly. Tests skip while `cases` is empty.
 import { fetchJson } from './source';
 
 export interface GoldenSet {
   set: 1 | 2;
   cases: unknown[];
-  tolerances: { elevation_deg?: number; time_s?: number };
+  /** Real names from golden.py: azimuth_deg, elevation_deg, event_time_s, metric_percent. */
+  tolerances: { azimuth_deg?: number; elevation_deg?: number; event_time_s?: number; metric_percent?: number };
   empty: boolean;
   mock: boolean;
 }

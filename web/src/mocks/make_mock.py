@@ -76,14 +76,13 @@ def cross(a, b):
 
 
 def site_frame(lat_deg: float, lon_deg: float):
-    """PLAN_FINAL 5.1: rows are [n_ref, e, u]; local = M @ vec_ME."""
+    """Gowri's frames.py order: rows are (east, north_reference, up); local = M @ vec_ME. Azimuth = atan2(east, north_ref)."""
     la, lo = math.radians(lat_deg), math.radians(lon_deg)
     u = [math.cos(la) * math.cos(lo), math.cos(la) * math.sin(lo), math.sin(la)]
     ref = [1.0, 0.0, 0.0] if abs(lat_deg) >= 60 else [0.0, 0.0, 1.0]
-    k = dot(ref, u)
-    n_ref = norm([ref[i] - k * u[i] for i in range(3)])
-    e = cross(n_ref, u)
-    return [n_ref, e, u], ("+X_ME" if abs(lat_deg) >= 60 else "+Z_ME")
+    e = norm(cross(ref, u))
+    n_ref = norm(cross(u, e))
+    return [e, n_ref, u], ("+X_ME" if abs(lat_deg) >= 60 else "+Z_ME")
 
 
 def polar_xy_km(lat_deg: float, lon_deg: float):
@@ -161,21 +160,24 @@ def vel(fn, t, eps=60.0):
     return [(b[i] - a[i]) / (2 * eps) for i in range(3)]
 
 
-EPH_FIELDS = [f"{b}_{q}_{a}" for b, q in (("sun", "position_km"), ("sun", "velocity_km_s"), ("earth", "position_km"), ("earth", "velocity_km_s")) for a in "xyz"]
+START_ET_TDB = 725803268.1839136  # real value for 2023-01-01T00:00:00Z (mock start is the same instant)
 
 
 def make_ephem():
+    """Mirrors the real ephem.json field names (step_seconds, start_et_tdb, frame MOON_ME_DE421, 4 field groups)."""
     n = (T1 - T0) // EPH_STEP + 1
     buf = bytearray()
     for i in range(n):
         t = T0 + i * EPH_STEP
         rec = sun_pos(t) + vel(sun_pos, t) + earth_pos(t) + vel(earth_pos, t)
         buf += struct.pack("<12f", *rec)
-    w_array("ephem/ephem.bin", bytes(buf), shape=(n, 12), dtype="float32", fields=EPH_FIELDS,
-            units=["km"] * 3 + ["km/s"] * 3 + ["km"] * 3 + ["km/s"] * 3,
-            start_utc=iso(T0), cadence_s=EPH_STEP, frame="MOON_ME", body_order=["sun", "earth"],
-            aberration="LT+S (mock: none, synthetic circular Sun path)", kernels=[{"name": "MOCK", "sha256": "0" * 64}],
-            mock_cadence_note="mock is 6 h; real is 3600 s. Loaders must read cadence_s.")
+    w_array("ephem/ephem.bin", bytes(buf), shape=(n, 12), dtype="float32",
+            fields=["sun_position_km", "sun_velocity_km_s", "earth_position_km", "earth_velocity_km_s"],
+            units=["km", "km/s", "km", "km/s"],
+            start_utc=iso(T0), end_utc=iso(T0 + (n - 1) * EPH_STEP), count=n, start_et_tdb=START_ET_TDB, step_seconds=EPH_STEP,
+            frame="MOON_ME_DE421", body_order=["sun", "earth"], aberration_correction="LT+S",
+            kernel_provenance=[{"filename": "MOCK", "sha256": "0" * 64}],
+            mock_cadence_note="mock is 6 h; real is 3600 s. Loaders must read step_seconds.")
 
 
 DSN = [("DSS-14", "Goldstone", 0.0), ("DSS-43", "Canberra", 2 * math.pi / 3), ("DSS-63", "Madrid", 4 * math.pi / 3)]
@@ -284,7 +286,7 @@ def make_pad_disp_summaries():
         mat, _ = site_frame(s["lat"], s["lon"])
         la, aa = math.radians(th), math.radians(up)  # horizontal projection of g points uphill
         n_c, e_c, u_c = math.sin(la) * math.cos(aa), math.sin(la) * math.sin(aa), math.cos(la)
-        g_me = [n_c * mat[0][i] + e_c * mat[1][i] + u_c * mat[2][i] for i in range(3)]
+        g_me = [n_c * mat[1][i] + e_c * mat[0][i] + u_c * mat[2][i] for i in range(3)]  # mat rows: east, north_ref, up
         w_json(f"terrain/pad/{s['id']}.json", hdr(
             "pad", version="0.1.0", producer="lumen_pipeline.terrain.pad (mock)", created_utc="2026-01-01T00:00:00Z", site_id=s["id"],
             ground_normal_me=[round(x, 9) for x in g_me], slope_deg=th, downhill_aspect_deg=s["aspect"], uphill_az_deg=up,
@@ -507,35 +509,31 @@ def make_sparklines():
 
 
 def make_catalog():
+    """Mirrors the real sites.json: terrain info nested under `terrain`, rotation rows (east, north_ref, up), coords {lat, lon, source}."""
     sites = []
     for idx, s in enumerate(SITES):
         mat, ref = site_frame(s["lat"], s["lon"])
         tier_c = s["tier"] == "C"
         psr = s["psr"]
         is_cy3 = s["id"] == "cy3_shiv_shakti"
+        terrain = {"status": "pending" if tier_c else "ready", "near_field_res_m": s["nf"],
+                   "mask": None if tier_c else f"masks/{s['id']}.json",
+                   "sigma": None if tier_c else {"source": "default", "default_deg": 0.1, "file": f"sigma/{s['id']}.json"},
+                   "pad": None if tier_c else {"file": f"pad/{s['id']}.json", "slope_deg": s["slope"], "downhill_aspect_deg": s["aspect"]},
+                   "dispersion_file": None if tier_c else f"dispersion/{s['id']}.json",
+                   "psr": None if not psr else {"distance_km": psr[0], "bearing_deg": psr[1], "nearest_psr_area_km2": psr[2], "source": "derived"}}
         rec = {
-            "id": s["id"], "name": s["name"], "category": s["cat"], "agency": s["agency"],
-            "date": s["touchdown"][:10] if s["touchdown"] else None,
-            "as_published_date": "2026-01-01" if s["cat"] == "published_target" else None,
-            "latitude_deg": s["lat"], "longitude_deg_east": s["lon"], "coordinate_frame": "MOON_ME", "elevation_m": 0.0,
-            "landing_coords": {"latitude_deg": s["lat"], "longitude_deg_east": s["lon"], "source": "mock"},
-            "target_coords": ({"latitude_deg": -69.367621, "longitude_deg_east": 32.348126, "source": "mock"} if is_cy3 else None),
-            "coord_note": "mock coordinate" if not is_cy3 else "mock; landing and target ~350 m apart",
+            "id": s["id"], "name": s["name"], "category": s["cat"], "agency": s["agency"], "program": "MOCK",
+            "latitude_deg": s["lat"], "longitude_deg_east": s["lon"], "coordinate_frame": "MOON_ME_DE421",
+            "landing_coords": {"lat": s["lat"], "lon": s["lon"], "source": "mock"},
+            "target_coords": ({"lat": -69.367621, "lon": 32.348126, "source": "mock"} if is_cy3 else None),
+            "coord_note": "mock coordinate" if not is_cy3 else "mock; landing and target ~350 m apart", "notes": MOCK_NOTE,
             "touchdown_utc": s["touchdown"], "touchdown_precision": s["prec"], "last_contact_utc": None,
-            "reference_axis": ref, "rotation_matrix": mat, "tier": s["tier"],
-            "near_field_res_m": s["nf"],
-            "mask": None if tier_c else {"file": f"masks/{s['id']}.json", "heights_m": HEIGHTS_M},
-            "sigma": {"source": "n/a (smooth-Moon bound)" if tier_c else "default", "default_deg": None if tier_c else 0.1,
-                      "file": None if tier_c else f"sigma/{s['id']}.json"},
-            "pad": None if tier_c else {"file": f"pad/{s['id']}.json", "slope_deg": s["slope"], "downhill_aspect_deg": s["aspect"]},
-            "dispersion_file": None if tier_c else f"dispersion/{s['id']}.json",
-            "sparkline_index": idx,
-            "psr": None if not psr else {"distance_km": psr[0], "bearing_deg": psr[1], "nearest_psr_area_km2": psr[2], "source": "derived"},
+            "reference_axis": ref, "rotation_matrix": mat, "tier": s["tier"], "terrain": terrain,
             "source_url": "https://example.invalid/mock", "source_type": "mock", "verification_status": "mock", "verified_by": None,
-            "provenance_notes": MOCK_NOTE,
         }
         sites.append(rec)
-    w_json("catalog/sites.json", hdr("catalog", sites=sites))
+    w_json("catalog/sites.json", hdr("catalog", coordinate_frame="MOON_ME_DE421", sites=sites))
 
 
 # ---------------------------------------------------------------- golden, validation, manifest

@@ -53,6 +53,17 @@ uses only what is listed here.
 2. Whether `series` should be downsampled by the engine per viewport (proposal: engine returns a fixed 10-min grid for the render window).
 3. R3 additions already in the types: `grazingReason`, `dtMethod`, `boundsStatus`, `minSunElevationOps` state (`belowOpsElevation`), site `landingCoords/targetCoords/touchdownPrecision/lastContactUtc`.
 
-## Status
-Types, hook signatures and function signatures are implemented against the **mock dataset** (`web/public/data-mock/`).
-Values are fake; shapes are final unless the H2 review changes them.
+## Status (what is real, what is still mock)
+| Piece | Status |
+|---|---|
+| `useCatalog`, `useLayers` | Real loaders; work in mock and real mode (sparklines optional in real mode). |
+| **`useResult`, `jumpTo`** | **Real in real mode** (`VITE_LUMEN_DATA=real`): the scenario from the store is evaluated in a Web Worker against the real `ephem.bin`. One shared evaluation per scenario change (`engine/resultStore.ts`), 30 ms debounce, latest-wins. Mock mode returns a fake result. |
+| `useCompareResults`, `useQuickAnswer`, `runScan` | Still mock-backed (Phase 4). |
+| `exportCsv`, `exportJson` | Real and **lossless** (round-trip tested, gate G11). |
+
+### What real-mode results contain today (geometry only)
+Sun/Earth azimuth, elevation, range, disk fraction and clearance on a 2-minute grid; events (sunset, shadow exit, earthset, earthrise) refined to ~10 s; windows; sunlit %, Earth-visible %, longest night, longest comm gap, ops hours; the Answer Strip state (D-14) including the ops-elevation state.
+**Not available yet and therefore `null` / labelled, never invented:** terrain mask (every site uses the smooth-Moon horizon, labelled "terrain pending"), ± bounds and δt (need σ), DSN link (link = Earth visible, stated in `meta.definitionsSummary`), power and energy, pad statistics, the verdict (always `PENDING` with a reason).
+
+### Parity with the Python reference (gate G4, first pass)
+`core/*.ts` are ports of `pipeline/lumen_pipeline/reference/*.py`. Against the real golden set 1 (IM-2, 30 days): worst azimuth error 5e-6°, elevation 1e-6°, events within 0.25 s, windows and metrics identical. CI requires these tests to run (`LUMEN_REQUIRE_PARITY=1`).
