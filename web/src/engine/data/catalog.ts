@@ -1,6 +1,7 @@
 // Owner: Nived
 // Loader: catalog/sites.json + catalog/sparklines.{json,bin}.
-import { fetchBuffer, fetchJson } from './source';
+import { loadBinArray, utcExtra } from './binArray';
+import { DataError, fetchJson } from './source';
 import type { SiteRecord, Sparkline } from '../types';
 
 const VERSIONS = [1];
@@ -88,20 +89,21 @@ async function doLoad(): Promise<Catalog> {
   return { sites, sparklines: await loadSparklines() };
 }
 
+/** catalog/sparklines.{bin,json}: uint8 percent, shape [site, series(sunlit,link), day]. `sites` + `start_utc` are DRAFT extras. */
 async function loadSparklines(): Promise<Record<string, Sparkline>> {
-  const [h, buf] = await Promise.all([
-    fetchJson<{ start_unix_s: number; days: number; sites: string[] }>('catalog/sparklines.json', VERSIONS),
-    fetchBuffer('catalog/sparklines.bin'),
-  ]);
-  const u8 = new Uint8Array(buf);
+  const { sidecar: s, data } = await loadBinArray('catalog/sparklines', ['1', 1]);
+  if (s.dtype !== 'uint8' || s.shape.length !== 3 || s.shape[1] !== 2) {
+    throw new DataError(`sparklines: expected uint8 shape [sites, 2, days], got ${s.dtype} [${s.shape.join(', ')}]`);
+  }
+  const ids = s.sites;
+  if (!Array.isArray(ids) || ids.length !== s.shape[0]) throw new DataError('sparklines: sidecar `sites` must list one id per row');
+  const [, , days] = s.shape;
+  const startUtc = utcExtra('sparklines', s, 'start_utc');
+  const u8 = data as Uint8Array;
   const out: Record<string, Sparkline> = {};
-  h.sites.forEach((id, i) => {
-    const o = i * 2 * h.days;
-    out[id] = {
-      startUtc: h.start_unix_s * 1000,
-      sunlitPct: u8.subarray(o, o + h.days),
-      linkPct: u8.subarray(o + h.days, o + 2 * h.days),
-    };
+  (ids as string[]).forEach((id, i) => {
+    const o = i * 2 * days;
+    out[id] = { startUtc, sunlitPct: u8.subarray(o, o + days), linkPct: u8.subarray(o + days, o + 2 * days) };
   });
   return out;
 }
