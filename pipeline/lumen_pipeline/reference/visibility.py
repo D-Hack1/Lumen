@@ -45,7 +45,8 @@ class Horizon:
                 - self.observer_height_m / self.d_min_m
             )
         )
-        return max(terrain, max(0.0, near))
+        near_positive = max(0.0, near)
+        return terrain if near_positive == 0.0 else max(terrain, near_positive)
 
     def extrema(self, centre_azimuth_deg: float, half_width_deg: float) -> tuple[float, float]:
         if self.elevations_deg is None:
