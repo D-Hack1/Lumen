@@ -1,37 +1,76 @@
 // Owner: Ebin
-// Per-panel power bars vs flat-ground baseline (PLAN_FINAL §5.6 power presets).
+// Per-panel power bars vs flat-ground baseline (PLAN_FINAL §5.6). Fast Lane: widths and numbers are written to
+// DOM refs from `padDragBus` + `crosshairBus`, so tilt/yaw drags and scrubbing update live without re-rendering.
+// Only the preset (human rate) changes which rows exist. Model: ./padModel.ts (relative; scaled to engine power).
+import { useEffect, useRef } from 'react';
+import type { Series } from '../../engine/types';
+import { crosshairBus, padDragBus } from '../../state/buses';
+import type { PanelPreset } from '../../state/scenarioStore';
 import { color } from '../../ui/tokens';
+import { panelFaces, type PanelFace } from './padModel';
 
 export interface PanelPowerBarsProps {
-  /** Watts per panel for the current attitude, and the flat-ground baseline for comparison. */
-  panels: Array<{ label: string; watts: number; baselineWatts: number }>;
+  preset: PanelPreset;
+  series: Series | null;
+  slopeDeg: number;
+  downhillAzDeg: number;
 }
 
-export function PanelPowerBars({ panels }: PanelPowerBarsProps) {
-  const max = Math.max(1, ...panels.map((p) => Math.max(p.watts, p.baselineWatts)));
+const LABELS: Record<PanelPreset, string[]> = {
+  fourSide: ['+X side', '+Y side', '−X side', '−Y side'],
+  singleHeading: ['Panel (45°)'],
+  horizontalDeck: ['Deck'],
+  trackingMast: ['Tracking'],
+};
+
+export function PanelPowerBars({ preset, series, slopeDeg, downhillAzDeg }: PanelPowerBarsProps) {
+  const labels = LABELS[preset];
+  const fillRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const baseRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const valRefs = useRef<(HTMLSpanElement | null)[]>([]);
+
+  useEffect(() => {
+    const paint = () => {
+      let faces: PanelFace[] = labels.map((label) => ({ label, watts: 0, baselineWatts: 0 }));
+      if (series) {
+        const i = Math.max(0, Math.min(series.sunElevDeg.length - 1, Math.round((crosshairBus.get().tScrub - series.t0) / series.stepMs)));
+        const d = padDragBus.get();
+        faces = panelFaces(
+          preset,
+          { slopeDeg, downhillAzDeg, tiltMagDeg: d.tiltMagDeg, tiltDirDeg: d.tiltDirDeg, yawDeg: d.yawDeg },
+          series.sunAzDeg[i],
+          series.sunElevDeg[i],
+          series.powerW[i],
+        );
+      }
+      const max = Math.max(1, ...faces.map((f) => Math.max(f.watts, f.baselineWatts)));
+      faces.forEach((f, k) => {
+        const fill = fillRefs.current[k];
+        const base = baseRefs.current[k];
+        const val = valRefs.current[k];
+        if (fill) fill.style.width = `${(f.watts / max) * 100}%`;
+        if (base) base.style.left = `${(f.baselineWatts / max) * 100}%`;
+        if (val) val.textContent = `${f.watts.toFixed(0)} W`;
+      });
+    };
+    paint();
+    const un = [padDragBus.subscribe(paint), crosshairBus.subscribe(paint)];
+    return () => un.forEach((u) => u());
+  }, [preset, series, slopeDeg, downhillAzDeg, labels]);
+
   return (
-    <div className="panel-power-bars num" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)' }}>
-      {panels.map((p) => (
-        <div key={p.label} style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-3)' }}>
-          <span style={{ width: 90, fontSize: 'var(--fs-xs)', color: color.textMuted }}>{p.label}</span>
+    <div className="panel-power-bars num" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)' }} aria-label="Per-panel power versus flat-ground baseline">
+      {labels.map((label, k) => (
+        <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-3)' }}>
+          <span style={{ width: 78, fontSize: 'var(--fs-xs)', color: color.textMuted }}>{label}</span>
           <div style={{ flex: 1, height: 10, background: color.surface3, position: 'relative' }}>
-            <div
-              style={{ position: 'absolute', inset: 0, width: `${(p.watts / max) * 100}%`, background: color.sun }}
-            />
-            <div
-              style={{
-                position: 'absolute',
-                top: 0,
-                bottom: 0,
-                left: `${(p.baselineWatts / max) * 100}%`,
-                width: 1,
-                background: color.textFaint,
-              }}
-            />
+            <div ref={(el) => (fillRefs.current[k] = el)} style={{ position: 'absolute', inset: 0, width: 0, background: color.sun }} />
+            <div ref={(el) => (baseRefs.current[k] = el)} style={{ position: 'absolute', top: -1, bottom: -1, left: 0, width: 2, background: color.text }} title="flat-ground baseline" />
           </div>
-          <span style={{ width: 48, textAlign: 'right' }}>{p.watts.toFixed(0)} W</span>
+          <span ref={(el) => (valRefs.current[k] = el)} style={{ width: 48, textAlign: 'right' }} />
         </div>
       ))}
+      <span style={{ fontSize: 'var(--fs-2xs)', color: color.textFaint }}>▏ marker = flat-ground baseline</span>
     </div>
   );
 }
