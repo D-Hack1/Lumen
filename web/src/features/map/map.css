@@ -51,6 +51,25 @@
   width: 100%;
   height: 100%;
 }
+.basemap__base {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  pointer-events: none;
+  background: #000;
+}
+.basemap__base > img {
+  position: absolute;
+  max-width: none;
+  image-rendering: auto;
+}
+.basemap__credit {
+  flex: none;
+  font-size: var(--fs-2xs);
+  color: var(--c-text-faint);
+  text-align: center;
+}
 .basemap__square > img {
   border-radius: 50%;
   pointer-events: none;

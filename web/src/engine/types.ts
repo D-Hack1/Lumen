@@ -78,6 +78,9 @@ export interface EventRecord {
   grazing: boolean;
   grazingReason: GrazingReason;
   dtMethod: 'fast' | 'exact';
+  /** The final bisection bracket around `t` (epoch ms). The one-sided clearance rate picks its side from it (R3 D-8). */
+  bracketStartMs?: number | null;
+  bracketEndMs?: number | null;
 }
 
 export interface WindowRecord {

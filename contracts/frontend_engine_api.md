@@ -21,6 +21,7 @@ uses only what is listed here.
 | `useCatalog()` | `CatalogResult` `{ sites: SiteRecord[], sparklines: Record<siteId, {startUtc, sunlitPct: Uint8Array, linkPct: Uint8Array}>, loading, error }` | Sparklines: one value per day from `startUtc`. |
 | `useResult()` | `ScenarioResult` | Reads the active scenario from Abhinav's store (`useScenario`) and recomputes in the worker (debounced, stale jobs cancelled). |
 | `useCompareResults()` | `CompareResults` `{ status, rows: {scenarioId, result, deltaVsBaseline}[], baselineId }` | One row per compare scenario (≤4). |
+| `useSiteVerdict(siteId)` / `useSiteVerdicts()` | `{ verdict, viabilityIndex, provisional }` / `{ status, bySite }` | Verdict dot for site cards and Compare rows. One shared stage-1 pass over every catalog site, re-run when landing date, window, height, definitions, profile or weights change. The selected site returns the Cockpit's exact verdict; others are provisional (PENDING until terrain masks exist). |
 | `useQuickAnswer(input \| null)` | `QuickAnswerResult` | `null` input → idle. |
 | `useLayers()` | `LayersResult` `{ layers, extents, sizePx, regions, loading, error }` | Layer `url`s are ready for `<img>`. `extents` keys are `'80S'`/`'85S'` (same ids as the store; the contract's `80_90S`/`85_90S` are mapped in the loader). `regions[].svgPath` is in km, y flipped (same frame as the layers). |
 
