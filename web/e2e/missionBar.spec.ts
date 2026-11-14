@@ -49,16 +49,20 @@ test.describe('dynamic E label across all 9 D-14 forced states', () => {
   });
 });
 
+/** Wait two animation frames: the MET readout is written by a bus subscriber on the next frame (Fast Lane, §1.3). */
+const frames = (page: Page) =>
+  page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+
 test('jump buttons and S/E/X/T keys commit the scrub instantly (no tween)', async ({ page }) => {
   await open(page);
-  const before = await met(page).textContent();
+  const before = (await met(page).textContent()) ?? '';
   await jump(page, 'E').click(); // the default mock has Earth events in the window (no sunset: S is disabled)
-  const afterClick = await met(page).textContent();
-  expect(afterClick).not.toBe(before);
+  // the readout updates on the next frame, never synchronously, so wait for it (auto-retry), don't read once
+  await expect(met(page)).not.toHaveText(before);
 
-  // one frame later the value is final: nothing is animating t_scrub
-  await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+  // instant, no tween: once it has changed, the value never moves again (a tween would keep stepping)
   const settled = await met(page).textContent();
+  for (let i = 0; i < 10; i++) await frames(page);
   await page.waitForTimeout(300);
   expect(await met(page).textContent()).toBe(settled);
 
@@ -67,10 +71,13 @@ test('jump buttons and S/E/X/T keys commit the scrub instantly (no tween)', asyn
   await page.keyboard.press('e');
   await expect(met(page)).not.toHaveText('T+00:00:00');
 
-  // keys are ignored while typing in a field
+  // keys are ignored while typing in a field (wait past the frame a jump would need, so the check isn't vacuous)
   await page.locator('.mb-input').focus();
   const typingBefore = await met(page).textContent();
   await page.keyboard.press('s');
+  await page.keyboard.press('e');
+  await frames(page);
+  await page.waitForTimeout(100);
   expect(await met(page).textContent()).toBe(typingBefore);
 });
 
