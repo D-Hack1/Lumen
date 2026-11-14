@@ -10,6 +10,7 @@ import { dataMode } from './data/source';
 import { mockScenarioResult } from '../mocks/mockResult';
 import { getScenario, useScenario } from '../state/scenarioStore';
 import { makeRequest } from './requests';
+import { perf } from './perf';
 import type { EventType, ScenarioResult } from './types';
 
 const DEBOUNCE_MS = 30;
@@ -23,9 +24,15 @@ const listeners = new Set<() => void>();
 let started = false;
 let timer: ReturnType<typeof setTimeout> | undefined;
 let lastKey = '';
+let lastSiteKey = '';
+let siteSwitchStart: number | null = null; // G8: a site change -> its result on screen
 const evaluateLatest = latestWins(evaluateScenario);
 
 function publish(r: ScenarioResult): void {
+  if (siteSwitchStart != null && r.status === 'ready') {
+    perf.record('siteSwitch', performance.now() - siteSwitchStart);
+    siteSwitchStart = null;
+  }
   snapshot = r;
   listeners.forEach((fn) => fn());
 }
@@ -58,10 +65,16 @@ function start(): void {
   if (started) return;
   started = true;
   lastKey = relevantKey();
+  lastSiteKey = JSON.stringify(getScenario().site);
   useScenario.subscribe(() => {
     const k = relevantKey();
     if (k !== lastKey) {
       lastKey = k;
+      const siteKey = JSON.stringify(getScenario().site);
+      if (siteKey !== lastSiteKey) {
+        lastSiteKey = siteKey;
+        siteSwitchStart = performance.now();
+      }
       schedule();
     }
   });

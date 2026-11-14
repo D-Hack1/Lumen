@@ -67,6 +67,9 @@
 /web/src/content/                  @abhinav
 /web/src/engine/                   @nived
 /web/src/mocks/                    @nived    # mock engine, forced states, Scan simulator (guide §0 C-3)
+/web/src/perf/                     @nived    # Perf HUD, G8 budgets, React commit counter
+/web/e2e-offline/                  @nived    # airplane-mode test (N-12)
+/web/e2e-perf/                     @nived    # G8 / G13 performance run
 /web/src/features/sidebar/         @abhinav
 /web/src/features/definitions/     @abhinav
 /web/src/features/quickAnswer/     @abhinav
