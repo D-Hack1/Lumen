@@ -1,45 +1,73 @@
 // Owner: Ebin
-// Aligned Barcodes: ≤4 compare rows stacked, aligned to days since landing, shared crosshair (PLAN_FINAL §8.6).
+// Aligned Barcodes: ≤4 compare rows stacked, aligned to time since each row's own landing (PLAN_FINAL §8.6).
+// Encoding follows §8.1 #8 — never colour alone: Sun-only = amber solid, Sun+Earth = teal solid,
+// Earth-only = blue dots, blocked = grey hatch. One shared crosshair: the scrub/hover offset is measured from the
+// first row's start and applied to every row's own time axis, so a column always means "same day since landing".
+// Overlay-only redraw on `crosshairBus` (Fast Lane); the static layer draws once per series.
 import { useCompareResults } from '../../engine/hooks';
+import type { Series } from '../../engine/types';
 import { crosshairBus } from '../../state/buses';
+import { createDotPattern, createHatchPattern } from '../../ui/patterns';
 import { color } from '../../ui/tokens';
 import { LayeredCanvas } from '../shared/LayeredCanvas';
 
 // Module-level so the array reference is stable across renders (LayeredCanvas resubscribes when it changes).
 const OVERLAY_BUSES = [crosshairBus] as const;
+const MAX_ROWS = 4;
+
+const spanOf = (s: Series) => s.stepMs * s.sunUp.length;
 
 export function AlignedBarcodes() {
   const compare = useCompareResults();
+  const rows = compare.rows.slice(0, MAX_ROWS);
+  const refSeries = rows[0]?.result.series ?? null;
 
   return (
-    <div className="aligned-barcodes" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)', height: '100%' }}>
-      {compare.rows.map((row) => {
+    <div className="aligned-barcodes" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)', height: '100%', minHeight: 0 }}>
+      {rows.map((row) => {
         const series = row.result.series;
         return (
           <div key={row.scenarioId} style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', gap: 'var(--sp-3)' }}>
-            <span className="num" style={{ width: 20, color: color.textMuted }}>{row.scenarioId}</span>
-            <div style={{ flex: 1, height: '100%' }}>
+            <span className="num" style={{ width: 20, color: color.textMuted }}>
+              {row.scenarioId}
+              {row.scenarioId === compare.baselineId ? '★' : ''}
+            </span>
+            <div style={{ flex: 1, height: '100%', minHeight: 0 }}>
               <LayeredCanvas
                 staticKey={series}
-                drawStatic={(ctx, w, h) => {
+                drawStatic={(ctx, w, h, dpr) => {
                   if (!series) return;
+                  const hatch = createHatchPattern(ctx, dpr) ?? color.blockedBg;
+                  const dots = createDotPattern(ctx, dpr) ?? color.earthSoft;
                   const n = series.sunUp.length;
                   const cw = w / Math.max(1, n);
                   for (let i = 0; i < n; i++) {
-                    ctx.fillStyle = series.sunUp[i] && series.earthUp[i] ? color.both : series.sunUp[i] ? color.sun : color.blocked;
+                    const sun = series.sunUp[i] === 1;
+                    const earth = series.earthUp[i] === 1;
+                    ctx.fillStyle = sun && earth ? color.both : sun ? color.sun : earth ? dots : hatch;
                     ctx.fillRect(i * cw, 0, Math.max(1, cw), h);
                   }
                 }}
                 drawOverlay={(ctx, w, h) => {
-                  if (!series) return;
-                  const { tScrub } = crosshairBus.get();
-                  const total = series.stepMs * series.sunUp.length;
-                  const x = ((tScrub - series.t0) / total) * w;
-                  ctx.strokeStyle = color.focus;
-                  ctx.beginPath();
-                  ctx.moveTo(x, 0);
-                  ctx.lineTo(x, h);
-                  ctx.stroke();
+                  if (!series || !refSeries) return;
+                  const { tScrub, tHover } = crosshairBus.get();
+                  const line = (t: number, alpha: number, dashed: boolean) => {
+                    const x = ((t - refSeries.t0) / spanOf(refSeries)) * w;
+                    if (x < 0 || x > w) return;
+                    const px = Math.round(x) + 0.5;
+                    ctx.globalAlpha = alpha;
+                    ctx.strokeStyle = color.focus;
+                    ctx.lineWidth = 1;
+                    ctx.setLineDash(dashed ? [3, 3] : []);
+                    ctx.beginPath();
+                    ctx.moveTo(px, 0);
+                    ctx.lineTo(px, h);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                    ctx.globalAlpha = 1;
+                  };
+                  line(tScrub, 0.95, false);
+                  if (tHover != null) line(tHover, 0.55, true);
                 }}
                 overlayBuses={OVERLAY_BUSES}
               />
@@ -47,7 +75,7 @@ export function AlignedBarcodes() {
           </div>
         );
       })}
-      {compare.rows.length === 0 && <div style={{ color: color.textFaint }}>Add scenarios to Compare to see them here.</div>}
+      {rows.length === 0 && <div style={{ color: color.textFaint, fontSize: 'var(--fs-sm)' }}>Add scenarios to Compare to see them here.</div>}
     </div>
   );
 }
