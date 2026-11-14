@@ -57,7 +57,7 @@ export const planner: CopyTable = {
   'verdict.GO.long': 'GO — every hard threshold passes on the conservative bound',
   'verdict.MARGINAL.long': 'MARGINAL — passes on the nominal value but not on the conservative bound',
   'verdict.NO-GO.long': 'NO-GO — at least one hard threshold fails',
-  'verdict.PENDING.long': 'PENDING — no result yet',
+  'verdict.PENDING.long': 'PENDING — cannot be judged yet (missing data or only a smooth-Moon bound); see reasons',
   'verdict.provisional.long': 'Provisional — uncertainty bounds still computing; GO needs the conservative bound',
 
   // ---- Mission Profile popover (verdict chip). Placeholder until the Phase 4 form. ----
@@ -211,12 +211,12 @@ export const educator: CopyTable = {
   'verdict.GO': 'Looks good',
   'verdict.MARGINAL': 'Borderline',
   'verdict.NO-GO': 'Not viable',
-  'verdict.PENDING': 'Working…',
+  'verdict.PENDING': 'Not sure yet',
   'verdict.provisional': 'first guess',
   'verdict.GO.long': 'Looks good — passes every must-have, even in the cautious case',
   'verdict.MARGINAL.long': 'Borderline — passes on the best guess, but not in the cautious case',
   'verdict.NO-GO.long': 'Not viable — at least one must-have fails',
-  'verdict.PENDING.long': 'Working… — no answer yet',
+  'verdict.PENDING.long': 'Not sure yet — some data is still missing, so this cannot be judged',
   'verdict.provisional.long': 'First guess — the give-or-take is still being worked out',
   'mb.verdict.long': 'How this plan does against the mission’s must-haves — click for details',
 

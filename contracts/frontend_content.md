@@ -1,6 +1,6 @@
 # frontend_content.md
 
-_Owner: Abhinav_ · Status: copy keys **implemented (Phase 1)**; `quickstart.json` shape **draft for Phase 5**.
+_Owner: Abhinav_ · Status: copy keys **implemented (Phase 2: D-14 states complete in both personas)**; `quickstart.json` shape **draft for Phase 5**.
 Source of truth: `web/src/content/personaCopy.ts` (strings), `web/src/state/copy.ts` (lookup),
 `web/src/engine/format.ts` → `fill()` (placeholders, Nived). If this file and the code disagree, the code wins and
 this file gets fixed.
@@ -30,6 +30,7 @@ this file gets fixed.
 | `{n}` | integer days (window length) or a percentage | caller |
 | `{deg}` | degrees (ops elevation) | caller |
 | `{name}`, `{lat}`, `{lon}`, `{km}` | off-map indicator (site name, coordinates, distance) | caller |
+| `{label}`, `{time}`, `{pm}`, `{key}` | Mission Bar jump tooltip (`mb.jump.tip*`): the `.long` jump label, target UTC to the minute, ± half-width, shortcut key | `jumpTooltip` (`app/jumps.ts`) |
 
 - **Uncertainty is never in the copy string:** ±, `[lo–hi]` and "grazing" ranges are built by the formatter and
   passed in through `{t}`. Copy owns the words around them.
@@ -52,15 +53,18 @@ this file gets fixed.
 
 ## 3. Current Educator overrides
 
-23 keys: `mb.met`, `mb.share.toast`, `verdict.*` (4), `answer.sunNow`, `answer.earthNow`, `answer.up`,
-`answer.down`, `answer.sun.{sunsetIn, sunriseIn, noSunriseBeforeEnd, staysUpPastEnd, belowOps}`,
-`answer.earth.{earthsetIn, earthriseIn, linkResumes}`, `answer.grazingFull`,
-`metric.{sunlit, link, longestNight, commGap}`. Every other key uses the Planner text in both personas.
+71 keys (full wording in §4): `mb.*` (16), `verdict.*` (10), `profile.*` (10), `answer.*` (31), `metric.*` (4).
 
-**To do (Phase 5, A-12):** Educator wording for the remaining Answer Strip, Metric Deck, map and Scan keys, plus
-the "What am I seeing?" callouts.
+Phase 2 completed Educator wording for **all 9 D-14 Answer Strip states** (labels, value templates, grazing,
+"dark for", below-ops and the shared now/window cells), the Mission Bar jump labels and tooltips, the verdict
+chip and the Mission Profile popover. Which keys make up each D-14 state is indexed in
+`web/src/content/answerStates.ts` (`ANSWER_STATE_COPY`); `web/src/app/missionBar.test.tsx` checks every
+state has a Planner string and a different Educator string, and that Educator keeps every `{placeholder}`.
 
-## 4. Key reference (153 keys, generated from `personaCopy.ts`)
+**To do (Phase 5, A-12):** Educator wording for the remaining Metric Deck, map and Scan keys, plus the
+"What am I seeing?" callouts.
+
+## 4. Key reference (179 keys, generated from `personaCopy.ts`)
 
 ### `app.*` · App · used by Abhinav
 
@@ -89,17 +93,23 @@ the "What am I seeing?" callouts.
 | `mb.duration` | Mission duration |  |
 | `mb.met` | MET | Time since landing |
 | `mb.jump.sunset` | Sunset |  |
-| `mb.jump.sunset.long` | Next Sunset |  |
+| `mb.jump.sunset.long` | Next Sunset | Jump to the next sunset |
 | `mb.jump.earthset` | Earthset |  |
-| `mb.jump.earthset.long` | Next Earthset |  |
+| `mb.jump.earthset.long` | Next Earthset | Jump to when Earth next sets |
 | `mb.jump.earthrise` | Earthrise |  |
-| `mb.jump.earthrise.long` | Next Earthrise |  |
-| `mb.jump.shadowExit` | Shadow exit |  |
-| `mb.jump.shadowExit.long` | Next Shadow Exit |  |
-| `mb.jump.touchdown` | T0 |  |
-| `mb.jump.touchdown.long` | Touchdown (T0) |  |
-| `mb.jump.none` | No such event in this window |  |
+| `mb.jump.earthrise.long` | Next Earthrise | Jump to when Earth next rises |
+| `mb.jump.shadowExit` | Shadow exit | Sun returns |
+| `mb.jump.shadowExit.long` | Next Shadow Exit | Jump to when the Sun comes back |
+| `mb.jump.touchdown` | T0 | Landing |
+| `mb.jump.touchdown.long` | Touchdown (T0) | Jump back to the landing moment |
+| `mb.jump.none` | No such event in this window | That does not happen in this window |
+| `mb.jump.group` | Jump to event | Jump to a moment |
+| `mb.jump.tip` | {label} · {time} UTC ± {pm} · key {key} | {label} — {time} UTC, give or take {pm} (press {key}) |
+| `mb.jump.tipExact` | {label} · {time} UTC · key {key} | {label} — {time} UTC (press {key}) |
+| `mb.jump.tipGrazing` | {label} · {time} UTC ± {pm} (grazing) · key {key} | {label} — around {time} UTC, hard to pin down (give or take {pm}) (press {key}) |
+| `mb.jump.tipNone` | {label} · none before window end · key {key} | {label} — does not happen before the window ends (press {key}) |
 | `mb.verdict` | Verdict |  |
+| `mb.verdict.long` | Verdict against the Mission Profile — click for details | How this plan does against the mission’s must-haves — click for details |
 | `mb.persona` | Persona |  |
 | `mb.share` | Share |  |
 | `mb.share.long` | Share Scenario URL |  |
@@ -122,7 +132,32 @@ the "What am I seeing?" callouts.
 | `verdict.GO` | GO | Looks good |
 | `verdict.MARGINAL` | MARGINAL | Borderline |
 | `verdict.NO-GO` | NO-GO | Not viable |
-| `verdict.PENDING` | PENDING | Working… |
+| `verdict.PENDING` | PENDING | Not sure yet |
+| `verdict.provisional` | provisional | first guess |
+| `verdict.GO.long` | GO — every hard threshold passes on the conservative bound | Looks good — passes every must-have, even in the cautious case |
+| `verdict.MARGINAL.long` | MARGINAL — passes on the nominal value but not on the conservative bound | Borderline — passes on the best guess, but not in the cautious case |
+| `verdict.NO-GO.long` | NO-GO — at least one hard threshold fails | Not viable — at least one must-have fails |
+| `verdict.PENDING.long` | PENDING — cannot be judged yet (missing data or only a smooth-Moon bound); see reasons | Not sure yet — some data is still missing, so this cannot be judged |
+| `verdict.provisional.long` | Provisional — uncertainty bounds still computing; GO needs the conservative bound | First guess — the give-or-take is still being worked out |
+
+### `profile.*` · Mission Profile popover (verdict chip) · used by Abhinav
+
+| Key | Planner | Educator override |
+|---|---|---|
+| `profile.title` | Mission Profile | Mission must-haves |
+| `profile.reasons` | Why |  |
+| `profile.thresholds` | Hard thresholds | Must-haves |
+| `profile.surfaceDurationDays` | Surface duration | Time on the surface |
+| `profile.minSunlitPct` | Min sunlit | Sunlight needed |
+| `profile.minLinkHours` | Min link | Radio contact needed |
+| `profile.maxLongestNightH` | Max longest night | Longest dark spell allowed |
+| `profile.maxPadSlopeDeg` | Max pad slope | Steepest ground allowed |
+| `profile.batteryWh` | Battery |  |
+| `profile.loadW` | Load |  |
+| `profile.edit` | Edit in Compare | Change in Compare |
+| `profile.placeholder` | The editable profile form arrives with the Compare view. | You will be able to change these in the Compare view. |
+| `profile.noReasons` | No reasons reported yet. | No explanation yet. |
+| `profile.close` | Close |  |
 
 ### `slot.*` · Slot labels (placeholders, accessible names) · used by Abhinav
 
@@ -173,33 +208,33 @@ the "What am I seeing?" callouts.
 | `answer.earthNow` | Earth now | Earth right now |
 | `answer.up` | UP | in the sky |
 | `answer.down` | DOWN | below the horizon |
-| `answer.disk` | {n}% disk |  |
-| `answer.linkOk` | link ✓ |  |
-| `answer.linkDown` | link ✗ |  |
-| `answer.windowSunlit` | Window sunlit |  |
-| `answer.windowLink` | Window link |  |
-| `answer.label.sunsetIn` | Sunset |  |
-| `answer.label.sunriseIn` | Sunrise (Shadow Exit) |  |
-| `answer.label.noSunriseBeforeEnd` | Sunrise |  |
-| `answer.label.staysUpPastEnd` | Sunset |  |
-| `answer.label.belowOpsElevation` | Ops elevation |  |
-| `answer.label.earthsetIn` | Earthset |  |
-| `answer.label.earthriseIn` | Earthrise |  |
-| `answer.label.linkResumesDsn` | Link |  |
+| `answer.disk` | {n}% disk | {n}% of the Sun showing |
+| `answer.linkOk` | link ✓ | radio contact ✓ |
+| `answer.linkDown` | link ✗ | no radio contact ✗ |
+| `answer.windowSunlit` | Window sunlit | Sunlight over the mission |
+| `answer.windowLink` | Window link | Radio contact over the mission |
+| `answer.label.sunsetIn` | Sunset | Next sunset |
+| `answer.label.sunriseIn` | Sunrise (Shadow Exit) | Sun comes back |
+| `answer.label.noSunriseBeforeEnd` | Sunrise | Sun comes back |
+| `answer.label.staysUpPastEnd` | Sunset | Next sunset |
+| `answer.label.belowOpsElevation` | Ops elevation | Sun too low |
+| `answer.label.earthsetIn` | Earthset | Earth sets |
+| `answer.label.earthriseIn` | Earthrise | Earth rises |
+| `answer.label.linkResumesDsn` | Link | Radio contact |
 | `answer.sun.sunsetIn` | Sunset in {t} | The Sun sets in {t} |
 | `answer.sun.sunriseIn` | Sunrise (Shadow Exit) in {t} | The Sun comes back in {t} |
-| `answer.sun.darkFor` | dark for {t} so far |  |
+| `answer.sun.darkFor` | dark for {t} so far | dark for {t} already |
 | `answer.sun.noSunriseBeforeEnd` | No sunrise before window end (+{n} d) | The Sun does not come back in this window (+{n} days) |
 | `answer.sun.staysUpPastEnd` | Stays up past window end | The Sun stays up for the whole window |
 | `answer.sun.belowOps` | Below ops elevation ({deg}°) — ops resume in {t} | Too low for the lander ({deg}°) — usable again in {t} |
-| `answer.sun.belowOpsNoResume` | Below ops elevation ({deg}°) |  |
+| `answer.sun.belowOpsNoResume` | Below ops elevation ({deg}°) | Too low for the lander ({deg}°) |
 | `answer.earth.earthsetIn` | Earthset in {t} | Earth sets in {t} |
 | `answer.earth.earthriseIn` | Earthrise in {t} | Earth rises in {t} |
 | `answer.earth.linkResumes` | Link resumes in {t} (DSN) | Radio contact returns in {t} |
-| `answer.earth.noChange` | No change before window end |  |
-| `answer.grazing` | {t} (grazing) |  |
+| `answer.earth.noChange` | No change before window end | No change before the window ends |
+| `answer.grazing` | {t} (grazing) | {t} (skims the horizon) |
 | `answer.grazingFull` | grazing — timing poorly constrained | skims the horizon — timing is hard to pin down |
-| `answer.smoothMoon` | smooth-Moon bound |  |
+| `answer.smoothMoon` | smooth-Moon bound | flat-Moon estimate |
 
 ### `metric.*` · Metric Deck · used by Nived
 
@@ -246,16 +281,16 @@ the "What am I seeing?" callouts.
 | `scan.mode.sites` | All sites |  |
 | `scan.provisional` | provisional |  |
 | `scan.bounded` | bounded |  |
-| `scan.load` | Load into row |  |
+| `scan.load` | Load |  |
 | `scan.stage1` | Stage 1 · nominal |  |
-| `scan.stage2` | Stage 2 · bounded |  |
+| `scan.stage2` | Stage 2 · exact |  |
 | `scan.running` | Scanning… |  |
 | `scan.col.rank` | # |  |
 | `scan.col.site` | Site · landing |  |
 | `scan.col.verdict` | Verdict |  |
-| `scan.col.sunlit` | Sunlit % |  |
+| `scan.col.sunlit` | Sun % |  |
 | `scan.col.link` | Link % |  |
-| `scan.col.night` | Longest night |  |
+| `scan.col.night` | Night |  |
 
 ### `delta.*` · Delta Table · used by Nived
 
@@ -299,7 +334,6 @@ the "What am I seeing?" callouts.
 | `touchdown.preset.horizontalDeck` | Deck |  |
 | `touchdown.preset.trackingMast` | Tracking mast |  |
 | `touchdown.height` | Mast height |  |
-
 
 ## 5. `web/public/content/quickstart.json` (draft, built in Phase 5)
 
