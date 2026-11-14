@@ -2,15 +2,48 @@
 
 from __future__ import annotations
 
+import math
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 
-from .dem_io import DemProduct, DemReader, DemWindow, load_products
+from pyproj import Transformer
+
+from .dem_io import (
+    LUNAR_SPHERICAL_CRS,
+    SPHERE_RADIUS_M,
+    DemProduct,
+    DemReader,
+    DemWindow,
+    load_products,
+)
+
+_BOUNDARY_TOLERANCE_M = 1.0
+_BOUNDARY_MAX_SEGMENT_M = 250.0
+_BOUNDARY_MAX_SAMPLES = 16_384
+# The transformed boundary is refined until each chord is below 250 m and
+# midpoint curvature is below this 1 m conservative envelope.
 
 
 class CropCoverageError(RuntimeError):
     """Raised when a requested crop has no verified covered source."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        site_id: str | None = None,
+        source_key: str | None = None,
+        crop: str | None = None,
+        required_region_km: tuple[float, float] | None = None,
+        uncovered_region_km: str | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.site_id = site_id
+        self.source_key = source_key
+        self.crop = crop
+        self.required_region_km = required_region_km
+        self.uncovered_region_km = uncovered_region_km
 
 
 @dataclass(frozen=True)
@@ -115,6 +148,117 @@ def _select_product(
     )
 
 
+def _radial_coverage(
+    dem: DemWindow,
+    *,
+    latitude_deg: float,
+    longitude_deg_east: float,
+    region_km: tuple[float, float],
+) -> tuple[bool, str]:
+    """Check the complete radial annulus against original raster bounds."""
+
+    source_bounds = dem.provenance.get("source_bounds")
+    if (
+        not isinstance(source_bounds, (list, tuple))
+        or len(source_bounds) != 4
+        or not all(isinstance(value, (int, float)) for value in source_bounds)
+    ):
+        return False, "source raster bounds are unavailable"
+    if not dem.crs.is_projected:
+        return False, "source CRS is not projected in linear ground units"
+    units = {axis.unit_name.lower() for axis in dem.crs.axis_info if axis.unit_name}
+    if not units or not units <= {"metre", "meter", "metres", "meters"}:
+        return False, f"source CRS units are not metres: {sorted(units)}"
+
+    transformer = Transformer.from_crs(LUNAR_SPHERICAL_CRS, dem.crs, always_xy=True)
+    left, bottom, right, top = (float(value) for value in source_bounds)
+    inner_km, outer_km = region_km
+    lat0 = math.radians(latitude_deg)
+    lon0 = math.radians(longitude_deg_east)
+
+    def boundary_point(radius_km: float, bearing: float) -> tuple[float, float]:
+        angular_distance = radius_km * 1000.0 / SPHERE_RADIUS_M
+        sin_lat = math.sin(lat0) * math.cos(angular_distance) + math.cos(lat0) * math.sin(
+            angular_distance
+        ) * math.cos(bearing)
+        lat = math.asin(max(-1.0, min(1.0, sin_lat)))
+        lon = lon0 + math.atan2(
+            math.sin(bearing) * math.sin(angular_distance) * math.cos(lat0),
+            math.cos(angular_distance) - math.sin(lat0) * math.sin(lat),
+        )
+        return math.degrees(lon), math.degrees(lat)
+
+    def transformed_boundary(radius_km: float) -> list[tuple[float, float]] | None:
+        bearings = [2.0 * math.pi * index / 64 for index in range(64)]
+        while True:
+            longitudes, latitudes = zip(
+                *(boundary_point(radius_km, bearing) for bearing in bearings)
+            )
+            xs, ys = transformer.transform(longitudes, latitudes)
+            points = list(zip(bearings, xs, ys))
+            mid_bearings = [
+                bearing + ((points[(index + 1) % len(points)][0] - bearing) % (2.0 * math.pi)) / 2.0
+                for index, (bearing, _, _) in enumerate(points)
+            ]
+            mid_lons, mid_lats = zip(
+                *(boundary_point(radius_km, bearing) for bearing in mid_bearings)
+            )
+            mid_xs, mid_ys = transformer.transform(mid_lons, mid_lats)
+            mids = list(zip(mid_bearings, mid_xs, mid_ys))
+            converged = True
+            for index, (_, x1, y1) in enumerate(points):
+                _, x2, y2 = points[(index + 1) % len(points)]
+                _, xm, ym = mids[index]
+                segment_length = math.hypot(x2 - x1, y2 - y1)
+                dx, dy = x2 - x1, y2 - y1
+                if dx == 0.0 and dy == 0.0:
+                    deviation = math.hypot(xm - x1, ym - y1)
+                else:
+                    projection = max(
+                        0.0,
+                        min(
+                            1.0,
+                            ((xm - x1) * dx + (ym - y1) * dy) / (dx * dx + dy * dy),
+                        ),
+                    )
+                    deviation = math.hypot(xm - (x1 + projection * dx), ym - (y1 + projection * dy))
+                if segment_length > _BOUNDARY_MAX_SEGMENT_M or deviation > _BOUNDARY_TOLERANCE_M:
+                    converged = False
+            if converged:
+                return [(x, y) for _, x, y in points] + [(x, y) for _, x, y in mids]
+            if len(bearings) * 2 > _BOUNDARY_MAX_SAMPLES:
+                return None
+            bearings = [
+                value
+                for index, point in enumerate(points)
+                for value in (point[0], mid_bearings[index])
+            ]
+
+    rings = [outer_km] + ([inner_km] if inner_km > 0.0 else [])
+    transformed_rings = [transformed_boundary(radius_km) for radius_km in rings]
+    if any(ring is None for ring in transformed_rings):
+        return False, "spherical boundary sampling did not converge conservatively"
+    margin = _BOUNDARY_TOLERANCE_M
+    valid_rings = [ring for ring in transformed_rings if ring is not None]
+    outside = [
+        (x, y)
+        for ring in valid_rings
+        for x, y in ring
+        if not (left + margin <= x <= right - margin and bottom + margin <= y <= top - margin)
+    ]
+    if not outside:
+        return True, f"complete {inner_km:g}-{outer_km:g} km radial region"
+    total_samples = sum(len(ring) for ring in valid_rings)
+    if len(outside) == total_samples:
+        detail = "no sampled part of the required radial region intersects"
+    else:
+        detail = (
+            "spherical radial boundary is only partially covered "
+            f"({len(outside)} of {total_samples} samples outside)"
+        )
+    return False, detail
+
+
 def build_crops(
     site_id: str,
     *,
@@ -144,6 +288,25 @@ def build_crops(
                 width_m=2.0 * spec.max_distance_km * 1000.0,
                 height_m=2.0 * spec.max_distance_km * 1000.0,
             )
+            covered, coverage_detail = _radial_coverage(
+                dem,
+                latitude_deg=latitude_deg,
+                longitude_deg_east=longitude_deg_east,
+                region_km=(spec.min_distance_km, spec.max_distance_km),
+            )
+            if not covered:
+                raise CropCoverageError(
+                    (
+                        f"{site_id}: source {product.key} does not fully cover "
+                        f"{spec.name} crop ({spec.min_distance_km:g}-{spec.max_distance_km:g} km): "
+                        f"{coverage_detail}"
+                    ),
+                    site_id=site_id,
+                    source_key=product.key,
+                    crop=spec.name,
+                    required_region_km=(spec.min_distance_km, spec.max_distance_km),
+                    uncovered_region_km=coverage_detail,
+                )
             crops[spec.name] = TerrainCrop(
                 spec=spec,
                 dem=dem,
