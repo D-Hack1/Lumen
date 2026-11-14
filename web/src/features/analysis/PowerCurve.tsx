@@ -5,6 +5,9 @@ import { crosshairBus } from '../../state/buses';
 import { color } from '../../ui/tokens';
 import { LayeredCanvas } from '../shared/LayeredCanvas';
 
+// Module-level so the array reference is stable across renders (LayeredCanvas resubscribes when it changes).
+const OVERLAY_BUSES = [crosshairBus] as const;
+
 function plot(ctx: CanvasRenderingContext2D, values: Float32Array, w: number, h: number, stroke: string) {
   const n = values.length;
   if (n < 2) return;
@@ -51,6 +54,7 @@ export function PowerCurve() {
         ctx.lineTo(x, h);
         ctx.stroke();
       }}
+      overlayBuses={OVERLAY_BUSES}
     />
   );
 }

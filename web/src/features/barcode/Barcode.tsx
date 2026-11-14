@@ -6,6 +6,9 @@ import { crosshairBus } from '../../state/buses';
 import { color } from '../../ui/tokens';
 import { LayeredCanvas } from '../shared/LayeredCanvas';
 
+// Module-level so the array reference is stable across renders (LayeredCanvas resubscribes when it changes).
+const OVERLAY_BUSES = [crosshairBus] as const;
+
 function cellState(sunUp: number, earthUp: number): keyof typeof STATE_COLOR {
   if (sunUp && earthUp) return 'both';
   if (sunUp) return 'sun';
@@ -57,6 +60,7 @@ export function Barcode() {
           ctx.stroke();
         }
       }}
+      overlayBuses={OVERLAY_BUSES}
     />
   );
 }

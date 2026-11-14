@@ -1,11 +1,19 @@
 // Owner: Ebin
 // Touchdown Pad widget: slope/aspect compass, panel preset + mast height, yaw, off-nominal tilt, power bars.
 // Tilt/yaw drag writes padDragBus live (Fast Lane); release commits via useScenario (PLAN_FINAL §5.6, §8.3).
+//
+// Teammate review fix: the tilt slider used to be a controlled <input value={tilt.magnitudeDeg}> whose value
+// never changed during drag (only padDragBus did) — React kept re-rendering it back to the stale committed
+// value every tick, so the thumb would snap back instead of following the pointer. Switched to Abhinav's
+// `Slider` (uncontrolled; onLive is bus-only, onCommit fires once on release) and the live label now paints
+// from padDragBus via a ref instead of reading committed state.
+import { useEffect, useRef } from 'react';
 import { useResult } from '../../engine/hooks';
 import { useScenario, type MastHeightM, type PanelPreset } from '../../state/scenarioStore';
 import { padDragBus } from '../../state/buses';
 import { useCopyFn } from '../../state/copy';
 import { Segmented } from '../../ui/Segmented';
+import { Slider } from '../../ui/Slider';
 import { SlopeCompass } from './SlopeCompass';
 import { PanelPowerBars } from './PanelPowerBars';
 
@@ -21,6 +29,15 @@ export function TouchdownPad() {
   const tilt = useScenario((s) => s.tilt);
   const setTilt = useScenario((s) => s.setTilt);
   const t = useCopyFn();
+  const tiltLabelRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const paint = (deg: number) => {
+      if (tiltLabelRef.current) tiltLabelRef.current.textContent = `${deg.toFixed(0)}°`;
+    };
+    paint(padDragBus.get().tiltMagDeg);
+    return padDragBus.subscribe((v) => paint(v.tiltMagDeg));
+  }, []);
 
   const padSlope = result.metrics?.padSlopeDeg?.value ?? null;
   const sunAz = result.answer?.sun.elevDeg != null ? result.series?.sunAzDeg[0] ?? null : null;
@@ -59,18 +76,16 @@ export function TouchdownPad() {
 
       <div>
         <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--c-text-muted)' }}>
-          Off-nominal tilt {tilt.magnitudeDeg.toFixed(0)}°
+          Off-nominal tilt <span ref={tiltLabelRef} className="num" />
         </label>
-        <input
-          type="range"
+        <Slider
+          value={tilt.magnitudeDeg}
           min={0}
           max={30}
-          value={tilt.magnitudeDeg}
-          onChange={(e) => {
-            const magnitudeDeg = Number(e.target.value);
-            padDragBus.set({ tiltMagDeg: magnitudeDeg, dragging: true });
-          }}
-          onPointerUp={(e) => setTilt({ ...tilt, magnitudeDeg: Number((e.target as HTMLInputElement).value) })}
+          ariaLabel="Off-nominal tilt magnitude"
+          hotpath
+          onLive={(v) => padDragBus.set({ tiltMagDeg: v, dragging: true })}
+          onCommit={(v) => setTilt({ ...tilt, magnitudeDeg: v })}
         />
       </div>
 
