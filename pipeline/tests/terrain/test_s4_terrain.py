@@ -7,12 +7,14 @@ import struct
 
 import numpy as np
 import pytest
+from pyproj import CRS, Transformer
 from rasterio.transform import from_origin
 
 from lumen_pipeline.terrain.crops import (
     CropCoverageError,
     CropSpec,
     TerrainCrop,
+    _radial_coverage,
     build_crops,
 )
 from lumen_pipeline.terrain.dem_io import LUNAR_SPHERICAL_CRS, DemProduct, DemWindow
@@ -45,33 +47,45 @@ def _product(key: str, resolution_m: float, coverage: str) -> DemProduct:
     )
 
 
-def _dem(pixel_m: float = 5.0, size: int = 101) -> DemWindow:
-    lat_step = np.degrees(pixel_m / 1_737_400.0)
-    lon_step = np.degrees(pixel_m / (1_737_400.0 * np.cos(np.radians(LATITUDE))))
+def _dem(pixel_m: float = 5.0, size: int = 101, crs: CRS | None = None) -> DemWindow:
+    crs = crs or CRS.from_proj4(
+        f"+proj=aeqd +lat_0={LATITUDE} +lon_0={LONGITUDE} +R=1737400 +units=m +no_defs"
+    )
+    transformer = Transformer.from_crs(LUNAR_SPHERICAL_CRS, crs, always_xy=True)
+    site_x, site_y = transformer.transform(LONGITUDE, LATITUDE)
+    source_bounds = (
+        site_x - 300_000.0,
+        site_y - 300_000.0,
+        site_x + 300_000.0,
+        site_y + 300_000.0,
+    )
     return DemWindow(
         elevation=np.zeros((size, size), dtype=np.float32),
         valid=np.ones((size, size), dtype=bool),
         transform=from_origin(
-            LONGITUDE - size * lon_step / 2.0,
-            LATITUDE + size * lat_step / 2.0,
-            lon_step,
-            lat_step,
+            site_x - size * pixel_m / 2.0,
+            site_y + size * pixel_m / 2.0,
+            pixel_m,
+            pixel_m,
         ),
-        crs=LUNAR_SPHERICAL_CRS,
-        bounds=(0.0, 0.0, 0.0, 0.0),
+        crs=crs,
+        bounds=source_bounds,
         resolution_m=(pixel_m, pixel_m),
         source="synthetic",
-        provenance={"synthetic": True},
+        provenance={"synthetic": True, "source_bounds": list(source_bounds)},
     )
 
 
 class _Reader:
-    def __init__(self, dem: DemWindow):
+    def __init__(self, dem: DemWindow, source_bounds=None):
         self.dem = dem
+        self.source_bounds = source_bounds
         self.widths: list[float] = []
 
     def read_site_window(self, product, *, lon_deg, lat_deg, width_m, height_m):
         self.widths.append(width_m)
+        if self.source_bounds is not None:
+            self.dem.provenance["source_bounds"] = list(self.source_bounds)
         return self.dem
 
 
@@ -146,6 +160,130 @@ def test_missing_near_coverage_is_recorded_not_fabricated():
     assert crops.near is None
     assert "near" in crops.unavailable
     assert crops.mid is not None
+
+
+def test_radial_crop_requires_complete_source_bounds():
+    dem = _dem()
+    left, bottom, right, top = dem.provenance["source_bounds"]
+    center_x = (left + right) / 2.0
+    center_y = (bottom + top) / 2.0
+    assert _radial_coverage(
+        dem,
+        latitude_deg=LATITUDE,
+        longitude_deg_east=LONGITUDE,
+        region_km=(0.0, 5.0),
+    )[0]
+    dem.provenance["source_bounds"] = [
+        center_x - 50_000.0,
+        center_y - 50_000.0,
+        center_x + 50_000.0,
+        center_y + 50_000.0,
+    ]
+    covered, detail = _radial_coverage(
+        dem,
+        latitude_deg=LATITUDE,
+        longitude_deg_east=LONGITUDE,
+        region_km=(5.0, 80.0),
+    )
+    assert not covered
+    assert "partially covered" in detail
+
+
+def test_radial_coverage_uses_spherical_boundary_in_polar_stereographic():
+    polar_crs = CRS.from_proj4("+proj=stere +lat_0=-90 +lon_0=0 +R=1737400 +units=m +no_defs")
+    dem = _dem(crs=polar_crs)
+    covered, detail = _radial_coverage(
+        dem,
+        latitude_deg=LATITUDE,
+        longitude_deg_east=LONGITUDE,
+        region_km=(80.0, 250.0),
+    )
+    assert covered
+    assert detail == "complete 80-250 km radial region"
+
+
+def test_polar_stereographic_rejects_bounds_that_projected_shortcut_accepts():
+    polar_crs = CRS.from_proj4("+proj=stere +lat_0=-90 +lon_0=0 +R=1737400 +units=m +no_defs")
+    dem = _dem(crs=polar_crs)
+    left, bottom, right, top = dem.provenance["source_bounds"]
+    center_x = (left + right) / 2.0
+    center_y = (bottom + top) / 2.0
+    dem.provenance["source_bounds"] = [
+        center_x - 250_000.0,
+        center_y - 250_000.0,
+        center_x + 250_000.0,
+        center_y + 250_000.0,
+    ]
+
+    covered, detail = _radial_coverage(
+        dem,
+        latitude_deg=LATITUDE,
+        longitude_deg_east=LONGITUDE,
+        region_km=(80.0, 250.0),
+    )
+
+    assert not covered
+    assert "partially covered" in detail
+
+
+def test_partial_radial_crop_is_rejected_with_structured_error():
+    dem = _dem()
+    left, bottom, right, top = dem.provenance["source_bounds"]
+    center_x = (left + right) / 2.0
+    center_y = (bottom + top) / 2.0
+    reader = _Reader(
+        dem,
+        (
+            center_x - 50_000.0,
+            center_y - 50_000.0,
+            center_x + 50_000.0,
+            center_y + 50_000.0,
+        ),
+    )
+    with pytest.raises(CropCoverageError) as raised:
+        build_crops(
+            SITE_ID,
+            latitude_deg=LATITUDE,
+            longitude_deg_east=LONGITUDE,
+            reader=reader,
+            products={
+                "site_specific_5m_lola_pgda_78": _product(
+                    "site_specific_5m_lola_pgda_78", 5.0, "80S-90S"
+                ),
+                "polar_20m_lola_pgda_90": _product("polar_20m_lola_pgda_90", 20.0, "80S-90S"),
+                "regional_240m_lola_pgda_90": _product(
+                    "regional_240m_lola_pgda_90", 240.0, "60S-90S"
+                ),
+            },
+            allow_unavailable=False,
+        )
+    error = raised.value
+    assert error.site_id == SITE_ID
+    assert error.source_key == "polar_20m_lola_pgda_90"
+    assert error.crop == "mid"
+    assert error.required_region_km == (5.0, 80.0)
+    assert error.uncovered_region_km
+
+
+def test_non_intersecting_radial_crop_is_rejected():
+    dem = _dem()
+    left, bottom, right, top = dem.provenance["source_bounds"]
+    center_x = (left + right) / 2.0
+    center_y = (bottom + top) / 2.0
+    dem.provenance["source_bounds"] = [
+        center_x + 100_000.0,
+        center_y + 100_000.0,
+        center_x + 200_000.0,
+        center_y + 200_000.0,
+    ]
+    covered, detail = _radial_coverage(
+        dem,
+        latitude_deg=LATITUDE,
+        longitude_deg_east=LONGITUDE,
+        region_km=(0.0, 5.0),
+    )
+    assert not covered
+    assert "no sampled part" in detail
 
 
 def test_mask_header_payload_metadata_and_summary(monkeypatch, tmp_path):

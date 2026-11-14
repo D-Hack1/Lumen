@@ -5,8 +5,9 @@ import * as Comlink from 'comlink';
 import { buildScenarioResult, type ScenarioRequest } from './core/buildResult';
 import { loadEphem } from './data/ephem';
 import { dataMode } from './data/source';
+import { perf } from './perf';
 import type { EngineApi } from './worker';
-import { refineCandidate, scanStage1, type ScanInput } from './compare/scanEngine';
+import { refineCandidate, scanStage1, stage1ForOffsets, type ScanInput } from './compare/scanEngine';
 import type { ScanCandidate, ScenarioResult } from './types';
 
 let remote: Comlink.Remote<EngineApi> | null | undefined;
@@ -24,12 +25,14 @@ function engine(): Comlink.Remote<EngineApi> | null {
   return remote;
 }
 
-export async function evaluateScenario(req: ScenarioRequest): Promise<ScenarioResult> {
-  const mode = dataMode();
-  const w = engine();
-  if (w) return w.evaluateScenario(mode, req);
-  const eph = await loadEphem();
-  return buildScenarioResult(eph, { ...req, dataVersions: { ...req.dataVersions, ephem: eph.mock ? 'mock' : 'real' } });
+export function evaluateScenario(req: ScenarioRequest): Promise<ScenarioResult> {
+  return perf.timeAsync('workerJob', async () => {
+    const mode = dataMode();
+    const w = engine();
+    if (w) return w.evaluateScenario(mode, req);
+    const eph = await loadEphem();
+    return buildScenarioResult(eph, { ...req, dataVersions: { ...req.dataVersions, ephem: eph.mock ? 'mock' : 'real' } });
+  });
 }
 
 /** Latest-wins wrapper: results of superseded calls are discarded (resolve to null), so a slow old job can never overwrite a newer one. */
@@ -52,4 +55,10 @@ export async function runScanStage1(input: ScanInput): Promise<ScanCandidate[]> 
 export async function runRefineCandidate(req: ScenarioRequest, candidate: ScanCandidate): Promise<ScanCandidate> {
   const w = engine();
   return w ? w.refineCandidate(dataMode(), req, candidate) : refineCandidate(await loadEphem(), req, candidate);
+}
+
+/** Stage 1 for one site at the given day offsets (the calendar asks for a chunk at a time). */
+export async function runStage1Offsets(req: ScenarioRequest, offsets: number[]): Promise<ScanCandidate[]> {
+  const w = engine();
+  return w ? w.stage1Offsets(dataMode(), req, offsets) : stage1ForOffsets(await loadEphem(), req, offsets);
 }
