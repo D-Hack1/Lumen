@@ -13,7 +13,8 @@
     "typecheck": "tsc --noEmit -p .",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "e2e:offline": "playwright test -c e2e-offline/playwright.config.ts"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "^5.1.0",
