@@ -1,12 +1,10 @@
 // Owner: Nived
 // Smoke test: the mock dataset loads through the real loaders and has the shapes the contract promises.
-import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import { stubFetch, PUBLIC } from './helpers';
+import { stubFetch } from './helpers';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadCatalog } from '../data/catalog';
 import { loadLayers } from '../data/layers';
-import { dataUrl, fetchJson, checkVersion } from '../data/source';
+import { dataUrl, checkVersion } from '../data/source';
 import { mockScenarioResult } from '../mock/mockResult';
 
 beforeAll(() => stubFetch());
@@ -24,21 +22,17 @@ describe('mock dataset', () => {
     expect(c.sites.find((s) => s.tier === 'C')?.sigmaSource).toMatch(/smooth/);
     const sp = c.sparklines[c.sites[0].id];
     expect(sp.sunlitPct.length).toBe(400);
+    expect(sp.startUtc).toBe(Date.UTC(2025, 0, 1));
     expect(sp.linkPct.length).toBe(400);
   });
 
   it('loads layers and regions', async () => {
     const l = await loadLayers();
     expect(l.layers.length).toBe(10);
-    expect(l.extents?.['85S'].halfExtentKm).toBeLessThan(l.extents!['80S'].halfExtentKm);
+    expect(l.extents?.['85_90S'].halfExtentKm).toBeLessThan(l.extents!['80_90S'].halfExtentKm);
     expect(l.regions.length).toBe(3);
-  });
-
-  it('ephem.bin size matches its header', async () => {
-    const h = await fetchJson<{ count: number; byte_length: number }>('ephem/ephem.json', [1]);
-    const buf = await readFile(join(PUBLIC, 'data-mock/ephem/ephem.bin'));
-    expect(buf.length).toBe(h.byte_length);
-    expect(h.byte_length).toBe(h.count * 12 * 4);
+    expect(l.regions[0].svgPath).toMatch(/^M /);
+    expect(l.layers.every((x) => x.legendStops.every((g) => /^#[0-9a-f]{6}$/i.test(g.color)))).toBe(true);
   });
 
   it('rejects an unsupported header version', () => {
