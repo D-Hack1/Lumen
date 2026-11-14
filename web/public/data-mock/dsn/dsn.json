@@ -13,7 +13,7 @@
   "units": "deg",
   "scale": 0.5,
   "offset": 0.0,
-  "producer": "web/src/engine/mock/make_mock.py",
+  "producer": "web/src/mocks/make_mock.py",
   "created_utc": "2026-01-01T00:00:00Z",
   "sha256": "c03a8d2593b61172ba0275984337ea087a1d3b7157622cf2f44b39b7df6239d1",
   "mock": true,
