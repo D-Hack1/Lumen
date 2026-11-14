@@ -102,6 +102,29 @@ def synthetic_golden_payload() -> dict[str, object]:
         "tolerances": {"angle_deg": 0.005, "event_time_s": 10.0, "delta_t_percent": 5.0},
         "provenance": {"synthetic": True, "terrain_artifacts": "none", "dem_data": "none", "dsn_data": "none", "source": "hand-derived R3 reference cases"},
         "case_schema": {"required": ["id", "input", "expected"], "input_time_scale": "ET seconds"},
+        "typescript_parity": {
+            "full": [
+                "synthetic_flat_visibility_boundaries",
+                "synthetic_terrain_mask_boundary",
+                "synthetic_disk_limb_conventions",
+                "synthetic_event_at_window_start",
+                "synthetic_refined_visibility_window",
+                "synthetic_total_clearance_rate",
+                "synthetic_exact_event_uncertainty",
+                "synthetic_grazing_rate",
+                "synthetic_near_zone_slope_edges",
+                "synthetic_tier_c_smooth_moon",
+                "synthetic_min_sun_elevation_ops",
+                "synthetic_power_eclipse_soc",
+            ],
+            "partial": {
+                "synthetic_three_pass_bounds": "TS replays scalar three-pass mask bounds; scenario-window bounds are Python-only.",
+                "synthetic_dsn_link_modes": "TS replays DSN interpolation and pointwise on/off states; link-window metrics are Python-only.",
+            },
+            "python_only": {
+                "synthetic_guarded_span_spike": "TS has no envelope-guarded coarse sampler or exact span-extrema proof.",
+            },
+        },
         "cases": cases,
     }
 

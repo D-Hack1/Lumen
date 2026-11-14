@@ -48,5 +48,6 @@ def test_exact_extrema_preserve_near_zone_and_negative_downhill_terrain():
     minimum, maximum = horizon.extrema(0.0, 135.0)
 
     assert minimum == pytest.approx(-1.0)
-    assert maximum == pytest.approx(horizon.effective_at(45.0))
+    assert maximum == pytest.approx(horizon.effective_at(0.0))
+    assert maximum >= max(horizon.effective_at(azimuth) for azimuth in range(136))
     assert Horizon(terrain, bin_width_deg=90.0).extrema(180.0, 0.0) == (-1.0, -1.0)

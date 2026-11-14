@@ -135,20 +135,47 @@ class Horizon:
         finite = values[np.isfinite(values)]
         return (math.nan, math.nan) if len(finite) == 0 else (float(np.min(finite)), float(np.max(finite)))
 
+    def _near_zone_max(self, centre_azimuth_deg: float, half_width_deg: float) -> float:
+        if self.slope_deg is None or self.uphill_azimuth_deg is None or self.d_min_m is None:
+            return -math.inf
+        if not math.isfinite(centre_azimuth_deg) or not math.isfinite(half_width_deg) or half_width_deg < 0.0:
+            raise ValueError("azimuth centre and half-width must be finite, with non-negative half-width")
+
+        uphill_offset = (self.uphill_azimuth_deg - centre_azimuth_deg + 180.0) % 360.0 - 180.0
+        if half_width_deg >= 180.0 or abs(uphill_offset) <= half_width_deg:
+            maximum_cosine = 1.0
+        else:
+            slope_azimuth = math.radians(self.uphill_azimuth_deg)
+            endpoints = (
+                math.radians(centre_azimuth_deg - half_width_deg) - slope_azimuth,
+                math.radians(centre_azimuth_deg + half_width_deg) - slope_azimuth,
+            )
+            maximum_cosine = max(math.cos(value) for value in endpoints)
+        near_max = math.degrees(
+            math.atan(
+                math.tan(math.radians(self.slope_deg)) * maximum_cosine
+                - self.observer_height_m / self.d_min_m
+            )
+        )
+        return near_max if near_max > 0.0 else -math.inf
+
     def extrema(self, centre_azimuth_deg: float, half_width_deg: float) -> tuple[float, float]:
-        """Return exact finite bin extrema across the complete circular disk span."""
+        """Return conservative effective-mask extrema across a circular span.
+
+        Terrain extrema use finite mask bins. The near-zone upper bound is
+        maximized continuously over the span; the raw terrain minimum remains
+        a conservative lower bound for the maximum of terrain and near-zone.
+        """
         if self.elevations_deg is None:
-            value = self.effective_at(centre_azimuth_deg)
-            return value, value
+            terrain = self.elevation_at(centre_azimuth_deg)
+            return terrain, max(terrain, self._near_zone_max(centre_azimuth_deg, half_width_deg))
         ranges = self._span_ranges(centre_azimuth_deg, half_width_deg)
         if self.slope_deg is None or self.uphill_azimuth_deg is None or self.d_min_m is None:
             return self._raw_extrema(ranges)
-
-        indices = np.concatenate([np.arange(start, end) for start, end in ranges])
-        azimuths = (indices + 0.5) * self.bin_width_deg
-        values = np.asarray([self.effective_at(float(azimuth)) for azimuth in azimuths])
-        finite = values[np.isfinite(values)]
-        return (math.nan, math.nan) if len(finite) == 0 else (float(np.min(finite)), float(np.max(finite)))
+        minimum, maximum = self._raw_extrema(ranges)
+        if not math.isfinite(minimum) or not math.isfinite(maximum):
+            return (math.nan, math.nan)
+        return minimum, max(maximum, self._near_zone_max(centre_azimuth_deg, half_width_deg))
 
 
 def angular_radius_deg(body: str, distance_km: float) -> float:

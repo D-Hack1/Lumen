@@ -30,9 +30,10 @@ class EnvelopeBounds:
     """Caller-validated envelope over one candidate coarse interval.
 
     Elevation bounds, azimuth span, and maximum disk radius must conservatively
-    enclose the complete body disk throughout the interval. ``proven_state``
-    must prove the non-terrain parts of the predicate hold (or fail) throughout
-    the interval; endpoint samples alone are not a proof.
+    enclose the complete body disk throughout the interval. The guard adds one
+    mask bin to the supplied azimuth half-width. ``proven_state`` must prove
+    the non-terrain parts of the predicate hold (or fail) throughout the
+    interval; endpoint samples alone are not a proof.
     """
 
     min_elevation_deg: float
@@ -70,7 +71,12 @@ def _guarded_state(horizon: Horizon, bounds: EnvelopeBounds) -> bool | None:
         raise ValueError("envelope bounds must be finite with non-negative angular half-widths")
     if bounds.min_elevation_deg > bounds.max_elevation_deg:
         raise ValueError("envelope minimum elevation must not exceed its maximum")
-    minimum, maximum = horizon.extrema(bounds.azimuth_centre_deg, bounds.azimuth_half_width_deg)
+    half_width = bounds.azimuth_half_width_deg
+    if horizon.elevations_deg is not None:
+        if not math.isfinite(horizon.bin_width_deg) or horizon.bin_width_deg <= 0.0:
+            raise ValueError("masked horizons require a finite positive bin width")
+        half_width += horizon.bin_width_deg
+    minimum, maximum = horizon.extrema(bounds.azimuth_centre_deg, half_width)
     if not math.isfinite(minimum) or not math.isfinite(maximum):
         return None
     fully_visible = bounds.min_elevation_deg - bounds.max_disk_radius_deg - maximum > ENVELOPE_MARGIN_DEG

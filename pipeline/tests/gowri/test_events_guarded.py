@@ -103,3 +103,31 @@ def test_guarded_sampling_queries_wraparound_spans_and_keeps_grazing_threshold_f
 
     assert len(sample_times_guarded(0.0, 3600.0, horizon, wraparound)) == 31
     assert len(sample_times_guarded(0.0, 3600.0, Horizon(np.zeros(36), bin_width_deg=10.0), grazing)) == 31
+
+
+def test_guarded_sampling_widens_mask_span_by_one_bin_across_wraparound():
+    mask = np.zeros(36)
+    mask[-1] = 1.5
+    horizon = Horizon(mask, bin_width_deg=10.0)
+    bounds = lambda _left, _right: _bounds(1.6, 1.6, 0.0, 0.0, 0.0, True)
+
+    assert horizon.extrema(0.0, 0.0) == (0.0, 0.0)
+    assert horizon.extrema(0.0, horizon.bin_width_deg) == (0.0, 1.5)
+    assert len(sample_times_guarded(0.0, 3600.0, horizon, bounds)) == 31
+
+
+def test_guarded_sampling_bounds_continuous_near_zone_peak_between_mask_centres():
+    horizon = Horizon(
+        np.zeros(36),
+        bin_width_deg=10.0,
+        slope_deg=5.0,
+        uphill_azimuth_deg=0.0,
+        d_min_m=10.0,
+    )
+    bounds = lambda _left, _right: _bounds(5.2, 5.2, 0.0, 0.0, 0.0, True)
+
+    minimum, maximum = horizon.extrema(0.0, horizon.bin_width_deg)
+    assert maximum >= horizon.effective_at(0.0)
+    assert maximum == pytest.approx(5.0)
+    assert minimum <= horizon.effective_at(0.0)
+    assert len(sample_times_guarded(0.0, 3600.0, horizon, bounds)) == 31
