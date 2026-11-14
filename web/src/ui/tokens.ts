@@ -208,7 +208,8 @@ export function rightColumnTabs(w: number, h: number): boolean {
 }
 
 // ---------- CSS generation ----------
-const kebab = (s: string) => s.replace(/[A-Z0-9]+/g, (m) => '-' + m.toLowerCase()).replace(/^-/, '');
+// Digits stay attached to the word (surface1, not surface-1): every stylesheet uses --c-surface1..4. A test (cssVars.test.ts) guards this.
+const kebab = (s: string) => s.replace(/[A-Z]+/g, (m) => '-' + m.toLowerCase()).replace(/^-/, '');
 const px = (n: number) => `${n}px`;
 
 export function buildTokenCss(): string {
