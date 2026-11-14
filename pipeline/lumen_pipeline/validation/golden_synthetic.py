@@ -1,0 +1,100 @@
+"""Deterministic synthetic Golden Set 2 edge vectors.
+
+These vectors exercise reference primitives only.  They never represent DEM,
+sigma, DSN, or catalog data for a lunar landing site.
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+
+def default_synthetic_output_path() -> Path:
+    return Path(__file__).resolve().parents[3] / "web" / "public" / "data" / "golden" / "golden_set2_synthetic.json"
+
+
+def synthetic_golden_payload() -> dict[str, object]:
+    """Return static, hand-derived Set 2 reference vectors in declared units."""
+    cases: list[dict[str, object]] = [
+        {
+            "id": "synthetic_flat_visibility_boundaries",
+            "input": {"site_id": "synthetic_flat", "time_scale": "ET seconds", "range_et": [0, 120], "horizon_deg": 0.0, "sun_distance_km": 149597870.7},
+            "expected": {"visibility": [{"elevation_deg": 2.0, "clearance_deg": 2.0, "disk_fraction": 1.0, "visible": True}, {"elevation_deg": -2.0, "clearance_deg": -2.0, "disk_fraction": 0.0, "visible": False}]},
+        },
+        {
+            "id": "synthetic_terrain_mask_boundary",
+            "input": {"site_id": "synthetic_ridge", "time_scale": "ET seconds", "range_et": [0, 120], "horizon_deg": 4.0, "sun_distance_km": 149597870.7},
+            "expected": {"visibility": [{"elevation_deg": 5.0, "clearance_deg": 1.0, "visible": True}, {"elevation_deg": 3.0, "clearance_deg": -1.0, "visible": False}]},
+        },
+        {
+            "id": "synthetic_disk_limb_conventions",
+            "input": {"site_id": "synthetic_disk", "time_scale": "ET seconds", "range_et": [0, 0], "solar_radius_deg": 0.25},
+            "expected": {"limb_clearance_offset_deg": {"disk_0_pct": 0.25, "disk_50_pct": 0.0, "disk_100_pct": -0.25}},
+        },
+        {
+            "id": "synthetic_event_at_window_start",
+            "input": {"site_id": "synthetic_window_start", "time_scale": "ET seconds", "range_et": [0, 240], "visible_when": "et >= 0"},
+            "expected": {"events": [], "window": {"partial_start": True, "start_et": 0.0, "end_et": 240.0}},
+        },
+        {
+            "id": "synthetic_total_clearance_rate",
+            "input": {"site_id": "synthetic_moving_mask", "time_scale": "ET seconds", "range_et": [-20, 220], "elevation_deg": "5 + 0.001 * et", "azimuth_deg": "10 + 0.1 * et", "mask_deg_per_bin": 0.01, "mask_bin_width_deg": 0.1},
+            "expected": {"clearance_rate_deg_per_hour": -32.4},
+        },
+        {
+            "id": "synthetic_three_pass_bounds",
+            "input": {"site_id": "synthetic_sigma", "time_scale": "ET seconds", "mask_deg": 1.0, "sigma_deg": 0.2},
+            "expected": {"shifted_masks_deg": [0.8, 1.0, 1.2], "numeric_bounds": [0.8, 1.0, 1.2]},
+        },
+        {
+            "id": "synthetic_exact_event_uncertainty",
+            "input": {"site_id": "synthetic_exact", "time_scale": "ET seconds", "event_times_et": [80.0, 100.0, 120.0]},
+            "expected": {"delta_t_seconds": 20.0, "dt_method": "exact", "grazing_reason": None},
+        },
+        {
+            "id": "synthetic_grazing_rate",
+            "input": {"site_id": "synthetic_grazing", "time_scale": "ET seconds", "sigma_deg": 0.2, "constant_clearance_deg": 0.0},
+            "expected": {"delta_t_seconds": "infinity", "grazing_reason": "rate"},
+        },
+        {
+            "id": "synthetic_near_zone_slope_edges",
+            "input": {"site_id": "synthetic_pad", "time_scale": "ET seconds", "terrain_horizon_deg": -1.0, "slope_deg": 10.0, "uphill_azimuth_deg": 0.0, "d_min_m": 15.0, "observer_height_m": 1.0},
+            "expected": {"flat_or_downhill_effective_deg": -1.0, "cross_slope_effective_deg": -1.0, "uphill_effective_deg": 6.25},
+        },
+        {
+            "id": "synthetic_tier_c_smooth_moon",
+            "input": {"site_id": "synthetic_tier_c", "time_scale": "ET seconds", "observer_height_m": 2.0, "terrain_mode": "smooth_moon"},
+            "expected": {"terrain_sigma": None, "label": "smooth-Moon bound"},
+        },
+        {
+            "id": "synthetic_min_sun_elevation_ops",
+            "input": {"site_id": "synthetic_ops", "time_scale": "ET seconds", "elevation_deg": 5.0, "disk_threshold": 0.5, "min_sun_elevation_ops_deg": 6.0},
+            "expected": {"visible": False, "definitions_preset": "isroVikramOps"},
+        },
+        {
+            "id": "synthetic_power_eclipse_soc",
+            "input": {"site_id": "synthetic_power", "time_scale": "ET seconds", "times_et": [0.0, 3600.0], "panel_normal": [0.0, 0.0, 1.0], "panel_area_m2": 2.0, "panel_efficiency": 0.25, "sun_distance_km": 149597870.7, "disk_fractions": [1.0, 0.0], "load_w": [10.0, 10.0], "battery_capacity_wh": 1000.0, "usable_depth_of_discharge": 1.0, "initial_soc_fraction": 0.5},
+            "expected": {"generation_w": [680.5, 0.0], "net_w": [670.5, -10.0], "stored_energy_wh": [500.0, 830.25]},
+        },
+    ]
+    return {
+        "version": "1.0.0",
+        "set": 2,
+        "kind": "synthetic_reference_vectors",
+        "description": "Deterministic R3 edge vectors for reference and browser parity; not production terrain or site results.",
+        "units": {"time": "ET seconds", "angle": "deg", "distance": "km", "uncertainty": "s"},
+        "tolerances": {"angle_deg": 0.005, "event_time_s": 10.0, "delta_t_percent": 5.0},
+        "provenance": {"synthetic": True, "terrain_artifacts": "none", "dem_data": "none", "dsn_data": "none", "source": "hand-derived R3 reference cases"},
+        "case_schema": {"required": ["id", "input", "expected"], "input_time_scale": "ET seconds"},
+        "cases": cases,
+    }
+
+
+def build_synthetic_golden_set(output_path: str | Path | None = None) -> dict[str, object]:
+    """Write deterministic synthetic Set 2 JSON without reading production artifacts."""
+    output = Path(output_path) if output_path is not None else default_synthetic_output_path()
+    payload = synthetic_golden_payload()
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return payload
