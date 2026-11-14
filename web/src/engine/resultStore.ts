@@ -5,22 +5,18 @@
 //   scenario store change --(30 ms debounce)--> worker evaluate --(latest wins)--> snapshot --> subscribers
 // While a new evaluation is running the previous ready result stays visible (no flash of empty panels).
 import { evaluateScenario, latestWins } from './client';
-import type { ScenarioRequest } from './core/buildResult';
 import { loadCatalog } from './data/catalog';
 import { dataMode } from './data/source';
 import { mockScenarioResult } from '../mocks/mockResult';
-import { getScenario, useScenario, type Definitions as StoreDefinitions } from '../state/scenarioStore';
+import { getScenario, useScenario } from '../state/scenarioStore';
+import { makeRequest } from './requests';
 import type { EventType, ScenarioResult } from './types';
 
-const DAY_MS = 86_400_000;
 const DEBOUNCE_MS = 30;
 
-export const LOADING: ScenarioResult = { status: 'loading', error: null, meta: null, verdict: 'PENDING', verdictReasons: [], answer: null, events: [], windows: [], series: null, metrics: null };
+export const LOADING: ScenarioResult = { status: 'loading', error: null, meta: null, verdict: 'PENDING', verdictReasons: [], viability: null, answer: null, events: [], windows: [], series: null, metrics: null };
 
-/** Store definitions (percent, UI units) -> engine definitions (fractions). */
-export function engineDefinitions(d: StoreDefinitions) {
-  return { sunDiskThreshold: d.sunDiskThresholdPct / 100, earthDiskThreshold: d.dteDiskThresholdPct / 100, earthMarginDeg: d.earthMarginDeg, minSunElevationOpsDeg: d.minSunElevationOps };
-}
+export { engineDefinitions } from './requests';
 
 let snapshot: ScenarioResult = LOADING;
 const listeners = new Set<() => void>();
@@ -37,7 +33,7 @@ function publish(r: ScenarioResult): void {
 /** The request depends only on these scenario fields; anything else changing (view, persona, layers...) must not re-run the engine. */
 function relevantKey(): string {
   const s = getScenario();
-  return JSON.stringify([s.site, s.landingUtc, s.slipDays, s.durationDays, s.scrubUtc, s.heightM, s.definitions, dataMode()]);
+  return JSON.stringify([s.site, s.landingUtc, s.slipDays, s.durationDays, s.scrubUtc, s.heightM, s.definitions, s.profile, s.weights, dataMode()]);
 }
 
 async function run(): Promise<void> {
@@ -45,16 +41,7 @@ async function run(): Promise<void> {
   try {
     const { sites } = await loadCatalog();
     if (dataMode() === 'mock') return publish(mockScenarioResult(sites[0] ?? null));
-    const site = s.site.kind === 'site' ? sites.find((x) => x.id === (s.site as { id: string }).id) : undefined;
-    const point = s.site.kind === 'point' ? s.site : null;
-    if (!site && !point) throw new Error('The selected site is not in the catalog.');
-    const req: ScenarioRequest = {
-      siteId: site?.id ?? null, tier: site?.tier ?? 'C', nearFieldResM: site?.nearFieldResM ?? null,
-      latDeg: site?.lat ?? point!.lat, lonDegEast: site?.lon ?? point!.lon, heightM: s.heightM, rotation: site?.rotationMatrix ?? null,
-      touchdownMs: site?.touchdownUtc ?? null, padSlopeDeg: site?.padSlopeDeg ?? null, psr: site?.psr ?? null,
-      startMs: s.landingUtc + s.slipDays * DAY_MS, durationDays: s.durationDays, tScrubMs: s.scrubUtc,
-      definitions: engineDefinitions(s.definitions), dataVersions: { catalog: 1 },
-    };
+    const req = makeRequest(s, sites, { siteRef: s.site, landingUtc: s.landingUtc, heightM: s.heightM, scrubUtc: s.scrubUtc });
     const r = await evaluateLatest(req);
     if (r) publish(r); // null = superseded by a newer scenario: drop it
   } catch (e) {

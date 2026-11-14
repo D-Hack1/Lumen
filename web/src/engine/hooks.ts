@@ -6,7 +6,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { loadCatalog } from './data/catalog';
 import { loadLayers } from './data/layers';
-import { mockCompare } from '../mocks/mockResult';
+import { getCompare, subscribeCompare } from './compareStore';
 import { quickAnswer } from './quickAnswer';
 import { getResult, subscribeResult } from './resultStore';
 import type {
@@ -19,7 +19,6 @@ import type {
 } from './types';
 
 const EMPTY_CATALOG: CatalogResult = { sites: [], sparklines: {}, loading: true, error: null };
-const EMPTY_COMPARE: CompareResults = { status: 'idle', rows: [], baselineId: null };
 const EMPTY_QUICK: QuickAnswerResult = {
   status: 'idle', error: null, tier: 'pending', tierBadge: '', matchedSiteId: null, snapDistanceKm: null, sunElevDeg: 0, sunAzDeg: 0, sunDiskPct: 0,
   sunUp: false, earthElevDeg: 0, earthAzDeg: 0, earthRangeKm: 0, linkUp: false, nextSunset: null, nextEarthset: null, nextShadowExit: null,
@@ -60,12 +59,9 @@ export function useResult(): ScenarioResult {
   return useSyncExternalStore(subscribeResult, getResult, getResult);
 }
 
+/** Compare rows A-D evaluated once each (real mode) with deltas against the baseline; mock mode returns the fake set. */
 export function useCompareResults(): CompareResults {
-  return useLoaded<CompareResults>(
-    () => loadCatalog().then(({ sites }) => mockCompare(sites)),
-    { ...EMPTY_COMPARE, status: 'loading' },
-    () => ({ ...EMPTY_COMPARE, status: 'error' }),
-  );
+  return useSyncExternalStore(subscribeCompare, getCompare, getCompare);
 }
 
 export function useQuickAnswer(input: QuickAnswerInput | null): QuickAnswerResult {
