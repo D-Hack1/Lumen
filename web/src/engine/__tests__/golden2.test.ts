@@ -42,10 +42,11 @@ describe('Golden Set 2 (synthetic) vs the TypeScript engine', () => {
     expect(file.cases.map((c) => c.id)).toEqual([
       'synthetic_flat_visibility_boundaries', 'synthetic_terrain_mask_boundary', 'synthetic_disk_limb_conventions', 'synthetic_event_at_window_start',
       'synthetic_refined_visibility_window', 'synthetic_total_clearance_rate', 'synthetic_three_pass_bounds', 'synthetic_exact_event_uncertainty',
-      'synthetic_grazing_rate', 'synthetic_near_zone_slope_edges', 'synthetic_guarded_span_spike', 'synthetic_tier_c_smooth_moon',
-      'synthetic_min_sun_elevation_ops', 'synthetic_power_eclipse_soc', 'synthetic_dsn_link_modes',
+       'synthetic_grazing_rate', 'synthetic_near_zone_slope_edges', 'synthetic_guarded_span_spike', 'synthetic_tier_c_smooth_moon',
+       'synthetic_min_sun_elevation_ops', 'synthetic_power_eclipse_soc', 'synthetic_dsn_link_modes', 'synthetic_dsn_out_of_coverage',
     ]);
     expect(file.typescript_parity.python_only).toHaveProperty('synthetic_guarded_span_spike');
+    expect(file.typescript_parity.python_only).toHaveProperty('synthetic_dsn_out_of_coverage');
     expect(Object.keys(file.typescript_parity.partial).sort()).toEqual(['synthetic_dsn_link_modes', 'synthetic_three_pass_bounds']);
     expect(file.typescript_parity.full).not.toContain('synthetic_guarded_span_spike');
   });
