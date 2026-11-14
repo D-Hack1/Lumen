@@ -12,7 +12,7 @@ format. Copy keys and `quickstart.json` are in `frontend_content.md`.
 | Tier | What | Rate | React? |
 |---|---|---|---|
 | **Committed** | `useScenario` (Zustand): everything in the share URL | human speed (click, release, key) | yes, components re-render via selectors |
-| **Transient** | `crosshairBus`, `slipBus`, `padDragBus` | pointer / drag rate | **never**: subscribers draw imperatively |
+| **Transient** | `crosshairBus`, `slipBus`, `padDragBus`, `siteHoverBus` | pointer / drag rate | **never**: subscribers draw imperatively |
 
 Rule: a value that changes at pointer rate lives on a bus while it moves, and is committed to the store once, on
 release. **Never call `setState` (React or the store) from a bus subscriber or a pointer-move handler.**
@@ -111,6 +111,7 @@ interface TransientBus<T> {
 | `crosshairBus` | `{ tHover: number \| null; tScrub: number; source: string \| null }` | charts, Windows Table rows, Ribbon tracks, scrub bar | `commitScrub(t)` |
 | `slipBus` | `{ slipDays: number; dragging: boolean }` | Slip Bar during a drag | `setSlip(d)` on release |
 | `padDragBus` | `{ tiltMagDeg; tiltDirDeg; yawDeg; dragging: boolean }` | Touchdown Pad tilt and yaw drags | `setTilt(t)` / `setYaw(d)` on release |
+| `siteHoverBus` | `{ siteId: string \| null }` | Site Explorer cards (pointer enter/leave) — Phase 3 | never (hover only). The Basemap pin pulse reads it; until Nived's pins carry `data-site`, `features/sidebar/pinPulse.ts` toggles `.is-card-hover` on the matching pin |
 
 `source` is the id of the last writer (for example `'barcode'`), so a chart can skip redrawing its own echo.
 `'store'` means the value came from a commit.

@@ -1,6 +1,6 @@
 # frontend_content.md
 
-_Owner: Abhinav_ · Status: copy keys **implemented (Phase 2: D-14 states complete in both personas)**; `quickstart.json` shape **draft for Phase 5**.
+_Owner: Abhinav_ · Status: copy keys **implemented (Phase 2: D-14 states complete in both personas; Phase 3: Site Explorer, Definitions Bar, glossary tooltip and credit keys)**; `quickstart.json` shape **draft for Phase 5**.
 Source of truth: `web/src/content/personaCopy.ts` (strings), `web/src/state/copy.ts` (lookup),
 `web/src/engine/format.ts` → `fill()` (placeholders, Nived). If this file and the code disagree, the code wins and
 this file gets fixed.
@@ -53,7 +53,11 @@ this file gets fixed.
 
 ## 3. Current Educator overrides
 
-71 keys (full wording in §4): `mb.*` (16), `verdict.*` (10), `profile.*` (10), `answer.*` (31), `metric.*` (4).
+128 keys (full wording in §4): `mb.*` (16), `verdict.*` (10), `profile.*` (10), `answer.*` (31), `metric.*` (4),
+`sb.*` (21), `def.*` (32), `gloss.*` (4).
+
+Phase 3 added plain-language Educator wording for the Definitions Bar line and every ✎ popover field (PLAN §8.3
+"Educator persona shows a plain-language version"), the site cards, and the tooltip headings.
 
 Phase 2 completed Educator wording for **all 9 D-14 Answer Strip states** (labels, value templates, grazing,
 "dark for", below-ops and the shared now/window cells), the Mission Bar jump labels and tooltips, the verdict
@@ -64,7 +68,7 @@ state has a Planner string and a different Educator string, and that Educator ke
 **To do (Phase 5, A-12):** Educator wording for the remaining Metric Deck, map and Scan keys, plus the
 "What am I seeing?" callouts.
 
-## 4. Key reference (179 keys, generated from `personaCopy.ts`)
+## 4. Key reference (283 keys, generated from `personaCopy.ts`)
 
 ### `app.*` · App · used by Abhinav
 
@@ -334,6 +338,131 @@ state has a Planner string and a different Educator string, and that Educator ke
 | `touchdown.preset.horizontalDeck` | Deck |  |
 | `touchdown.preset.trackingMast` | Tracking mast |  |
 | `touchdown.height` | Mast height |  |
+
+### `sb.*` · Site Explorer sidebar · used by Abhinav
+
+| Key | Planner | Educator override |
+|---|---|---|
+| `sb.search` | Search sites or “lat, lon” | Find a place, or type “lat, lon” |
+| `sb.search.long` | Search sites by name, or type coordinates as “lat, lon” (e.g. −84.79, 29.20) | Find a landing site by name, or type a position as “latitude, longitude” |
+| `sb.search.clear` | Clear search |  |
+| `sb.coord.hint` | {lat} {lon} · not a catalog site | {lat} {lon} · your own spot |
+| `sb.coord.analyse` | Analyse custom point | Explore this spot |
+| `sb.coord.quick` | Quick Answer | Quick look |
+| `sb.filter.group` | Site category |  |
+| `sb.cat.all` | All |  |
+| `sb.cat.all.long` | All |  |
+| `sb.cat.artemis` | Artemis III |  |
+| `sb.cat.artemis.long` | Artemis III |  |
+| `sb.cat.historical` | Historical |  |
+| `sb.cat.historical.long` | Historical Landings |  |
+| `sb.cat.published` | Targets |  |
+| `sb.cat.published.long` | Published Targets |  |
+| `sb.cat.contrast` | Contrast |  |
+| `sb.cat.contrast.long` | Contrast Sites |  |
+| `sb.cat.custom` | Custom |  |
+| `sb.cat.custom.long` | Custom |  |
+| `sb.agency` | Agency |  |
+| `sb.agency.all` | All agencies |  |
+| `sb.agency.nasa_clps` | NASA/CLPS |  |
+| `sb.agency.isro` | ISRO |  |
+| `sb.agency.cnsa` | CNSA |  |
+| `sb.agency.jaxa` | JAXA |  |
+| `sb.agency.commercial` | Commercial |  |
+| `sb.category.historical_landing` | Historical landing |  |
+| `sb.category.published_target` | Published target |  |
+| `sb.category.artemis_candidate_region` | Artemis III region |  |
+| `sb.category.contrast_site` | Contrast site |  |
+| `sb.category.custom` | Custom point |  |
+| `sb.touchdown` | Touchdown {time} UTC | Landed {time} UTC |
+| `sb.precision.minute` | to the minute | time known to the minute |
+| `sb.precision.second` | to the second | time known to the second |
+| `sb.asPublished` | as published {date} | as announced {date} |
+| `sb.asPublished.pending` | as published · date pending | as announced |
+| `sb.landing` | Landing | Where it landed |
+| `sb.target` | Target | Where it aimed |
+| `sb.coords` | Coordinates |  |
+| `sb.compare` | + Compare |  |
+| `sb.compare.long` | Add to Compare (or Shift-click the card) | Put this site side by side with others (or Shift-click the card) |
+| `sb.compare.added` | Added to Compare as row {id}. |  |
+| `sb.compare.full` | Compare already has 4 rows — remove one first. |  |
+| `sb.spark.sun` | Sun | Sunlight |
+| `sb.spark.link` | Link | Contact |
+| `sb.spark.none` | no daily series |  |
+| `sb.spark.summary` | {label} {n}% mean over the window | {label}: about {n}% of the time |
+| `sb.verdict.pending` | Verdict pending — select the site to evaluate it | Click the site to see how it does |
+| `sb.verdict.of` | Verdict {v} |  |
+| `sb.tier` | Tier {tier} |  |
+| `sb.tier.pending` | Tier – |  |
+| `sb.tier.pending.long` | Fidelity tier not assigned yet | How much to trust the shadow timings here is not known yet |
+| `sb.mock` | mock |  |
+| `sb.empty` | No sites match. Clear the search or choose “All”. | Nothing matches. Clear the search or choose “All”. |
+| `sb.loading` | Loading the site catalog… |  |
+| `sb.error` | Could not load the site catalog: {e} |  |
+| `sb.count` | {n} of {total} sites |  |
+| `sb.card.hint` | Click to select · Shift-click to add to Compare | Click to explore · Shift-click to compare |
+| `sb.quick.title` | Quick Answer | Quick look |
+| `sb.quick.loading` | Computing… |  |
+| `sb.quick.error` | Quick Answer failed: {e} |  |
+| `sb.quick.open` | Open in Cockpit |  |
+| `sb.quick.close` | Close |  |
+
+### `def.*` · Definitions Bar + ✎ popover (R3 D-10) · used by Abhinav
+
+| Key | Planner | Educator override |
+|---|---|---|
+| `def.label` | Definitions | Rules |
+| `def.sun` | Sun available = ≥{disk}% disk above terrain{ops} @{h} m | The Sun counts as “up” when at least {disk}% of it clears the terrain{ops}, seen from {h} m |
+| `def.sun.ops` |  + elevation ≥{deg}° |  and it is at least {deg}° high |
+| `def.link` | Link = Earth ≥{margin}° above terrain{disk}{dsn} | Radio contact needs Earth at least {margin}° above the terrain{disk}{dsn} |
+| `def.link.disk` |  (≥{n}% disk) |  with {n}% of it showing |
+| `def.link.dsn` |  + DSN ≥{deg}° |  and a big dish on Earth seeing the Moon above {deg}° |
+| `def.link.noDsn` |  (DSN not applied) |  (Earth’s dishes not checked) |
+| `def.edit` | Edit definitions | Change the rules |
+| `def.chip.isroVikramOps` | Preset: ISRO ops | Using ISRO’s rules |
+| `def.chip.custom` | Custom rules | Your own rules |
+| `def.chip.reset` | Reset to default definitions | Go back to the standard rules |
+| `def.title` | Definitions | The rules |
+| `def.intro` | These rules decide when the Sun and the Earth link count as available. Every panel recomputes when you change them. | These rules decide when the lander counts as having sunlight and radio contact. Change one and everything updates. |
+| `def.f.sunDisk` | Sun disk threshold | How much of the Sun must show |
+| `def.f.sunDisk.help` | Share of the solar disk that must clear the terrain. | A Sun half-hidden behind a ridge gives about half the power. |
+| `def.f.height` | Observer height | How high the panels sit |
+| `def.f.height.help` | Height of the panels and antenna above the ground. | Raising panels a few metres lets them see over nearby bumps. |
+| `def.f.earthMargin` | Earth margin | Clear sky needed above Earth |
+| `def.f.earthMargin.help` | DTE margin: Earth centre elevation above the terrain at Earth’s azimuth. | How far above the hills Earth must be for the radio to work. |
+| `def.f.dteDisk` | DTE disk threshold | How much of Earth must show |
+| `def.f.dteDisk.help` | Share of the Earth disk that must clear the terrain for direct-to-Earth. | A radio needs a clear view of Earth, not just a sliver of it. |
+| `def.f.dsnMode` | DSN mode | Check Earth’s big dishes |
+| `def.f.dsnMode.help` | DSN-aware: link also needs a Goldstone, Canberra or Madrid dish to see the Moon. | Someone on Earth must be facing the Moon to listen. |
+| `def.dsn.off` | Off | No |
+| `def.dsn.dsnAware` | DSN-aware | Yes |
+| `def.f.dsnMask` | DSN mask | Lowest Moon the dishes can track |
+| `def.f.dsnMask.help` | Minimum Moon elevation at the DSN complex. | Dishes can’t listen when the Moon is too close to their horizon. |
+| `def.f.minSunElev` | Min Sun elevation (ops) | Lowest usable Sun |
+| `def.f.minSunElev.help` | When above 0°, the Sun also has to be at least this high. 0 = off. | Some landers need the Sun a little higher before they can work. 0 means no limit. |
+| `def.off` | off |  |
+| `def.preset.isroVikramOps` | ISRO Vikram ops (min Sun elevation 6°) | Use ISRO’s Vikram rule (Sun at least 6° high) |
+| `def.preset.isroVikramOps.source` | Source: mission team statement as reported. | As the mission team described it. |
+| `def.preset.active` | active |  |
+| `def.preset.default` | Reset to defaults | Back to the standard rules |
+| `def.close` | Close |  |
+
+### `gloss.*` · InfoBadge tooltip headings · used by the kit InfoBadge (everyone)
+
+| Key | Planner | Educator override |
+|---|---|---|
+| `gloss.about` | About | What is |
+| `gloss.formula` | Formula | How it’s worked out |
+| `gloss.impact` | Impact | Why it matters |
+| `gloss.source` | Source & σ | Where it comes from |
+| `gloss.learnMore` | Learn more → |  |
+
+### `credit.*` · CreditLine · used by the kit CreditLine (Ebin, Nived)
+
+| Key | Planner | Educator override |
+|---|---|---|
+| `credit.prefix` | Credit |  |
+
 
 ## 5. `web/public/content/quickstart.json` (draft, built in Phase 5)
 
