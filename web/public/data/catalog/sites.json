@@ -1,0 +1,223 @@
+{
+  "coordinate_frame": "MOON_ME_DE421",
+  "schema": "catalog",
+  "sites": [
+    {
+      "agency": "NASA / Intuitive Machines",
+      "category": "historical_landing",
+      "coord_note": "Published landing coordinate; reports with a minute-only touchdown time are noted separately.",
+      "coordinate_frame": "MOON_ME_DE421",
+      "id": "im2_athena",
+      "landing_coords": {
+        "lat": -84.7906,
+        "lon": 29.1957,
+        "source": "NASA and LROC landing-site release"
+      },
+      "last_contact_utc": "2025-03-07T06:15:00Z",
+      "latitude_deg": -84.7906,
+      "longitude_deg_east": 29.1957,
+      "name": "IM-2 Athena (Mons Mouton)",
+      "notes": "Published landing coordinate; reports with a minute-only touchdown time are noted separately.",
+      "program": "CLPS IM-2",
+      "reference_axis": "+X_ME",
+      "rotation_matrix": [
+        [
+          -0.0,
+          0.9990125213061966,
+          0.04442952029266446
+        ],
+        [
+          0.9968538879214051,
+          -0.0035215338175812135,
+          0.07918285758641631
+        ],
+        [
+          0.07926112625984477,
+          0.04428974004222553,
+          -0.9958695159462474
+        ]
+      ],
+      "source_type": "agency",
+      "source_url": "https://www.nasa.gov/missions/artemis/clps/",
+      "target_coords": null,
+      "terrain": {
+        "dispersion_file": null,
+        "mask": null,
+        "near_field_res_m": null,
+        "pad": null,
+        "psr": null,
+        "sigma": null,
+        "status": "pending"
+      },
+      "tier": "pending",
+      "touchdown_precision": "second",
+      "touchdown_utc": "2025-03-06T17:28:50Z",
+      "verification_status": "verified",
+      "verified_by": "Gowri"
+    },
+    {
+      "agency": "ISRO",
+      "category": "historical_landing",
+      "coord_note": "Landing coordinates drive computation; the target is a secondary pin.",
+      "coordinate_frame": "MOON_ME_DE421",
+      "id": "cy3_shiv_shakti",
+      "landing_coords": {
+        "lat": -69.373,
+        "lon": 32.319,
+        "source": "ISRO landing announcement"
+      },
+      "last_contact_utc": null,
+      "latitude_deg": -69.373,
+      "longitude_deg_east": 32.319,
+      "name": "Chandrayaan-3 Statio Shiv Shakti",
+      "notes": "Landing coordinates drive computation; the target is a secondary pin.",
+      "program": "Chandrayaan-3",
+      "reference_axis": "+X_ME",
+      "rotation_matrix": [
+        [
+          -0.0,
+          0.9803456779039375,
+          0.1972874851962721
+        ],
+        [
+          0.9546567618290611,
+          -0.058734199762732704,
+          0.2918574324431071
+        ],
+        [
+          0.29770869502594544,
+          0.18834183176687194,
+          -0.9358936303408887
+        ]
+      ],
+      "source_type": "agency_and_peer_reviewed",
+      "source_url": "https://www.isro.gov.in/Chandrayaan3.html",
+      "target_coords": {
+        "lat": -69.367621,
+        "lon": 32.348126,
+        "source": "PRL, Current Science pre-landing target"
+      },
+      "terrain": {
+        "dispersion_file": null,
+        "mask": null,
+        "near_field_res_m": null,
+        "pad": null,
+        "psr": null,
+        "sigma": null,
+        "status": "pending"
+      },
+      "tier": "pending",
+      "touchdown_precision": "minute",
+      "touchdown_utc": "2023-08-23T12:33:00Z",
+      "verification_status": "verified",
+      "verified_by": "Gowri"
+    },
+    {
+      "agency": "NASA",
+      "category": "published_target",
+      "coord_note": "Published target coordinate; no landing has occurred.",
+      "coordinate_frame": "MOON_ME_DE421",
+      "id": "shackleton_ridge",
+      "landing_coords": null,
+      "last_contact_utc": null,
+      "latitude_deg": -89.54,
+      "longitude_deg_east": 129.0,
+      "name": "Shackleton connecting ridge",
+      "notes": "Published target coordinate; no landing has occurred.",
+      "program": "CLPS",
+      "reference_axis": "+X_ME",
+      "rotation_matrix": [
+        [
+          -0.0,
+          0.9999805351270227,
+          0.00623934027549719
+        ],
+        [
+          0.9999872362746323,
+          3.152397750993308e-05,
+          -0.005052355298445896
+        ],
+        [
+          -0.005052453643814296,
+          0.0062392606382714365,
+          -0.9999677716500991
+        ]
+      ],
+      "source_type": "usgs_and_agency",
+      "source_url": "https://astrogeology.usgs.gov/search/map/Moon/Lunar_Polar_Maps",
+      "target_coords": {
+        "lat": -89.54,
+        "lon": 129.0,
+        "source": "USGS navigational grid and NASA CLPS mission material"
+      },
+      "terrain": {
+        "dispersion_file": null,
+        "mask": null,
+        "near_field_res_m": null,
+        "pad": null,
+        "psr": null,
+        "sigma": null,
+        "status": "pending"
+      },
+      "tier": "pending",
+      "touchdown_precision": null,
+      "touchdown_utc": null,
+      "verification_status": "verified",
+      "verified_by": "Gowri"
+    },
+    {
+      "agency": "Firefly Aerospace",
+      "category": "historical_landing",
+      "coord_note": "Target centre; Blue Ghost landed within 100 m. Awaiting an LROC final landing fix.",
+      "coordinate_frame": "MOON_ME_DE421",
+      "id": "blue_ghost_m1",
+      "landing_coords": null,
+      "last_contact_utc": "2025-03-16T23:25:00Z",
+      "latitude_deg": 18.56,
+      "longitude_deg_east": 61.81,
+      "name": "Blue Ghost Mission 1 (Mare Crisium)",
+      "notes": "Target centre; Blue Ghost landed within 100 m. Awaiting an LROC final landing fix.",
+      "program": "CLPS Blue Ghost Mission 1",
+      "reference_axis": "+Z_ME",
+      "rotation_matrix": [
+        [
+          -0.8813859143088522,
+          0.472396941202998,
+          0.0
+        ],
+        [
+          -0.15036279583917211,
+          -0.28054298986621573,
+          0.9479908546311784
+        ],
+        [
+          0.44782798001618457,
+          0.8355457861655312,
+          0.3182975644513294
+        ]
+      ],
+      "source_type": "agency",
+      "source_url": "https://fireflyspace.com/missions/blue-ghost-mission-1/",
+      "target_coords": {
+        "lat": 18.56,
+        "lon": 61.81,
+        "source": "Firefly landing ellipse centre"
+      },
+      "terrain": {
+        "dispersion_file": null,
+        "mask": null,
+        "near_field_res_m": null,
+        "pad": null,
+        "psr": null,
+        "sigma": null,
+        "status": "pending"
+      },
+      "tier": "pending",
+      "touchdown_precision": "minute",
+      "touchdown_utc": "2025-03-02T08:34:00Z",
+      "verification_status": "verified",
+      "verified_by": "Gowri"
+    }
+  ],
+  "version": 1
+}
