@@ -12,6 +12,8 @@ import { color } from '../../ui/tokens';
 import { LayeredCanvas } from '../shared/LayeredCanvas';
 import { COACH, coachAnchor, placeAnchor, POINT_ANCHOR_STYLE } from '../shared/coachAnchors';
 import { useVisualCopy, visualCopy } from '../shared/visualCopy';
+import { drawEarthTwin } from './earthTwinDraw';
+import { useSiteLat } from './useSiteLat';
 import { buildPanoramaScale, maskElevRange, nearestHeightIndex, type PanoramaScale } from '../shared/ribbonGeometry';
 import { useSiteMask } from './useSiteMask';
 
@@ -24,13 +26,15 @@ function sampleIndex(series: NonNullable<ReturnType<typeof useResult>['series']>
   return Math.max(0, Math.min(series.sunElevDeg.length - 1, Math.round((t - series.t0) / series.stepMs)));
 }
 
-export function RibbonPanorama() {
+export function RibbonPanorama({ showTwin = false }: { showTwin?: boolean }) {
   const result = useResult();
+  const lat = useSiteLat();
   const series = result.series;
   const heightM = useScenario((s) => s.heightM);
   const mask = useSiteMask(result.meta?.siteId ?? null);
   const heightIdx = nearestHeightIndex(heightM);
   const vc = useVisualCopy();
+  const twinOn = showTwin && vc.persona === 'educator';
   const sunAnchor = useRef<HTMLDivElement>(null);
   const earthAnchor = useRef<HTMLDivElement>(null);
   const horizonAnchor = useRef<HTMLDivElement>(null);
@@ -49,7 +53,7 @@ export function RibbonPanorama() {
         <div ref={horizonAnchor} {...coachAnchor(COACH.ribbonHorizon)} style={POINT_ANCHOR_STYLE} aria-hidden />
         <LayeredCanvas
           className="ribbon-panorama"
-          staticKey={`${mask.mask ? mask.mask.siteId : 'none'}:${heightIdx}:${series ? series.t0 : 0}:${vc.persona}`}
+          staticKey={`${mask.mask ? mask.mask.siteId : 'none'}:${heightIdx}:${series ? series.t0 : 0}:${vc.persona}:${twinOn ? lat : 'x'}`}
           drawStatic={(ctx, w, h) => {
             const { min, max } = mask.mask ? maskElevRange(mask.mask, heightIdx) : { min: -2, max: 6 };
             const scale = buildPanoramaScale(w, h, min, max);
@@ -103,6 +107,9 @@ export function RibbonPanorama() {
               drawTrack(ctx, scale, series.sunAzDeg, series.sunElevDeg, series.sunUp, color.sun);
               drawTrack(ctx, scale, series.earthAzDeg, series.earthElevDeg, series.earthUp, color.earth);
             }
+
+            // Earth Twin (Educator, toggled): the terrestrial Sun path for the same latitude and date.
+            if (twinOn && series) drawEarthTwin(ctx, scale, lat, series.t0, visualCopy().t('twin.label'));
 
             // "V ×N" exaggeration tag + not-to-scale note.
             ctx.fillStyle = color.textFaint;
