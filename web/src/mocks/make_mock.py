@@ -287,18 +287,29 @@ def make_pad_disp_summaries():
         la, aa = math.radians(th), math.radians(up)  # horizontal projection of g points uphill
         n_c, e_c, u_c = math.sin(la) * math.cos(aa), math.sin(la) * math.sin(aa), math.cos(la)
         g_me = [n_c * mat[1][i] + e_c * mat[0][i] + u_c * mat[2][i] for i in range(3)]  # mat rows: east, north_ref, up
-        w_json(f"terrain/pad/{s['id']}.json", hdr(
-            "pad", version="0.1.0", producer="lumen_pipeline.terrain.pad (mock)", created_utc="2026-01-01T00:00:00Z", site_id=s["id"],
-            ground_normal_me=[round(x, 9) for x in g_me], slope_deg=th, downhill_aspect_deg=s["aspect"], uphill_az_deg=up,
-            z0_m=0.0, d_min_m=3 * nf, near_field_resolution_m=nf, under_resolved=nf > 6,
-            plane_fit={"k": 3, "window_px": [7, 7], "window_dim_m": [7 * nf, 7 * nf], "baseline_m": 6 * nf, "dem_source": "MOCK-DEM"},
-            dispersion_slope_stats={"p50": th * 0.8, "p95": th * 1.6, "max": th * 2.0, "pct_below_tolerance": 92.5}))
         # 11x11 dispersion micro-grid, 50 m spacing. DRAFT layout (contract leaves it unresolved): slope uint8 (0.1 deg)
         grid = bytearray()
         for j in range(11):
             for i in range(11):
                 v = th + 2.0 * math.sin(i * 0.7 + s["seed"]) * math.cos(j * 0.5)
                 grid.append(max(0, min(255, round(max(0.0, v) * 10))))
+        # The pad stats are DERIVED from the stored grid (same scatter, one source of truth): the badge and the histogram cannot disagree.
+        # Percentiles use linear interpolation (numpy default); tolerance = the default hazard tolerance, 10 deg, "below" = strictly below.
+        vals = sorted(g * 0.1 for g in grid)
+
+        def pct(p):
+            x = (len(vals) - 1) * p / 100.0
+            lo = int(x)
+            return vals[lo] + (x - lo) * (vals[min(lo + 1, len(vals) - 1)] - vals[lo])
+
+        disp_stats = {"p50": round(pct(50), 3), "p95": round(pct(95), 3), "max": round(vals[-1], 3),
+                      "pct_below_tolerance": round(100.0 * sum(1 for v in vals if v < 10.0) / len(vals), 3)}
+        w_json(f"terrain/pad/{s['id']}.json", hdr(
+            "pad", version="0.1.0", producer="lumen_pipeline.terrain.pad (mock)", created_utc="2026-01-01T00:00:00Z", site_id=s["id"],
+            ground_normal_me=[round(x, 9) for x in g_me], slope_deg=th, downhill_aspect_deg=s["aspect"], uphill_az_deg=up,
+            z0_m=0.0, d_min_m=3 * nf, near_field_resolution_m=nf, under_resolved=nf > 6,
+            plane_fit={"k": 3, "window_px": [7, 7], "window_dim_m": [7 * nf, 7 * nf], "baseline_m": 6 * nf, "dem_source": "MOCK-DEM"},
+            dispersion_slope_stats=disp_stats))
         w_json(f"terrain/dispersion/{s['id']}.json", hdr(
             "dispersion", version="0.1.0", producer="mock", created_utc="2026-01-01T00:00:00Z", git_commit="0" * 40, site_id=s["id"],
             bin_width_deg=0.5, observer_height_m=1.0, nodes=[11, 11], spacing_m=50, dtype="uint8", unit_deg=0.1,
