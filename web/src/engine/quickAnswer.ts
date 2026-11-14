@@ -1,11 +1,15 @@
 // Owner: Nived
-// Single-point answer from lat/lon/UTC/duration/height: Tier A if a curated site matches, else Tier B snap, else Tier C.
-// MOCK implementation (N-3): returns fake numbers shaped like the final result.
+// Single-point answer from lat/lon/UTC/duration/height. Real mode: the same engine as the Cockpit (core/quick.ts), on the
+// real ephemeris; a curated site is recognised within 1 km, anything else is a smooth-Moon (Tier C) answer. Mock mode: fake numbers.
+import { buildQuickAnswer } from './core/quick';
 import { loadCatalog } from './data/catalog';
+import { loadEphem } from './data/ephem';
+import { dataMode } from './data/source';
 import { mockQuickAnswer } from '../mocks/mockResult';
 import type { QuickAnswerInput, QuickAnswerResult } from './types';
 
 export async function quickAnswer(input: QuickAnswerInput): Promise<QuickAnswerResult> {
   const { sites } = await loadCatalog();
-  return mockQuickAnswer(input, sites);
+  if (dataMode() === 'mock') return mockQuickAnswer(input, sites);
+  return buildQuickAnswer(await loadEphem(), input, sites);
 }
