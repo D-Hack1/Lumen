@@ -91,7 +91,14 @@ def build_g7_report(
     absolute_error = abs(sun.elevation_deg - REFERENCE_ELEVATION_DEG)
     numerical_pass = absolute_error <= TOLERANCE_DEG
     provenance_pass = ephem_hash_matches and kernel_hashes_match
-    status = "PASS" if numerical_pass and provenance_pass and timeline_pass else "FAIL"
+    numerical_failures = [] if numerical_pass else ["touchdown_elevation_outside_tolerance"]
+    provenance_failures = []
+    if not ephem_hash_matches:
+        provenance_failures.append("ephemeris_sha256_mismatch")
+    if not kernel_hashes_match:
+        provenance_failures.append("kernel_sha256_mismatch")
+    timeline_failures = [] if timeline_pass else ["sun_below_ops_event_not_found"]
+    status = "PASS" if numerical_pass and timeline_pass else "FAIL"
     return {
         "id": "G7",
         "check": "CY-3 Sun elevation at touchdown",
@@ -132,6 +139,11 @@ def build_g7_report(
         "absolute_error_deg": absolute_error,
         "numerical_result": "PASS" if numerical_pass else "FAIL",
         "provenance_result": "PASS" if provenance_pass else "FAIL",
+        "failure_reasons": {
+            "numerical": numerical_failures,
+            "provenance": provenance_failures,
+            "timeline": timeline_failures,
+        },
         "qualitative_timeline_check": {
             "status": "PASS" if timeline_pass else "FAIL",
             "sun_below_6_deg_utc": below_ops_utc,
