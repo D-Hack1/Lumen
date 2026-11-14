@@ -1,16 +1,17 @@
 // Owner: Nived
 // useCatalog, useResult, useCompareResults, useQuickAnswer, useLayers, jumpTo.
-// N-3: mock-backed. Catalog and layers load the (mock or real) files through the loaders; results are fake
-// but fully shaped. useResult will read the scenario from Abhinav's store once it exists (N-5+).
-import { useEffect, useState } from 'react';
+// Catalog and layers load the (mock or real) files through the loaders. `useResult` reads the shared result store:
+// real mode evaluates the scenario with the engine in a Web Worker; mock mode returns a fake, well-shaped result.
+// useCompareResults / useQuickAnswer are still mock-backed (Phase 4).
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { loadCatalog } from './data/catalog';
 import { loadLayers } from './data/layers';
-import { mockCompare, mockScenarioResult } from '../mocks/mockResult';
+import { mockCompare } from '../mocks/mockResult';
 import { quickAnswer } from './quickAnswer';
+import { getResult, subscribeResult } from './resultStore';
 import type {
   CatalogResult,
   CompareResults,
-  EventType,
   LayersResult,
   QuickAnswerInput,
   QuickAnswerResult,
@@ -18,9 +19,6 @@ import type {
 } from './types';
 
 const EMPTY_CATALOG: CatalogResult = { sites: [], sparklines: {}, loading: true, error: null };
-const EMPTY_RESULT: ScenarioResult = {
-  status: 'idle', error: null, meta: null, verdict: 'PENDING', verdictReasons: [], answer: null, events: [], windows: [], series: null, metrics: null,
-};
 const EMPTY_COMPARE: CompareResults = { status: 'idle', rows: [], baselineId: null };
 const EMPTY_QUICK: QuickAnswerResult = {
   status: 'idle', error: null, tier: 'pending', tierBadge: '', matchedSiteId: null, snapDistanceKm: null, sunElevDeg: 0, sunAzDeg: 0, sunDiskPct: 0,
@@ -57,19 +55,9 @@ export function useCatalog(): CatalogResult {
   );
 }
 
-// Latest result, so jumpTo() can answer without arguments (per contract).
-let lastResult: ScenarioResult = EMPTY_RESULT;
-
+/** The scenario's result. One shared evaluation per scenario change (see resultStore.ts); mock mode returns a fake, well-shaped result. */
 export function useResult(): ScenarioResult {
-  return useLoaded<ScenarioResult>(
-    () =>
-      loadCatalog().then(({ sites }) => {
-        lastResult = mockScenarioResult(sites[0] ?? null);
-        return lastResult;
-      }),
-    { ...EMPTY_RESULT, status: 'loading' },
-    (error) => ({ ...EMPTY_RESULT, status: 'error', error }),
-  );
+  return useSyncExternalStore(subscribeResult, getResult, getResult);
 }
 
 export function useCompareResults(): CompareResults {
@@ -110,8 +98,4 @@ export function useLayers(): LayersResult {
   );
 }
 
-/** Time (epoch ms UTC) of the next event of this type after the current scrub time, or null. Abhinav sets t_scrub from it. */
-export function jumpTo(eventType: EventType): number | null {
-  const after = lastResult.answer?.tScrub ?? 0;
-  return lastResult.events.find((e) => e.type === eventType && e.t > after)?.t ?? null;
-}
+export { jumpTo } from './resultStore';

@@ -4,7 +4,15 @@
 
 export type DataMode = 'mock' | 'real';
 
+let modeOverride: DataMode | null = null;
+
+/** Force mock/real at runtime (tests, a dev toggle). Pass null to go back to the VITE_LUMEN_DATA setting. */
+export function setDataMode(mode: DataMode | null): void {
+  modeOverride = mode;
+}
+
 export function dataMode(): DataMode {
+  if (modeOverride) return modeOverride;
   const v = (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_LUMEN_DATA;
   return v === 'real' ? 'real' : 'mock';
 }

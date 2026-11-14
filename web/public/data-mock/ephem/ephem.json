@@ -6,31 +6,15 @@
   ],
   "dtype": "float32",
   "fields": [
-    "sun_position_km_x",
-    "sun_position_km_y",
-    "sun_position_km_z",
-    "sun_velocity_km_s_x",
-    "sun_velocity_km_s_y",
-    "sun_velocity_km_s_z",
-    "earth_position_km_x",
-    "earth_position_km_y",
-    "earth_position_km_z",
-    "earth_velocity_km_s_x",
-    "earth_velocity_km_s_y",
-    "earth_velocity_km_s_z"
+    "sun_position_km",
+    "sun_velocity_km_s",
+    "earth_position_km",
+    "earth_velocity_km_s"
   ],
   "units": [
     "km",
-    "km",
-    "km",
-    "km/s",
-    "km/s",
     "km/s",
     "km",
-    "km",
-    "km",
-    "km/s",
-    "km/s",
     "km/s"
   ],
   "scale": null,
@@ -41,18 +25,21 @@
   "mock": true,
   "note": "MOCK DATA \u2014 synthetic values, not for science or demo claims",
   "start_utc": "2023-01-01T00:00:00Z",
-  "cadence_s": 21600,
-  "frame": "MOON_ME",
+  "end_utc": "2031-01-01T00:00:00Z",
+  "count": 11689,
+  "start_et_tdb": 725803268.1839136,
+  "step_seconds": 21600,
+  "frame": "MOON_ME_DE421",
   "body_order": [
     "sun",
     "earth"
   ],
-  "aberration": "LT+S (mock: none, synthetic circular Sun path)",
-  "kernels": [
+  "aberration_correction": "LT+S",
+  "kernel_provenance": [
     {
-      "name": "MOCK",
+      "filename": "MOCK",
       "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
     }
   ],
-  "mock_cadence_note": "mock is 6 h; real is 3600 s. Loaders must read cadence_s."
+  "mock_cadence_note": "mock is 6 h; real is 3600 s. Loaders must read step_seconds."
 }
