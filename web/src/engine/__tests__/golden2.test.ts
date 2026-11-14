@@ -145,8 +145,7 @@ describe('Golden Set 2 (synthetic) vs the TypeScript engine', () => {
     expect(Math.abs(flatH.effectiveAt(i.uphill_azimuth_deg) - c.expected.flat_or_downhill_effective_deg)).toBeLessThanOrEqual(TOL.angle_deg);
     expect(Math.abs(h.effectiveAt((i.uphill_azimuth_deg + 180) % 360) - c.expected.flat_or_downhill_effective_deg)).toBeLessThanOrEqual(TOL.angle_deg);
     expect(Math.abs(h.effectiveAt((i.uphill_azimuth_deg + 90) % 360) - c.expected.cross_slope_effective_deg)).toBeLessThanOrEqual(TOL.angle_deg);
-    // The file stores the hand-rounded 6.25; the exact value is atan(tan 10deg - 1/15) = 6.2597 deg, so (as Gowri's own pytest does) allow 0.01 deg here.
-    expect(Math.abs(h.effectiveAt(i.uphill_azimuth_deg) - c.expected.uphill_effective_deg)).toBeLessThanOrEqual(0.01);
+    expect(Math.abs(h.effectiveAt(i.uphill_azimuth_deg) - c.expected.uphill_effective_deg)).toBeLessThanOrEqual(TOL.angle_deg);
   });
 
   it('synthetic_min_sun_elevation_ops: 5 deg elevation fails the 6 deg ISRO ops minimum even with the full disk', () => {

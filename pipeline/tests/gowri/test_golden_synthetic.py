@@ -110,7 +110,7 @@ def test_synthetic_golden_events_uncertainty_and_slope_edges():
     expected_slope = _case(payload, "synthetic_near_zone_slope_edges")["expected"]
     assert slope.effective_at(180.0) == pytest.approx(expected_slope["flat_or_downhill_effective_deg"])
     assert slope.effective_at(90.0) == pytest.approx(expected_slope["cross_slope_effective_deg"])
-    assert slope.effective_at(0.0) == pytest.approx(expected_slope["uphill_effective_deg"], abs=0.01)
+    assert slope.effective_at(0.0) == pytest.approx(expected_slope["uphill_effective_deg"], abs=0.005)
 
 
 def test_synthetic_golden_ops_elevation_definition():

@@ -225,7 +225,7 @@
       "expected": {
         "cross_slope_effective_deg": -1.0,
         "flat_or_downhill_effective_deg": -1.0,
-        "uphill_effective_deg": 6.25
+        "uphill_effective_deg": 6.2597
       },
       "id": "synthetic_near_zone_slope_edges",
       "input": {

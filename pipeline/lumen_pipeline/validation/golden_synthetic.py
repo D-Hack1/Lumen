@@ -65,7 +65,7 @@ def synthetic_golden_payload() -> dict[str, object]:
         {
             "id": "synthetic_near_zone_slope_edges",
             "input": {"site_id": "synthetic_pad", "time_scale": "ET seconds", "terrain_horizon_deg": -1.0, "slope_deg": 10.0, "uphill_azimuth_deg": 0.0, "d_min_m": 15.0, "observer_height_m": 1.0},
-            "expected": {"flat_or_downhill_effective_deg": -1.0, "cross_slope_effective_deg": -1.0, "uphill_effective_deg": 6.25},
+            "expected": {"flat_or_downhill_effective_deg": -1.0, "cross_slope_effective_deg": -1.0, "uphill_effective_deg": 6.2597},
         },
         {
             "id": "synthetic_guarded_span_spike",
