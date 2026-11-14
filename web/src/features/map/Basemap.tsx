@@ -1,2 +1,6 @@
 // Owner: Nived
-// South Pole basemap with layers and pins.
+// Basemap: layers, pins, regions (STUB, N-1)
+
+export function Basemap() {
+  return <div data-component="Basemap" />;
+}

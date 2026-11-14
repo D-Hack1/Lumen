@@ -1,0 +1,40 @@
+{
+  "schema": "regions",
+  "version": 1,
+  "mock": true,
+  "note": "MOCK DATA \u2014 synthetic values, not for science or demo claims",
+  "file": "artemis_regions.svg",
+  "units": "km, same frame as layers (y flipped: svg_y = -y)",
+  "regions": [
+    {
+      "id": "mock_region_1",
+      "name": "MOCK region 1",
+      "centroid": {
+        "lat": -89.3,
+        "lon": 60.0
+      },
+      "approximate_centre": true,
+      "svg_element": "mock_region_1"
+    },
+    {
+      "id": "mock_region_2",
+      "name": "MOCK region 2",
+      "centroid": {
+        "lat": -86.9,
+        "lon": 200.0
+      },
+      "approximate_centre": true,
+      "svg_element": "mock_region_2"
+    },
+    {
+      "id": "mock_region_3",
+      "name": "MOCK region 3",
+      "centroid": {
+        "lat": -85.4,
+        "lon": 310.0
+      },
+      "approximate_centre": true,
+      "svg_element": "mock_region_3"
+    }
+  ]
+}

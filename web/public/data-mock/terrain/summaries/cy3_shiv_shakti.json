@@ -1,0 +1,18 @@
+{
+  "schema": "site_summary",
+  "version": 1,
+  "mock": true,
+  "note": "MOCK DATA \u2014 synthetic values, not for science or demo claims",
+  "site_id": "cy3_shiv_shakti",
+  "tier": "A",
+  "near_field_res_m": 20,
+  "dem_source": "MOCK-DEM",
+  "files": {
+    "mask": "masks/cy3_shiv_shakti.json",
+    "sigma": "sigma/cy3_shiv_shakti.bin",
+    "pad": "pad/cy3_shiv_shakti.json",
+    "dispersion": "dispersion/cy3_shiv_shakti.json"
+  },
+  "psr": null,
+  "run_utc": "2026-01-01T00:00:00Z"
+}

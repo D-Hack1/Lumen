@@ -1,0 +1,64 @@
+{
+  "schema": "mask",
+  "version": 1,
+  "mock": true,
+  "note": "MOCK DATA \u2014 synthetic values, not for science or demo claims",
+  "site_id": "im2_athena",
+  "bin_deg": 0.1,
+  "n_bins": 3600,
+  "heights_m": [
+    1.0,
+    2.0,
+    5.0,
+    10.0
+  ],
+  "range_km": 250,
+  "elev": {
+    "dtype": "int16",
+    "unit_deg": 0.01,
+    "offset_bytes": 0,
+    "shape": [
+      4,
+      3600
+    ]
+  },
+  "distance": {
+    "dtype": "uint16",
+    "unit_m": 100,
+    "offset_bytes": 28800,
+    "shape": [
+      4,
+      3600
+    ]
+  },
+  "global_extremes": [
+    {
+      "height_m": 1.0,
+      "min_deg": -0.47,
+      "max_deg": 3.324
+    },
+    {
+      "height_m": 2.0,
+      "min_deg": -0.482,
+      "max_deg": 3.312
+    },
+    {
+      "height_m": 5.0,
+      "min_deg": -0.503,
+      "max_deg": 3.291
+    },
+    {
+      "height_m": 10.0,
+      "min_deg": -0.521,
+      "max_deg": 3.273
+    }
+  ],
+  "d_min_m": 15,
+  "z0_m": 0.0,
+  "median_filter_radius_m": 100,
+  "near_field_res_m": 5,
+  "range_lookup": "rebuild_on_load",
+  "sigma_file": "sigma/im2_athena.bin",
+  "sigma_default_deg": 0.1,
+  "sigma_source": "default"
+}

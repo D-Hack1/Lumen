@@ -1,0 +1,30 @@
+{
+  "schema": "ephem",
+  "version": 1,
+  "mock": true,
+  "note": "MOCK DATA \u2014 synthetic values, not for science or demo claims",
+  "epoch_utc": "2023-01-01T00:00:00Z",
+  "epoch_unix_s": 1672531200,
+  "step_s": 21600,
+  "count": 11689,
+  "frame": "MOON_ME",
+  "units": {
+    "pos": "km",
+    "vel": "km/s"
+  },
+  "aberration": "LT+S (mock: none, synthetic circular Sun path)",
+  "record_layout": [
+    "sun_pos[3]",
+    "sun_vel[3]",
+    "earth_pos[3]",
+    "earth_vel[3]"
+  ],
+  "dtype": "float32",
+  "byte_length": 561072,
+  "kernels": [
+    {
+      "name": "MOCK",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ]
+}

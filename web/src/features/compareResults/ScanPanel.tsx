@@ -1,2 +1,6 @@
 // Owner: Nived
-// Scan panel for alternatives.
+// Scan panel (STUB, N-1)
+
+export function ScanPanel() {
+  return <div data-component="ScanPanel" />;
+}
