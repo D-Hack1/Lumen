@@ -1,14 +1,14 @@
 // Owner: Abhinav
 // Worst-case content fixture (FRONTEND_BUILD_GUIDE §5.1), loaded only with `?fixture=worst-case`.
-// Phase 1: slots are placeholders, so this renders stand-in content with the worst-case strings at each slot's
-// budget. As real components land, their slot entries here are removed and the same strings arrive through
-// Nived's forced-state mock engine instead (fixture → engine → real component).
+// Stand-in content only for MY slots that are not built yet (Slot applies it to status 'later' only).
+// Teammate slots render their real components; their worst-case strings (No sunrise before window end (+60 d),
+// grazing ranges, 9-row Windows Table, 30 Scan rows…) must arrive through Nived's forced-state mock engine.
+// The fixture scenario (Educator, 60 d, 4 Compare rows, ISRO preset, slip +30 d) still applies to every slot.
 import type { ReactNode } from 'react';
 import type { Fixture } from '../layout/fixture';
 import { Badge } from '../../ui/Badge';
 import { Chip } from '../../ui/Chip';
 import { InfoBadge } from '../../ui/InfoBadge';
-import { Segmented } from '../../ui/Segmented';
 import { DEFAULT_LANDING_UTC, type CompareRow } from '../../state/scenarioStore';
 import './worstCase.css';
 
@@ -28,52 +28,6 @@ function Cell({ label, value, badge }: { label: string; value: ReactNode; badge?
     </div>
   );
 }
-
-function Table({ cols, rows, scroll }: { cols: string[]; rows: string[][]; scroll?: boolean }) {
-  return (
-    <div className="fx-table" data-scroll={scroll ? 'allowed' : undefined}>
-      <table>
-        <thead>
-          <tr>
-            {cols.map((c) => (
-              <th key={c}>{c}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="num">
-          {rows.map((r, i) => (
-            <tr key={i}>
-              {r.map((c, j) => (
-                <td key={j} className="truncate">
-                  {c}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-const windowRows = Array.from({ length: 9 }, (_, i) => [
-  ['Sun', 'Earth', 'Link', 'Ops'][i % 4],
-  `2025-03-${String(6 + i * 3).padStart(2, '0')} 17:2${i} ± 5 h`,
-  `2025-03-${String(8 + i * 3).padStart(2, '0')} 04:1${i} ± 6 h`,
-  `[${30 + i}–${44 + i}] h`,
-  `${(1.2 + i * 0.1).toFixed(2)}°`,
-  i % 3 === 0 ? 'grazing · partial start' : i % 3 === 1 ? 'partial end' : '—',
-]);
-
-const scanRows = Array.from({ length: 30 }, (_, i) => [
-  String(i + 1),
-  i % 2 ? 'Shackleton–de Gerlache connecting ridge' : 'Peak near Shackleton (Artemis III candidate)',
-  `2025-03-${String(1 + (i % 28)).padStart(2, '0')}`,
-  ['GO', 'MARGINAL', 'NO-GO'][i % 3] + (i < 10 ? '' : ' (provisional)'),
-  `${60 - i}% [${55 - i}–${66 - i}]`,
-  `${80 - i}% [${74 - i}–${85 - i}]`,
-  `${30 + i} h [${26 + i}–${41 + i}]`,
-]);
 
 const rowsAD: CompareRow[] = (['A', 'B', 'C', 'D'] as const).map((id, i) => ({
   id,
@@ -137,118 +91,11 @@ export const worstCaseFixture: Fixture = {
         ))}
       </div>
     ),
-    answer: (
-      <div className="fx-grid fx-grid--3">
-        <Cell label="Sun now" value="−0.42° · 0% disk · DOWN" badge={<Badge tone="blocked">down</Badge>} />
-        <Cell label="Sunrise (Shadow Exit)" value="No sunrise before window end (+60 d) · dark for 31 h so far" />
-        <Cell label="Window sunlit" value="12% [8–17%] · smooth-Moon bound" />
-        <Cell
-          label="Earth now"
-          value="+2.10° · link ✗ · Link resumes in 2 h (DSN)"
-          badge={<Badge tone="earth">visible</Badge>}
-        />
-        <Cell label="Earthrise" value="Sunset ~12–30 h (grazing — timing poorly constrained)" />
-        <Cell label="Window link" value="41% [35–48%]" />
-      </div>
-    ),
     definitions: (
       <div className="fx-line truncate">
         <span className="fx-strong">Rules ✎</span> The Sun counts as “up” when at least half of its disk clears the
         terrain at 2 m and it is at least 6° high (ISRO Vikram ops) · Link needs Earth at least 1° above the terrain and
         a DSN dish seeing the Moon above 10°
-      </div>
-    ),
-    ribbon: (
-      <div className="fx-pad fx-stack">
-        <div className="fx-badges">
-          <Badge tone="neutral">V ×9.4</Badge>
-          <Badge tone="neutral">not to scale</Badge>
-          <Badge tone="sun">Sunset ~12–30 h (grazing)</Badge>
-          <Badge tone="earth">Earthset in 3 d 4 h ± 6 h</Badge>
-          <Badge tone="blocked">near-zone occluder N⁺</Badge>
-          <Badge tone="provisional">σ default 0.2°</Badge>
-        </div>
-        <div className="fx-faint">
-          Educator: The grey band is the uncertainty in the horizon. The Sun is skimming the ridge, so the exact sunset
-          is hard to pin down — think hours, not minutes.
-        </div>
-      </div>
-    ),
-    analysis: (
-      <div className="fx-stack fx-stack--tight fx-fill">
-        <div className="fx-pad-x">
-          <Segmented
-            size="sm"
-            ariaLabel="Analysis"
-            value="windows"
-            onChange={() => {}}
-            options={[
-              { value: 'power', label: 'Power & Elevation' },
-              { value: 'windows', label: 'Windows Table' },
-              { value: 'pointing', label: 'Pointing & Link' },
-            ]}
-          />
-        </div>
-        <Table cols={['Type', 'Start UTC ±', 'End UTC ±', 'Duration', 'Peak el', 'Flags']} rows={windowRows} scroll />
-      </div>
-    ),
-    barcode: (
-      <div className="fx-barcode">
-        {Array.from({ length: 60 }, (_, i) => (
-          <span key={i} className={`fx-bar fx-bar--${['sun', 'both', 'earth', 'blocked'][Math.floor(i / 7) % 4]}`} />
-        ))}
-      </div>
-    ),
-    slip: (
-      <div className="fx-line">
-        <span className="num">◀ −1 d</span>
-        <span className="fx-track" />
-        <span className="num">+1 d ▶</span>
-        <Badge tone="neutral">slipped +30 d</Badge>
-        <span className="fx-faint">reset</span>
-      </div>
-    ),
-    metricDeck: (
-      <div className="fx-pad fx-stack fx-stack--tight">
-        <div className="fx-hero num">
-          1.24° <span className="fx-faint">± 0.18°</span>
-        </div>
-        <div className="fx-grid fx-grid--2">
-          {[
-            ['Clearance / disk', '+0.40° ± 0.10° · 100%'],
-            ['Earth el / margin', '−0.80° · −1.9° [−2.1–−1.7]'],
-            ['Sunlit %', '62% [55–68%]'],
-            ['Link %', '48% [41–55%]'],
-            ['Longest night', '96 h [80–120 h]'],
-            ['Comm gap', '131 h [118–140 h]'],
-            ['Ops hours', '210 h [188–231 h]'],
-            ['PSR distance', '2.4 km · 212° · 0.6 km² (derived)'],
-          ].map(([l, v]) => (
-            <Cell key={l} label={l} value={v} />
-          ))}
-        </div>
-      </div>
-    ),
-    touchdown: (
-      <div className="fx-pad fx-stack">
-        <div className="fx-badges">
-          <Badge tone="blocked">Near-zone occluder active</Badge>
-          <Badge tone="neutral">slope at 30 m baseline</Badge>
-          <Badge tone="nogo">pad risk: high</Badge>
-          <Badge tone="tier" glyph={null}>
-            slope under-resolved
-          </Badge>
-        </div>
-        <div className="fx-faint num">
-          Slope 12.4° ± 1.1° · downhill 214° · uphill 34° · tilt 30° @ 90° · yaw best of 15°
-        </div>
-        <Segmented
-          size="sm"
-          ariaLabel="Mast"
-          value={10}
-          onChange={() => {}}
-          options={[1, 2, 5, 10].map((m) => ({ value: m, label: `${m} m` }))}
-        />
       </div>
     ),
     profileBattery: (
@@ -281,49 +128,6 @@ export const worstCaseFixture: Fixture = {
           <Cell key={l} label={l} value={v} />
         ))}
       </div>
-    ),
-    compareSlip: (
-      <div className="fx-line">
-        <span className="num">◀ −1 d</span>
-        <span className="fx-track" />
-        <span className="num">+1 d ▶</span>
-        <Badge tone="neutral">all rows · slipped +30 d</Badge>
-      </div>
-    ),
-    compareVisual: (
-      <div className="fx-pad fx-stack">
-        {rowsAD.map((r) => (
-          <div key={r.id} className="fx-barcode fx-barcode--row">
-            {Array.from({ length: 60 }, (_, i) => (
-              <span
-                key={i}
-                className={`fx-bar fx-bar--${['sun', 'both', 'earth', 'blocked'][(Math.floor(i / 6) + r.id.charCodeAt(0)) % 4]}`}
-              />
-            ))}
-          </div>
-        ))}
-        <div className="fx-badges">
-          <Badge tone="sun">Sun only</Badge>
-          <Badge tone="both">Sun + Earth</Badge>
-          <Badge tone="earth">Earth only</Badge>
-          <Badge tone="blocked">neither</Badge>
-          <Badge tone="provisional">provisional</Badge>
-        </div>
-      </div>
-    ),
-    scan: <Table cols={['#', 'Site', 'Landing', 'Verdict', 'Sunlit', 'Link', 'Night']} rows={scanRows} />,
-    deltaTable: (
-      <Table
-        cols={['Row', 'Δ sunlit', 'Δ link', 'Δ night']}
-        rows={['B', 'C', 'D', 'A ★'].map((r, i) => [r, `−${4 + i}% ± 2%`, `+${2 + i}% ± 3%`, `+${12 + i} h ± 4 h`])}
-      />
-    ),
-    compareWindows: (
-      <Table
-        cols={['Type', 'Start ±', 'End ±', 'Duration', 'Flags']}
-        rows={windowRows.map((r) => [r[0], r[1], r[2], r[3], r[5]])}
-        scroll
-      />
     ),
     methodology: (
       <div className="fx-pad fx-stack">

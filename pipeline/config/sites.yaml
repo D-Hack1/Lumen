@@ -1,7 +1,7 @@
 # Coordinates are MOON_ME degrees, with east-positive longitude.
 # Only source-verified rows are permitted here; do not infer target coordinates.
 sites:
-  - id: chandrayaan3_statio_shiv_shakti
+  - id: cy3_shiv_shakti
     name: Chandrayaan-3 Statio Shiv Shakti
     category: historical_landing
     agency: ISRO
@@ -44,3 +44,42 @@ sites:
     verification_status: verified
     verified_by: Gowri
     tier: A
+  - id: shackleton_ridge
+    name: Shackleton connecting ridge
+    category: published_target
+    agency: NASA
+    program: CLPS
+    latitude_deg: -89.54
+    longitude_deg_east: 129.0
+    landing_coords: null
+    target_coords:
+      latitude_deg: -89.54
+      longitude_deg_east: 129.0
+      source: USGS navigational grid and NASA CLPS mission material
+    coord_note: Published target coordinate; no landing has occurred.
+    source_url: https://astrogeology.usgs.gov/search/map/Moon/Lunar_Polar_Maps
+    source_type: usgs_and_agency
+    verification_status: verified
+    verified_by: Gowri
+    tier: A
+  - id: blue_ghost_m1
+    name: Blue Ghost Mission 1 (Mare Crisium)
+    category: historical_landing
+    agency: Firefly Aerospace
+    program: CLPS Blue Ghost Mission 1
+    latitude_deg: 18.56
+    longitude_deg_east: 61.81
+    landing_coords: null
+    target_coords:
+      latitude_deg: 18.56
+      longitude_deg_east: 61.81
+      source: Firefly landing ellipse centre
+    coord_note: Target centre; Blue Ghost landed within 100 m. Awaiting an LROC final landing fix.
+    touchdown_utc: "2025-03-02T08:34:00Z"
+    touchdown_precision: minute
+    last_contact_utc: "2025-03-16T23:25:00Z"
+    source_url: https://fireflyspace.com/missions/blue-ghost-mission-1/
+    source_type: agency
+    verification_status: verified
+    verified_by: Gowri
+    tier: C
