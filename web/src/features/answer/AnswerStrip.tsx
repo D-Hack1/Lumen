@@ -5,13 +5,14 @@
 import { useFixture } from '../../app/layout/fixture';
 import { fill, fmtBounded, fmtDeg } from '../../engine/format';
 import { useResult } from '../../engine/hooks';
-import type { AnswerState } from '../../engine/types';
+import type { AnswerState, ScenarioResult } from '../../engine/types';
 import { forcedAnswerFromUrl, WORST_CASE_ANSWER } from '../../mocks/forced';
 import { useCopyFn } from '../../state/copy';
 import { useScenario } from '../../state/scenarioStore';
 import { Badge } from '../../ui/Badge';
 import { InfoBadge } from '../../ui/InfoBadge';
 import { earthEventText, sunEventText } from './answerText';
+import { PanelState } from './PanelState';
 import './answer.css';
 
 function Cell({ label, term, value, tag, up, state, hint }: { label: string; term?: string; value: string; tag?: React.ReactNode; up?: boolean; state?: string; hint?: string }) {
@@ -30,15 +31,16 @@ function Cell({ label, term, value, tag, up, state, hint }: { label: string; ter
   );
 }
 
-export function AnswerStrip({ state }: { state?: AnswerState }) {
+export function AnswerStrip({ state, result: given }: { state?: AnswerState; /** Override the live result (tests, forced states). */ result?: ScenarioResult }) {
   const t = useCopyFn();
-  const result = useResult();
+  const live = useResult();
+  const result = given ?? live;
   const storeDays = useScenario((s) => s.durationDays);
   const fixture = useFixture();
   const windowDays = fixture?.scenario?.durationDays ?? storeDays; // a fixture's window length wins (it is also applied to the store)
   const worst = fixture?.name === 'worst-case';
   const a = state ?? (worst ? WORST_CASE_ANSWER : forcedAnswerFromUrl()) ?? result.answer;
-  if (!a) return <div className="answer-strip" aria-busy="true" />;
+  if (!a) return <PanelState status={result.status === 'error' ? 'error' : 'loading'} message={result.error} />;
 
   const smooth = worst || result.meta?.tier === 'C';
   const note = smooth ? <span className="answer-strip__tag"> · {t('answer.smoothMoon')}</span> : null;

@@ -4,26 +4,24 @@
 import { useFixture } from '../../app/layout/fixture';
 import { fmtPm } from '../../engine/format';
 import { useResult } from '../../engine/hooks';
-import type { MetricSet } from '../../engine/types';
+import type { MetricSet, ScenarioResult } from '../../engine/types';
+import { PanelState } from '../answer/PanelState';
 import { metricTiles } from './metricTiles';
+import { verdictLines } from './verdictLines';
 import { WORST_CASE_METRICS } from '../../mocks/forced';
 import { useCopyFn } from '../../state/copy';
 import { InfoBadge } from '../../ui/InfoBadge';
 import './metrics.css';
 
-export function MetricDeck({ metrics }: { metrics?: MetricSet }) {
+export function MetricDeck({ metrics, result: given }: { metrics?: MetricSet; /** Override the live result (tests, forced states). */ result?: ScenarioResult }) {
   const t = useCopyFn();
-  const result = useResult();
+  const live = useResult();
+  const result = given ?? live;
   const worst = useFixture()?.name === 'worst-case';
   const m = metrics ?? (worst ? WORST_CASE_METRICS : result.metrics);
-  if (!m) {
-    return (
-      <div className="metric-deck" aria-busy={result.status === 'loading'}>
-        <div className="metric-deck__hero-label">{t('metric.empty')}</div>
-      </div>
-    );
-  }
-  const hero = fmtPm(m.sunElevationDeg, 2, '°');
+  if (!m) return <PanelState status={result.status === 'error' ? 'error' : 'loading'} message={result.error} />;
+  const hero = fmtPm(m.sunElevationDeg, 2, '\u00b0');
+  const verdict = verdictLines(result.verdict, result.verdictReasons, t);
   return (
     <div className="metric-deck" data-tier={result.meta?.tier}>
       <div>
@@ -46,6 +44,16 @@ export function MetricDeck({ metrics }: { metrics?: MetricSet }) {
             </div>
           </div>
         ))}
+      </div>
+      <div className="metric-deck__verdict" data-verdict={result.verdict}>
+        <div className="metric-deck__headline">{verdict.headline}</div>
+        {verdict.lines.length > 0 && (
+          <ul className="metric-deck__reasons">
+            {verdict.lines.map((l) => (
+              <li key={l}>{l}</li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );

@@ -123,3 +123,27 @@ describe('slice 5: Viability Index (weighted components, 0-100)', () => {
     expect(evaluateVerdict(input(metrics({ sunlitPct: b(20) }))).viabilityIndex).not.toBeNull();
   });
 });
+
+describe('slice 6: one sentence per cause, not one per requirement', () => {
+  it('optimistic passes are reported ONCE, naming every requirement it applies to', () => {
+    const r = evaluateVerdict(input(metrics(), { boundsKind: 'optimistic' }));
+    expect(r.reasons).toEqual(['Sunlit time, link time, longest night and pad slope pass only on the smooth-Moon bound; terrain data is needed to confirm.']);
+  });
+  it('a single requirement uses the singular verb', () => {
+    const r = evaluateVerdict(input(metrics({ linkPct: null, longestNightH: null, padSlopeDeg: null }), { boundsKind: 'optimistic' }));
+    expect(r.reasons[0]).toBe('Sunlit time passes only on the smooth-Moon bound; terrain data is needed to confirm.');
+  });
+  it('missing data is still listed separately, after the combined line', () => {
+    const r = evaluateVerdict(input(metrics({ padSlopeDeg: null }), { boundsKind: 'optimistic' }));
+    expect(r.reasons).toEqual([
+      'Sunlit time, link time and longest night pass only on the smooth-Moon bound; terrain data is needed to confirm.',
+      'Pad slope: no data yet.',
+    ]);
+  });
+  it('a real failure is reported on its own line and is not folded into the combined one', () => {
+    const r = evaluateVerdict(input(metrics({ sunlitPct: b(30, null, null) }), { boundsKind: 'optimistic' }));
+    expect(r.reasons[0]).toMatch(/^Sunlit time 30\.0% is below the minimum/);
+    expect(r.reasons.join(' ')).toContain('Link time, longest night and pad slope pass only on the smooth-Moon bound');
+  });
+});
+
