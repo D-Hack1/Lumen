@@ -14,6 +14,7 @@ import { useCopyFn } from '../../state/copy';
 import { getScenario, useScenario, type MapLayerId } from '../../state/scenarioStore';
 import { Segmented } from '../../ui/Segmented';
 import { Slider } from '../../ui/Slider';
+import { drawMoonImagery } from '../shared/moonImagery';
 import { insetOffsetsM } from './inset';
 import { drawRelief } from './proceduralRelief';
 import './map.css';
@@ -41,8 +42,19 @@ export function Basemap() {
   useEffect(() => {
     const c = canvas.current;
     const ctx = c?.getContext('2d');
-    if (c && ctx) drawRelief(ctx, CANVAS, extent === '80S' ? 80 : 85);
-  }, [extent]);
+    if (!c || !ctx) return;
+    drawRelief(ctx, CANVAS, extent === '80S' ? 80 : 85);
+    // Real LROC imagery over the schematic relief when the file is present (Ebin, moonImagery.ts).
+    let live = true;
+    const tag = square.current?.querySelector<HTMLElement>('.basemap__tag');
+    if (tag) tag.hidden = false;
+    void drawMoonImagery(ctx, CANVAS, half, () => live).then((ok) => {
+      if (ok && tag) tag.hidden = true; // real imagery drawn: the "schematic relief" tag no longer applies
+    });
+    return () => {
+      live = false;
+    };
+  }, [extent, half]);
   useEffect(() => {
     let live = true;
     loadPsr().then((r) => live && (psr.current = r), () => undefined);
