@@ -54,9 +54,10 @@ azimuth = atan2(dot(v, e), dot(v, n_ref)) in degrees, normalized to [0, 360)
 zero direction is the projected `+X_ME`/`+Z_ME` reference axis `n_ref`;
 azimuth increases toward `e`.
 
-This is the proposed Gowri convention. Repository verification is pending:
-`frames.py` must implement the same reference axis, cross-product order, and
-positive direction before the contract can be frozen.
+The frame convention (+X_ME for `abs(latitude) >= 60°`, +Z_ME otherwise,
+azimuth increasing toward east) has been verified against `frames.py`, with
+59 tests passed recorded as review evidence without claiming those tests
+validate every contract requirement.
 
 Bin `i` covers the half-open interval
 `[i * 0.1°, (i + 1) * 0.1°)`. Its representative sample centre is
@@ -234,13 +235,16 @@ supports.
   site, in metres, within which the filter is applied. It is not the radius
   of the filter kernel and must be `100.0` for this contract.
   `median_filter_kernel_px` is the pixel kernel width and must be `3`.
-  `median_filter_status` is `applied` only when that operation was completed;
-  otherwise it is `unavailable` and the provenance must explain why.
+  `median_filter_status` is `applied` only when that operation was completed.
+  If a valid 3x3 median-filter neighbourhood cannot be obtained within the
+  100 m region, set `median_filter_status = "unavailable"` and record the
+  reason in provenance.
 - The physical footprint of the 3x3 kernel is determined by
-  `near_field_resolution_m`; it must not be enlarged or replaced with another
-  kernel. The exact handling of a source grid whose pixels do not provide a
-  complete valid 3x3 neighbourhood within the 100 m region requires team
-  approval. This does not by itself prohibit a Tier-A artifact at 240 m/px.
+  `near_field_resolution_m`. Do not fabricate finer data, enlarge the
+  filtering region, or substitute another filter. Tier-A publication is
+  allowed with `median_filter_status = "unavailable"` only if the required
+  plane fit and all other geometry requirements remain valid. The achieved
+  DEM resolution must be documented in `near_field_resolution_m`.
 - `plane_fit_kernel_px` must be `7`; `plane_fit_half_width_px` must be `3`.
   The 7-pixel window has an outer-pixel-centre baseline of
   `6 * near_field_resolution_m`, not `7 * near_field_resolution_m`.
@@ -291,12 +295,13 @@ model is active for both Tier A and Tier B. The DEM horizon `m_dem` is never
 clamped; only the near-zone contribution is clamped to zero.
 
 The 100 m value defines the spatial region, not a kernel radius. The producer
-must not enlarge that region, fabricate finer data, or substitute a different
-kernel when source resolution is coarse. If the available source cannot
-provide a valid 3x3 operation for the required region, it must record
-`median_filter_status = "unavailable"` and the reason in provenance. Whether
-such an artifact may be published as Tier A requires team approval; this
-contract does not automatically prohibit publication at 240 m/px.
+must not enlarge that region, fabricate finer data, or substitute another
+filter when source resolution is coarse. If a valid 3x3 median-filter
+neighbourhood cannot be obtained within the 100 m region, set
+`median_filter_status = "unavailable"` and record the reason in provenance.
+Tier-A publication is allowed only if the required plane fit and all other
+geometry requirements remain valid; the achieved DEM resolution must be
+documented in `near_field_resolution_m` (e.g. 240 m/px).
 
 ## 7. Distance semantics
 
@@ -311,10 +316,8 @@ For each `(height, azimuth)` sample:
    produced `m_dem`.
 4. If both are finite and `N_plus > m_dem`, distance is `d_min_m / 1000`.
 5. If both contributions are unavailable, elevation and distance are NaN.
-6. If `m_dem == N_plus` and both are finite, R3 does not specify a unique
-   producing point. The current proposed deterministic tie-break is to use the
-   DEM distance because the effective-horizon expression is ordered as
-   `max(m_dem, N_plus)`. This tie rule requires team approval before freeze.
+6. If `m_dem == N_plus` and both are finite, select the DEM distance that
+   produced `m_dem`.
 
 The distance must identify the contribution selected by the same comparison
 that produces the stored elevation. It must be finite and in `(0, 250]` km
@@ -370,7 +373,12 @@ A Tier-A publication is valid only when all of the following pass:
 6. Sigma is shape `(4, 3600)`; its finite values are non-negative, and its
    NaN pattern matches mask validity.
 7. `d_min_m` equals `3 * near_field_resolution_m`; the 3x3 filter and 7x7
-   plane-fit metadata match the actual processing.
+   plane-fit metadata match the actual processing. If a valid 3x3 median-filter
+   neighbourhood cannot be obtained within the 100 m region,
+   `median_filter_status = "unavailable"` is conditionally acceptable (not an
+   automatic failure) for Tier-A publication provided the reason is recorded,
+   the achieved DEM resolution is documented in `near_field_resolution_m`, and
+   the required plane fit and all other geometry requirements remain valid.
 8. `z0_m`, slope/aspects, extrema, and filter metadata satisfy §5.3.
 9. Range-extrema reconstruction uses finite-only segment-tree queries and
    correctly handles intervals crossing azimuth zero.
@@ -379,7 +387,9 @@ A Tier-A publication is valid only when all of the following pass:
 11. Source and achieved near-field resolution match the actual production
    inputs and the retained site summary.
 12. Synthetic horizon cases validate the azimuth centre convention, height
-   ordering, elevation ordering, and distance ordering.
+   ordering, elevation ordering, distance ordering, and include an exact-tie
+   test verifying that when `m_dem == N_plus` and both are finite, the DEM
+   distance is selected.
 13. The producer/consumer golden-vector test reads the same representative
    bins in Python and TypeScript.
 
@@ -391,15 +401,19 @@ approval.
 
 ## 11. Integration status
 
-The following checkpoints remain open; none is complete based on the current
-repository:
+The following checkpoints track contract integration and verification:
 
 1. Gowri implements matching mask and sigma binary support in `binio.py`.
-2. `frames.py` is verified against the azimuth convention in §2.1.
-3. Nived reviews frontend compatibility, including the `(4, 3600)` distance
-   arrays and sigma artifact paths.
+2. The frame convention is verified: `+X_ME` for `|lat| >= 60°`, `+Z_ME`
+   otherwise, with azimuth increasing toward east (`e = cross(n_ref, u)`).
+   59 tests passed, which is recorded as review evidence without claiming
+   those tests validate every contract requirement.
+3. Frontend compatibility remains pending Nived's confirmation, including the
+   `(4, 3600)` distance arrays, `range_extrema` segment-tree queries, and
+   sigma artifact paths.
 4. Python and TypeScript golden vectors pass.
 5. The team confirms the contract for CP0 freeze.
 
-Until all checkpoints pass, this document remains **Proposed** and must not be
-represented as a frozen producer-consumer interface.
+Until all checkpoints pass (specifically pending frontend compatibility
+confirmation by Nived), this document remains **Proposed** and must not be
+marked frozen.
