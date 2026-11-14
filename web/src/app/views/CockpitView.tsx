@@ -1,17 +1,19 @@
 // Owner: Abhinav
 // Mission Cockpit — 3-column zero-scroll bento (PLAN_FINAL §8.3, guide §4).
 //
-// Teammate imports (agreed paths, WORK_DISTRIBUTION §5) — all Phase 1 stubs merged:
-//   Nived: AnswerStrip, MetricDeck, Basemap · Ebin: Ribbon, AnalysisPanel, Barcode, SlipBar, TouchdownPad
+// Teammate imports (agreed paths, WORK_DISTRIBUTION §5):
+//   Nived: AnswerStrip, MetricDeck, Basemap (embedded by my Sidebar) · Ebin: Ribbon, AnalysisPanel, Barcode,
+//   SlipBar, TouchdownPad. Mine: Sidebar (search + map + site list slots), DefinitionsBar.
 import { useState } from 'react';
 import { AnswerStrip } from '../../features/answer/AnswerStrip';
-import { Basemap } from '../../features/map/Basemap';
+import { DefinitionsBar } from '../../features/definitions/DefinitionsBar';
 import { MetricDeck } from '../../features/metrics/MetricDeck';
 import { Ribbon } from '../../features/ribbon/Ribbon';
 import { AnalysisPanel } from '../../features/analysis/AnalysisPanel';
 import { Barcode } from '../../features/barcode/Barcode';
 import { SlipBar } from '../../features/barcode/SlipBar';
 import { TouchdownPad } from '../../features/touchdown/TouchdownPad';
+import { Sidebar } from '../../features/sidebar/Sidebar';
 import { useCopyFn } from '../../state/copy';
 import { Segmented } from '../../ui/Segmented';
 import { BentoColumn, BentoGrid } from '../layout/BentoGrid';
@@ -28,20 +30,16 @@ export function CockpitView() {
   return (
     <BentoGrid view="cockpit">
       <BentoColumn side="left">
-        <Slot id="search" />
-        <Slot id="map">
-          <div className="map-square">
-            <Basemap />
-          </div>
-        </Slot>
-        <Slot id="siteList" />
+        <Sidebar />
       </BentoColumn>
 
       <BentoColumn side="centre">
         <Slot id="answer">
           <AnswerStrip />
         </Slot>
-        <Slot id="definitions" />
+        <Slot id="definitions">
+          <DefinitionsBar />
+        </Slot>
         <Slot id="ribbon">
           <Ribbon />
         </Slot>

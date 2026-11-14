@@ -7,6 +7,7 @@
 //   crosshairBus  { tHover, tScrub, source }       — shared crosshair (PLAN §8.12)
 //   slipBus       { slipDays, dragging }           — Slip Bar drag (live), committed via store.setSlip
 //   padDragBus    { tiltMagDeg, tiltDirDeg, yawDeg, dragging } — Touchdown Pad drags, committed via store
+//   siteHoverBus  { siteId }                       — site-card hover → map pin pulse (Phase 3)
 import { frameBus } from './frameBus';
 
 export type Listener<T> = (value: Readonly<T>) => void;
@@ -98,3 +99,10 @@ export const padDragBus = createBus<PadDragValue>('padDragBus', {
   yawDeg: 0,
   dragging: false,
 });
+
+/** Site Explorer card hover → map pin pulse (FRONTEND_BUILD_GUIDE §1.4: CSS opacity only). `siteId` null = none.
+ *  The Basemap (or the sidebar's interim pin-pulse binding) subscribes and toggles a class — never React state. */
+export interface SiteHoverValue {
+  siteId: string | null;
+}
+export const siteHoverBus = createBus<SiteHoverValue>('siteHoverBus', { siteId: null });
