@@ -15,6 +15,7 @@ import { getScenario, useScenario, type MapLayerId } from '../../state/scenarioS
 import { Segmented } from '../../ui/Segmented';
 import { Slider } from '../../ui/Slider';
 import { extentContains, EXTENT_LIMIT_DEG, smallestExtentContaining } from './extent';
+import { hillshadeFor, selectableLayers } from './hillshade';
 import { insetOffsetsM } from './inset';
 import { baseImageStyle, MOON_BASE_CREDIT, MOON_BASE_URL } from './moonBase';
 import './map.css';
@@ -66,7 +67,8 @@ export function Basemap(props: BasemapProps) {
   }, []);
 
   const layer = layersRes.layers.find((l) => l.id === layers.layer && l.extent === extent);
-  const hasLayers = layersRes.layers.length > 0;
+  const hasLayers = selectableLayers(layersRes.layers).length > 0;
+  const hillshade = hillshadeFor(layersRes.layers, extent);
   const pins = useMemo(
     () =>
       sites.map((s) => {
@@ -145,6 +147,7 @@ export function Basemap(props: BasemapProps) {
           <div className="basemap__base" aria-hidden>
             <img src={MOON_BASE_URL} alt="" style={baseImageStyle(half)} data-testid="moon-base" draggable={false} />
           </div>
+          {hillshade && <img src={hillshade.url} alt="" data-layer="hillshade" className="basemap__hillshade" />}
           {layer && <img ref={img} src={layer.url} alt="" style={{ opacity: layers.opacity }} data-layer={layer.id} />}
           <svg viewBox={`${-half} ${-half} ${2 * half} ${2 * half}`}>
             <circle className="basemap__disk" cx={0} cy={0} r={half} />
