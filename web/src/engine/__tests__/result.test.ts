@@ -104,6 +104,26 @@ describe.skipIf(!run)('buildScenarioResult (real IM-2 ephemeris)', () => {
     }
   });
 
+  it('with a power config: series.powerW / flatPowerW are the panel generation (flat deck: S0*sin(el)*disk), energy per day is filled', () => {
+    const power = { preset: 'horizontalDeck' as const, yawDeg: 0, tiltMagDeg: 0, tiltDirDeg: 0, groundNormal: null, panelAreaM2: 1, efficiency: 1 };
+    const r = buildScenarioResult(eph, { ...base, power });
+    const s = r.series!;
+    expect(s.powerW.length).toBe(s.sunElevDeg.length);
+    let checked = 0;
+    for (let i = 0; i < s.powerW.length; i += 97) {
+      const want = 1361 * Math.max(0, Math.sin((s.sunElevDeg[i] * Math.PI) / 180)) * (s.sunDiskPct[i] / 100);
+      expect(Math.abs(s.powerW[i] - want), `sample ${i}`).toBeLessThanOrEqual(0.04 * want + 0.05); // the Sun's distance varies +-1.7% over the year => irradiance +-3.4%
+      expect(s.flatPowerW[i]).toBeCloseTo(s.powerW[i], 3); // flat deck on flat ground: actual == baseline
+      checked++;
+    }
+    expect(checked).toBeGreaterThan(50);
+    expect(Math.max(...s.powerW)).toBeGreaterThan(0);
+    const e = r.metrics!.energyPerDayWh.value!;
+    expect(e).toBeGreaterThan(0);
+    expect(e).toBeLessThan(1361 * 24); // can never beat a panel facing the Sun all day
+    expect(buildScenarioResult(eph, base).metrics!.energyPerDayWh.value).toBeNull(); // no config => no invented number
+  });
+
   it('the client runs the same evaluation in-thread when there is no Worker (tests/SSR)', async () => {
     const r = await evaluateScenario(base);
     expect(r.status).toBe('ready');

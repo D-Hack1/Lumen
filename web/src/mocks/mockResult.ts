@@ -44,7 +44,7 @@ export function mockScenarioResult(
   const u = (): Uint8Array => new Uint8Array(n);
   const s: Series = {
     t0: landingUtc, stepMs: STEP, sunElevDeg: f(), sunAzDeg: f(), sunClearanceDeg: f(), sunDiskPct: f(), earthElevDeg: f(),
-    earthAzDeg: f(), earthClearanceDeg: f(), earthDiskPct: f(), earthRangeKm: f(), powerW: f(), sunUp: u(), earthUp: u(), linkUp: u(), sigmaBandDeg: f(),
+    earthAzDeg: f(), earthClearanceDeg: f(), earthDiskPct: f(), earthRangeKm: f(), powerW: f(), flatPowerW: f(), sunUp: u(), earthUp: u(), linkUp: u(), sigmaBandDeg: f(),
   };
   const mask = tier === 'C' ? -0.09 : 1.0;
   for (let i = 0; i < n; i++) {
@@ -64,6 +64,7 @@ export function mockScenarioResult(
     s.earthUp[i] = s.earthDiskPct[i] >= 50 && s.earthClearanceDeg[i] >= 1 ? 1 : 0;
     s.linkUp[i] = s.earthUp[i] && Math.sin((2 * Math.PI * t) / D + seedPhase) > -0.3 ? 1 : 0;
     s.powerW[i] = s.sunUp[i] ? 120 * Math.max(0.05, Math.sin((s.sunElevDeg[i] * Math.PI) / 180) * 8) * (s.sunDiskPct[i] / 100) : 0;
+    s.flatPowerW[i] = s.powerW[i] * 0.97;
     s.sigmaBandDeg[i] = tier === 'C' ? 0 : tier === 'B' ? 0.5 : 0.1;
   }
 
