@@ -4,7 +4,7 @@
 
 Stdlib only. Deterministic (no randomness without a fixed seed). Run from anywhere:
 
-    python3 web/src/engine/mock/make_mock.py
+    python3 web/src/mocks/make_mock.py
 
 Every number here is synthetic. Formats are DRAFTS taken from PLAN_FINAL §6 + R3 delta D-11 and
 must be reconciled with the owners' contracts at H2 (see web/public/data-mock/README.md).
@@ -21,7 +21,7 @@ import zlib
 from datetime import datetime, timezone
 from pathlib import Path
 
-OUT = Path(__file__).resolve().parents[3] / "public" / "data-mock"
+OUT = Path(__file__).resolve().parents[2] / "public" / "data-mock"
 R_MOON_M = 1_737_400.0
 VERSION = 1
 MOCK_NOTE = "MOCK DATA — synthetic values, not for science or demo claims"
@@ -45,7 +45,7 @@ def w_array(rel: str, data: bytes, *, shape, dtype, fields, units, scale=None, o
     """Gowri's shared binary-sidecar contract (pipeline/common/binio.py): raw little-endian array + JSON sidecar."""
     w_bin(rel, data)
     meta = {"version": "1", "shape": list(shape), "dtype": dtype, "fields": fields, "units": units, "scale": scale, "offset": offset,
-            "producer": "web/src/engine/mock/make_mock.py", "created_utc": "2026-01-01T00:00:00Z",
+            "producer": "web/src/mocks/make_mock.py", "created_utc": "2026-01-01T00:00:00Z",
             "sha256": hashlib.sha256(data).hexdigest(), "mock": True, "note": MOCK_NOTE, **extra}
     w_json(rel[:-4] + ".json", meta)
 
@@ -207,7 +207,7 @@ NAN = float("nan")
 # bins deliberately unavailable (NaN) in this site's mask, to exercise NaN preservation and the circular
 # range query across azimuth zero (contract §3.2, §5.3)
 NAN_BINS = {"cy3_shiv_shakti": [3598, 3599, 0, 1]}
-PROVENANCE = {"producer": "web/src/engine/mock/make_mock.py", "created_utc": "2026-01-01T00:00:00Z", "git_commit": "0" * 40}
+PROVENANCE = {"producer": "web/src/mocks/make_mock.py", "created_utc": "2026-01-01T00:00:00Z", "git_commit": "0" * 40}
 
 
 def lumen_header(magic: bytes, elev_off: int, dist_off: int, elev_len: int, dist_len: int) -> bytes:

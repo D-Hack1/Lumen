@@ -5,7 +5,7 @@
 import { useEffect, useState } from 'react';
 import { loadCatalog } from './data/catalog';
 import { loadLayers } from './data/layers';
-import { mockCompare, mockScenarioResult } from './mock/mockResult';
+import { mockCompare, mockScenarioResult } from '../mocks/mockResult';
 import { quickAnswer } from './quickAnswer';
 import type {
   CatalogResult,
