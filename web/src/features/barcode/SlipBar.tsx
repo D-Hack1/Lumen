@@ -1,55 +1,50 @@
 // Owner: Ebin
-// Slip Bar — native range input (no spring/thumb animation per the matrix), ±30 d, −1/+1 d, reset.
-// Live drag writes slipBus only (Fast Lane); release commits via useScenario().setSlip (WORK_DISTRIBUTION §5).
-import { useEffect, useRef, useState } from 'react';
+// Slip Bar — ±30 d, −1/+1 d, reset (PLAN_FINAL §8.3). Fast Lane fixes from teammate review:
+//  - was calling setLive(v) on every onChange (pointer rate) → now uses Abhinav's `Slider` (ui/Slider.tsx),
+//    which is already uncontrolled and only calls back at pointer rate via `onLive` (bus-write only) and once
+//    on release via `onCommit`. No React state changes while dragging.
+//  - plain <button>s → now `Chip` from the UI kit, consistent with the rest of the app.
+import { useEffect, useRef } from 'react';
 import { useScenario } from '../../state/scenarioStore';
 import { slipBus } from '../../state/buses';
 import { useCopy } from '../../state/copy';
+import { Chip } from '../../ui/Chip';
+import { Slider } from '../../ui/Slider';
 
 export function SlipBar() {
   const committed = useScenario((s) => s.slipDays);
   const setSlip = useScenario((s) => s.setSlip);
-  const [live, setLive] = useState(committed);
   const chipRef = useRef<HTMLSpanElement>(null);
   const label = useCopy('slip.label');
 
-  useEffect(() => setLive(committed), [committed]);
   useEffect(() => {
-    if (chipRef.current) chipRef.current.textContent = live === 0 ? '' : `slipped ${live > 0 ? '+' : ''}${live} d`;
-  }, [live]);
-
-  const commit = (v: number) => {
-    setLive(v);
-    setSlip(v);
-  };
+    const paint = (days: number) => {
+      if (chipRef.current) chipRef.current.textContent = days === 0 ? '' : `slipped ${days > 0 ? '+' : ''}${days} d`;
+    };
+    paint(slipBus.get().slipDays);
+    return slipBus.subscribe((v) => paint(v.slipDays));
+  }, []);
 
   return (
     <div className="slipbar" style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-4)', height: '100%' }}>
-      <button type="button" aria-label="−1 day" onClick={() => commit(Math.max(-30, live - 1))}>
+      <Chip aria-label="−1 day" onClick={() => setSlip(Math.max(-30, committed - 1))}>
         ◀
-      </button>
-      <input
-        type="range"
+      </Chip>
+      <Slider
+        value={committed}
         min={-30}
         max={30}
         step={1}
-        value={live}
-        aria-label={label}
-        onChange={(e) => {
-          const v = Number(e.target.value);
-          setLive(v);
-          slipBus.set({ slipDays: v, dragging: true });
-        }}
-        onPointerUp={() => commit(live)}
-        onKeyUp={() => commit(live)}
+        ariaLabel={label}
+        hotpath
+        onLive={(v) => slipBus.set({ slipDays: v, dragging: true })}
+        onCommit={(v) => setSlip(v)}
         style={{ flex: 1 }}
       />
-      <button type="button" aria-label="+1 day" onClick={() => commit(Math.min(30, live + 1))}>
+      <Chip aria-label="+1 day" onClick={() => setSlip(Math.min(30, committed + 1))}>
         ▶
-      </button>
-      <button type="button" onClick={() => commit(0)}>
-        reset
-      </button>
+      </Chip>
+      <Chip onClick={() => setSlip(0)}>reset</Chip>
       <span ref={chipRef} className="num slipbar__chip" />
     </div>
   );

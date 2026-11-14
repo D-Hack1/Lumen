@@ -5,6 +5,9 @@ import { crosshairBus } from '../../state/buses';
 import { color } from '../../ui/tokens';
 import { LayeredCanvas } from '../shared/LayeredCanvas';
 
+// Module-level so the array reference is stable across renders (LayeredCanvas resubscribes when it changes).
+const OVERLAY_BUSES = [crosshairBus] as const;
+
 export function AlignedBarcodes() {
   const compare = useCompareResults();
 
@@ -38,6 +41,7 @@ export function AlignedBarcodes() {
                   ctx.lineTo(x, h);
                   ctx.stroke();
                 }}
+                overlayBuses={OVERLAY_BUSES}
               />
             </div>
           </div>

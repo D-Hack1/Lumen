@@ -17,6 +17,9 @@ const EARTH_DEG = 1.9;
 const WINDOW_H_DEG = 6;
 const WINDOW_W_DEG = 12;
 
+// Module-level so the array reference is stable across renders (LayeredCanvas resubscribes when it changes).
+const OVERLAY_BUSES = [crosshairBus] as const;
+
 type Body = 'sun' | 'earth';
 
 function sampleIndex(series: NonNullable<ReturnType<typeof useResult>['series']>, t: number): number {
@@ -125,8 +128,9 @@ export function RibbonLens() {
             ctx.fillText('true scale · clipped by terrain', 6, 12);
           }}
           drawStatic={() => {
-            /* all drawing happens in the overlay — the Lens tracks the live scrub position every frame */
+            /* all drawing happens in the overlay, redrawn whenever crosshairBus changes (scrub/hover/play) */
           }}
+          overlayBuses={OVERLAY_BUSES}
         />
       </div>
     </div>
