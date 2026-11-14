@@ -35,7 +35,7 @@
   ],
   "scale": null,
   "offset": null,
-  "producer": "web/src/engine/mock/make_mock.py",
+  "producer": "web/src/mocks/make_mock.py",
   "created_utc": "2026-01-01T00:00:00Z",
   "sha256": "57f1f4f4330317f5d2bb876ed05ad5674f9b1853cd992298f92553e56e1ac05e",
   "mock": true,

@@ -2,7 +2,7 @@
 // Single-point answer from lat/lon/UTC/duration/height: Tier A if a curated site matches, else Tier B snap, else Tier C.
 // MOCK implementation (N-3): returns fake numbers shaped like the final result.
 import { loadCatalog } from './data/catalog';
-import { mockQuickAnswer } from './mock/mockResult';
+import { mockQuickAnswer } from '../mocks/mockResult';
 import type { QuickAnswerInput, QuickAnswerResult } from './types';
 
 export async function quickAnswer(input: QuickAnswerInput): Promise<QuickAnswerResult> {

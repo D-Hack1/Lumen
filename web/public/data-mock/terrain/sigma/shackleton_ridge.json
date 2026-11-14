@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "mock": true,
   "note": "MOCK DATA \u2014 synthetic values, not for science or demo claims",
-  "producer": "web/src/engine/mock/make_mock.py",
+  "producer": "web/src/mocks/make_mock.py",
   "created_utc": "2026-01-01T00:00:00Z",
   "git_commit": "0000000000000000000000000000000000000000",
   "site_id": "shackleton_ridge",

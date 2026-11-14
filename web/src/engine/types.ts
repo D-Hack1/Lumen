@@ -2,6 +2,8 @@
 // Shared types for the engine API. Authoritative description: contracts/frontend_engine_api.md.
 // Conventions: all times are epoch milliseconds (UTC); angles in degrees; distances in km unless suffixed.
 
+/** Basemap extents; same ids as the scenario store. Contract names `80_90S` / `85_90S` are mapped in data/layers.ts. */
+export type MapExtent = '80S' | '85S';
 export type Tier = 'A' | 'B' | 'C' | 'pending';
 export type Verdict = 'GO' | 'MARGINAL' | 'NO-GO' | 'PENDING';
 export type EventType = 'sunset' | 'shadowExit' | 'earthset' | 'earthrise';
@@ -262,7 +264,7 @@ export interface QuickAnswerResult {
 export interface LayerEntry {
   id: string;
   label: string;
-  extent: '80_90S' | '85_90S';
+  extent: MapExtent;
   url: string; // resolved, ready for <img>
   legendStops: Array<{ value: number; label: string; color: string }>;
   source: string;
@@ -286,7 +288,7 @@ export interface RegionOutline {
 
 export interface LayersResult {
   layers: LayerEntry[];
-  extents: Record<'80_90S' | '85_90S', LayerExtent> | null;
+  extents: Record<MapExtent, LayerExtent> | null;
   sizePx: [number, number] | null;
   regions: RegionOutline[];
   loading: boolean;
