@@ -11,7 +11,8 @@ import { evaluatePowerSeries } from '../core/power';
 import { energyPerDayWh } from '../core/padPower';
 import { availability } from '../core/visibility';
 import { Horizon } from '../core/visibility';
-import { mergeWindows } from '../core/windows';
+import { longestWindowGapHours, mergeWindows, windowPercentage, windowsFromEvents } from '../core/windows';
+import { detectTransitions } from '../core/events';
 import { dsnElevationsAt, dsnLinkUp } from '../core/dsn';
 import { fastEventUncertainty, limbOffsetDeg, numericBounds, shiftHorizonMask, threePassBounds, totalClearanceRateDegPerHour, exactEventUncertainty } from '../core/uncertainty';
 import { evaluateWithBounds } from '../core/bounds';
@@ -188,6 +189,24 @@ describe('Golden Set 2 (synthetic) vs the TypeScript engine', () => {
     expect(states).toEqual([true, true, false, true, true]);
     expect(dsnOffStates).toEqual([true, true, true, true, true]);
     expect(file.typescript_parity.partial.synthetic_dsn_link_modes).toContain('link-window metrics are Python-only');
+  });
+
+  it('synthetic_dsn_out_of_coverage: past the last DSN node the link is NOT up (an unknown is never a link): events, link % and longest gap match', () => {
+    const c = get('synthetic_dsn_out_of_coverage');
+    const i = c.input;
+    const elevations = i.station_elevations_deg as number[][];
+    const series: DsnSeries = { stations: i.station_order as string[], startMs: 0, cadenceMs: i.cadence_s * S, count: elevations[0].length, elevDeg: (st, n) => elevations[st][n] };
+    const [a, b] = i.range_et as [number, number];
+    const visible = (t: number) => i.earth_visible && dsnLinkUp(series, t, i.dsn_mask_deg); // Earth visible throughout; outside the series dsnLinkUp is false
+    const ev = detectTransitions(a * S, b * S, visible, 'link_down', 'link_recovery');
+    const want = c.expected.dsn_aware;
+    expect(ev.map((e) => e.type)).toEqual(want.event_types);
+    ev.forEach((e, k) => expect(Math.abs(e.t / S - want.event_times_et[k])).toBeLessThanOrEqual(TOL.event_time_s));
+    const wins = windowsFromEvents('link', a * S, b * S, visible(a * S), ev, { downEvent: 'link_down', upEvent: 'link_recovery', peakElevationDeg: () => 1 });
+    expect(Math.abs(windowPercentage(a * S, b * S, wins) - want.link_pct)).toBeLessThanOrEqual(1); // 3 edges, each bisected to the midpoint of a <= 10 s bracket (+-5 s): up to 15 s of 1800 s = 0.83 points
+    expect(Math.abs(longestWindowGapHours(a * S, b * S, wins) - want.longest_comm_gap_hours)).toBeLessThanOrEqual(0.01);
+    expect(dsnLinkUp(series, 1201 * S, i.dsn_mask_deg)).toBe(false); // the first instant past the last node
+    expect(dsnLinkUp(series, 1200 * S, i.dsn_mask_deg)).toBe(true); // the last node itself is covered
   });
 
   it('synthetic_tier_c_smooth_moon: no terrain => no sigma, labelled "smooth-Moon bound", and no +- on any value', async () => {
