@@ -382,3 +382,56 @@
   outline: 2px solid var(--c-focus);
   outline-offset: 1px;
 }
+
+/* ---------- CreditLine (image / map-layer credit; static, no blur or shadow) ---------- */
+.ui-credit {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--c-text-faint);
+  font-size: var(--fs-2xs);
+  line-height: 14px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.ui-credit__label {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.ui-credit a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--c-hairline-strong);
+  text-underline-offset: 2px;
+}
+.ui-credit a:hover {
+  color: var(--c-text-muted);
+}
+.ui-credit--overlay {
+  position: absolute;
+  bottom: var(--sp-1);
+  z-index: 2;
+  max-width: calc(100% - var(--sp-4));
+  padding: 0 var(--sp-2);
+  border-radius: var(--r-sm);
+  background: var(--c-bg);
+  opacity: 0.85;
+  pointer-events: none;
+}
+.ui-credit--overlay a {
+  pointer-events: auto;
+}
+.ui-credit--bl {
+  left: var(--sp-2);
+}
+.ui-credit--br {
+  right: var(--sp-2);
+}
+
+/* Glossary placeholder entries (glossary.json not delivered yet): marked, never silently shown as final */
+.ui-tooltip[data-pending] .ui-tooltip__title::after {
+  content: ' · draft';
+  color: var(--c-text-faint);
+  font-weight: var(--fw-regular);
+  font-size: var(--fs-2xs);
+}

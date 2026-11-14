@@ -8,7 +8,14 @@ export { Panel, type PanelProps } from './Panel';
 export { Card, type CardProps } from './Card';
 export { Chip, type ChipProps } from './Chip';
 export { Badge, type BadgeProps, type BadgeTone } from './Badge';
-export { InfoBadge, type InfoBadgeProps } from './InfoBadge';
+export {
+  InfoBadge,
+  setInfoBadgeBinding,
+  type InfoBadgeProps,
+  type InfoBadgeContent,
+  type InfoBadgeBinding,
+} from './InfoBadge';
+export { CreditLine, type CreditLineProps } from './CreditLine';
 export { Segmented, type SegmentedOption, type SegmentedProps } from './Segmented';
 export { Slider, type SliderProps } from './Slider';
 export { Tooltip, type TooltipProps } from './Tooltip';

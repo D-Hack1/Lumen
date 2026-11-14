@@ -35,7 +35,8 @@ npm install
 npm run dev            # http://localhost:5173 (mock data by default: VITE_LUMEN_DATA=mock|real)
 npm test               # Vitest unit tests
 npm run e2e:install    # once: Playwright Chromium
-npm run e2e            # zero-scroll check at V1–V4b with the worst-case fixture (?fixture=worst-case)
+npm run e2e            # zero-scroll (V1–V4b, worst-case fixture) + Phase 3 behaviour, mock data
+npm run e2e:real       # checks that need real data (CY-3 + ISRO preset → Answer Strip ops state)
 npm run lint && npm run typecheck
 ```
 
@@ -43,5 +44,5 @@ Layout, slot ids, density modes and the hot-path rules for teammates: `docs/ui_g
 
 ## Status
 
-Frontend Phase 1 (foundations) in progress — see `plan/FRONTEND_BUILD_GUIDE.md` §6 and the per-person "Order of work" tables in
+Frontend Phase 3 (context panels: Site Explorer, Definitions Bar, glossary tooltips) built for Abhinav's scope — see `plan/FRONTEND_BUILD_GUIDE.md` §6 and the per-person "Order of work" tables in
 `plan/WORK_DISTRIBUTION (1).md` for the build sequence and checkpoints (CP0–CP3).

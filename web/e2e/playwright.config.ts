@@ -6,6 +6,7 @@ const PORT = 5179;
 
 export default defineConfig({
   testDir: '.',
+  testIgnore: '**/*.real.spec.ts', // real-data checks: playwright.real.config.ts (npm run e2e:real)
   outputDir: '../test-results',
   fullyParallel: true,
   reporter: [['list']],
@@ -20,6 +21,7 @@ export default defineConfig({
     command: `npx vite --port ${PORT} --strictPort`,
     cwd: '..',
     url: `http://localhost:${PORT}`,
+    env: { VITE_LUMEN_DATA: 'mock' }, // mock fixtures, whatever the shell has set
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

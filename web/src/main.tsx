@@ -1,5 +1,6 @@
 // Owner: Abhinav
-// Entry: fonts → tokens → density attributes → scenario from URL (+ optional e2e fixture) → render → URL sync.
+// Entry: fonts → tokens → density attributes → glossary binding → scenario from URL (+ optional e2e fixture) →
+// render → URL sync.
 import '@fontsource/ibm-plex-sans/400.css';
 import '@fontsource/ibm-plex-sans/500.css';
 import '@fontsource/ibm-plex-sans/600.css';
@@ -15,6 +16,7 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { FixtureContext, type Fixture } from './app/layout/fixture';
 import { installViewportWatcher } from './app/layout/viewport';
+import { installGlossaryBinding } from './features/guidance/InfoBadgeBinding';
 import { useScenario } from './state/scenarioStore';
 import { readScenarioFromUrl, startUrlSync } from './state/urlSync';
 import { installTokens } from './ui/tokens';
@@ -22,6 +24,7 @@ import { installTokens } from './ui/tokens';
 async function boot() {
   installTokens();
   installViewportWatcher();
+  void installGlossaryBinding(); // every <InfoBadge term> resolves from glossary.json (interim spec text until it lands)
 
   const params = new URLSearchParams(window.location.search);
   let fixture: Fixture | null = null;
