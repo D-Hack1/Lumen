@@ -23,6 +23,7 @@ export interface BoundsOptions {
 
 export interface MetricBounds {
   sunlitPct: Bounded;
+  /** Link % (Earth visible AND, when the DSN rule applies, a complex above the mask); equals Earth-visible % without DSN. */
   earthVisiblePct: Bounded;
   longestNightH: Bounded;
 }
@@ -61,7 +62,7 @@ export function evaluateWithBounds(input: EvaluateInput, opts: BoundsOptions): B
     const nominal = evaluate(input);
     return {
       hasBounds: false, nominal, lower: nominal, upper: nominal,
-      metrics: { sunlitPct: unbounded(nominal.metrics.sunlitPct.value), earthVisiblePct: unbounded(nominal.metrics.earthVisiblePct.value), longestNightH: unbounded(nominal.metrics.longestNightH.value) },
+      metrics: { sunlitPct: unbounded(nominal.metrics.sunlitPct.value), earthVisiblePct: unbounded(nominal.linkPct), longestNightH: unbounded(nominal.metrics.longestNightH.value) },
       sunEvents: nominal.sunEvents, earthEvents: nominal.earthEvents, fastSunEvents: nominal.sunEvents, fastEarthEvents: nominal.earthEvents,
     };
   }
@@ -90,7 +91,7 @@ export function evaluateWithBounds(input: EvaluateInput, opts: BoundsOptions): B
 
   return {
     hasBounds: true, nominal, lower, upper,
-    metrics: { sunlitPct: metric((e) => e.metrics.sunlitPct.value), earthVisiblePct: metric((e) => e.metrics.earthVisiblePct.value), longestNightH: metric((e) => e.metrics.longestNightH.value) },
+    metrics: { sunlitPct: metric((e) => e.metrics.sunlitPct.value), earthVisiblePct: metric((e) => e.linkPct), longestNightH: metric((e) => e.metrics.longestNightH.value) },
     sunEvents: exact(nominal.sunEvents, lower.sunEvents, upper.sunEvents),
     earthEvents: exact(nominal.earthEvents, lower.earthEvents, upper.earthEvents),
     fastSunEvents: fast(nominal.sunEvents, 'sun'),
