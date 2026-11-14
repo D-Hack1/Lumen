@@ -34,7 +34,7 @@ uses only what is listed here.
 | `answer` | `AnswerState` | Answer Strip at `tScrub`. State enums per R3 D-14: Sun `sunsetIn \| sunriseIn \| noSunriseBeforeEnd \| staysUpPastEnd \| belowOpsElevation`; Earth `earthsetIn \| earthriseIn \| linkResumesDsn`. Includes `nextEventT`, `nextEventPmMs`, `grazing`, `darkForMs`, `windowSunlitPct`, `windowLinkPct`. |
 | `events` | `EventRecord[]` | `{type: sunset\|shadowExit\|earthset\|earthrise, t, dtMs, grazing, grazingReason: rate\|dt_limit\|vanishes\|null, dtMethod: fast\|exact}` |
 | `windows` | `WindowRecord[]` | `{type: sun\|earth\|link\|ops, start, end, startPmMs, endPmMs, durationH: Bounded, peakElevDeg, flags:{grazing, partialStart, partialEnd}}` |
-| `series` | `Series` | Uniform grid `t0 + i*stepMs`: `sunElevDeg, sunAzDeg, sunClearanceDeg, sunDiskPct, earthElevDeg, earthAzDeg, earthClearanceDeg, earthDiskPct, powerW, sunUp, earthUp, linkUp, sigmaBandDeg` (Float32Array / Uint8Array). Azimuth is Earth-referenced at polar sites. |
+| `series` | `Series` | Uniform grid `t0 + i*stepMs`: `sunElevDeg, sunAzDeg, sunClearanceDeg, sunDiskPct, earthElevDeg, earthAzDeg, earthClearanceDeg, earthDiskPct, earthRangeKm, powerW, sunUp, earthUp, linkUp, sigmaBandDeg` (Float32Array / Uint8Array). Azimuth is Earth-referenced at polar sites. |
 | `metrics` | `MetricSet` | `sunElevationDeg` (hero), `sunClearanceDeg`, `sunDiskPct`, `earthElevationDeg`, `dteMarginDeg`, `sunlitPct`, `linkPct`, `longestNightH`, `longestCommGapH`, `opsHours`, `energyPerDayWh`, `sunElevationAtTouchdownDeg`, `padSlopeDeg`, `psrDistanceKm {km, bearingDeg, areaKm2, source}`. Each is `Bounded`. |
 
 ## Functions
