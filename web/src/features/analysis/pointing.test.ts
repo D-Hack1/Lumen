@@ -2,7 +2,7 @@
 // Seam: sampleAt(series, t) - what the Pointing tab shows at the scrub time (nearest sample, clamped to the series).
 import { describe, expect, it } from 'vitest';
 import type { Series } from '../../engine/types';
-import { sampleAt } from './PointingLink';
+import { sampleAt } from './pointingSample';
 
 const f = (v: number[]) => Float32Array.from(v);
 const series = { t0: 1000, stepMs: 120_000, sunElevDeg: f([1, 2, 3]), sunAzDeg: f([10, 20, 30]), earthElevDeg: f([4, 5, 6]), earthAzDeg: f([40, 50, 60]), earthDiskPct: f([0, 50, 100]), earthRangeKm: f([380_000, 390_000, 400_000]), linkUp: Uint8Array.from([0, 1, 1]) } as unknown as Series;

@@ -23,6 +23,10 @@ const planner: Table = {
   'barcode.blocked': 'Blocked',
   'barcode.day': 'd{n}',
   'barcode.aria': 'Survival barcode: Sun and Earth availability by day since landing',
+  'disp.within': '{pct}% of spots ≤ {tol}°',
+  'disp.axis': 'slope at candidate spots',
+  'twin.label': 'Earth twin: Sun path at this latitude today (educational approximation)',
+  'twin.toggle': 'Earth twin',
 };
 
 const educator: Table = {
@@ -39,6 +43,10 @@ const educator: Table = {
   'barcode.blocked': 'Dark and cut off',
   'barcode.day': 'Day {n}',
   'barcode.aria': 'Each bar shows, day by day after landing, whether the Sun and the Earth can be seen',
+  'disp.within': 'About {pct}% of possible spots are under {tol}° (gentle enough)',
+  'disp.axis': 'how steep each possible spot is',
+  'twin.label': 'On Earth, at this latitude, the Sun would follow this path in one day',
+  'twin.toggle': 'Compare with Earth',
 };
 
 export interface VisualCopy {
