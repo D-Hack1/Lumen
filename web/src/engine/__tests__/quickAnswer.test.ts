@@ -4,6 +4,10 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { buildScenarioResult } from '../core/buildResult';
+import { DEFAULT_DEFINITIONS } from '../core/evaluate';
+import { loadDsn } from '../data/dsn';
+import { loadEphem } from '../data/ephem';
 import { setDataMode } from '../data/source';
 import { quickAnswer } from '../quickAnswer';
 import { PUBLIC, stubFetch } from './helpers';
@@ -33,6 +37,18 @@ describe.skipIf(!run)('quickAnswer (real data)', () => {
     expect(r.earthElevDeg).toBeCloseTo(first.earth.elevation_deg, 3);
     expect(Math.abs(r.earthRangeKm - first.earth.range_km)).toBeLessThan(1);
     expect(r.linkUp).toBe(first.earth.up);
+  });
+
+  it('applies the DSN-aware link by default (PLAN: ON): link % equals the Cockpit engine with the 10 deg DSN rule, and is below Earth-visible %', async () => {
+    const r = await quickAnswer(imTwo);
+    const req = {
+      siteId: 'im2_athena', tier: 'C' as const, nearFieldResM: null, latDeg: imTwo.lat, lonDegEast: imTwo.lon, heightM: 2, rotation: null, touchdownMs: null, padSlopeDeg: null, psr: null,
+      startMs: TOUCHDOWN, durationDays: 30, tScrubMs: TOUCHDOWN, definitions: { ...DEFAULT_DEFINITIONS, dsnMaskDeg: 10 }, dataVersions: { catalog: 1 },
+      profile: { minSunlitPct: 0, minLinkHours: 0, maxLongestNightH: Number.MAX_VALUE, maxPadSlopeDeg: 90 }, weights: { sunlit: 1, link: 1, night: 1, slope: 1 },
+    };
+    const cockpit = buildScenarioResult(await loadEphem(), req, await loadDsn());
+    expect(r.linkPct.value!).toBeCloseTo(cockpit.metrics!.linkPct.value!, 9);
+    expect(r.linkPct.value!).toBeLessThan(g.metrics.earthVisiblePct.value); // the DSN rule removes some of the Earth-visible time
   });
 
   it('gives the next sunset / earthset / shadow exit as golden event times (within the 60 s tolerance)', async () => {

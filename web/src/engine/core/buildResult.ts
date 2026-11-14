@@ -10,8 +10,9 @@ import { makeSite, type Mat3 } from './geometry';
 import { inEphemerisRange } from './interp';
 import { evaluateVerdict, type VerdictProfile, type VerdictWeights } from './verdict';
 import { longestFalseRunHours } from './metrics';
-import { FINE_STEP_MS } from './events';
+import { FINE_STEP_MS, refineTransition } from './events';
 import { energyPerDayWh, powerSeries, type PowerConfig } from './padPower';
+import type { DsnSeries } from '../data/dsn';
 import { Horizon } from './visibility';
 
 /** Everything the worker needs, as plain serialisable data (no store, no catalog objects). */
@@ -59,7 +60,7 @@ function buildSeries(ev: Evaluation, power: PowerConfig | null): Series {
     s.sunElevDeg[i] = p.sun.elevationDeg; s.sunAzDeg[i] = p.sun.azimuthDeg; s.sunClearanceDeg[i] = p.sun.clearanceDeg; s.sunDiskPct[i] = 100 * p.sun.diskFraction;
     s.earthElevDeg[i] = p.earth.elevationDeg; s.earthAzDeg[i] = p.earth.azimuthDeg; s.earthClearanceDeg[i] = p.earth.clearanceDeg; s.earthDiskPct[i] = 100 * p.earth.diskFraction; s.earthRangeKm[i] = p.earth.distanceKm;
     s.sunUp[i] = p.sun.up ? 1 : 0; s.earthUp[i] = p.earth.up ? 1 : 0;
-    s.linkUp[i] = p.earth.up ? 1 : 0; // no DSN data yet: link == Earth visible
+    s.linkUp[i] = p.linkUp ? 1 : 0; // Earth visible AND (when the DSN rule applies) a complex above the mask
     // sigmaBandDeg stays 0: no sigma yet
   });
   if (power) {
@@ -70,7 +71,7 @@ function buildSeries(ev: Evaluation, power: PowerConfig | null): Series {
   return s;
 }
 
-export function buildScenarioResult(eph: Ephemeris, req: ScenarioRequest): ScenarioResult {
+export function buildScenarioResult(eph: Ephemeris, req: ScenarioRequest, dsn: DsnSeries | null = null): ScenarioResult {
   const endMs = req.startMs + req.durationDays * DAY;
   if (!inEphemerisRange(eph, req.startMs) || !inEphemerisRange(eph, endMs)) {
     return emptyError(`The ephemeris covers ${new Date(eph.startMs).toISOString().slice(0, 10)} to ${new Date(eph.endMs).toISOString().slice(0, 10)}; this window is outside it.`);
@@ -80,11 +81,11 @@ export function buildScenarioResult(eph: Ephemeris, req: ScenarioRequest): Scena
   const site = makeSite(req.latDeg, req.lonDegEast, req.heightM, req.rotation ?? undefined);
   const horizon = new Horizon({ observerHeightM: req.heightM });
   const d = req.definitions;
-  const ev = evaluate({ eph, site, horizon, startMs: req.startMs, durationDays: req.durationDays, definitions: d });
+  const ev = evaluate({ eph, site, horizon, startMs: req.startMs, durationDays: req.durationDays, definitions: d, dsn });
   const series = buildSeries(ev, req.power ?? null);
 
   const tScrub = Math.min(Math.max(req.tScrubMs, req.startMs), endMs);
-  const cur = stateAt(eph, site, horizon, d, tScrub);
+  const cur = stateAt(eph, site, horizon, d, tScrub, dsn);
   const events: EventRecord[] = [...ev.sunEvents, ...ev.earthEvents].sort((a, b) => a.t - b.t);
 
   // Answer Strip facts (D-14). "Sun up" = geometrically visible; the ops-elevation requirement is handled by the state.
@@ -93,26 +94,32 @@ export function buildScenarioResult(eph: Ephemeris, req: ScenarioRequest): Scena
   const sunNext = ev.sunEvents.find((e) => e.t > tScrub && e.type === (sunAvailable ? 'sunset' : 'shadowExit')) ?? null;
   const resume = ev.sunEvents.find((e) => e.t > tScrub && e.type === 'shadowExit') ?? null;
   const lastSunset = [...ev.sunEvents].reverse().find((e) => e.type === 'sunset' && e.t <= tScrub) ?? null;
+  // "Link resumes (DSN)": Earth visible but the DSN-aware link is down => the first instant the link is up again (bisected like the events).
+  let linkResumeT: number | null = null;
+  if (ev.dsnApplied && cur.earth.up && !cur.linkUp) {
+    const i = ev.times.findIndex((t, k) => t > tScrub && ev.linkUp[k]);
+    if (i > 0) linkResumeT = refineTransition((t) => stateAt(eph, site, horizon, d, t, dsn).linkUp, Math.max(ev.times[i - 1], tScrub), ev.times[i]);
+  }
   const earthNext = ev.earthEvents.find((e) => e.t > tScrub && e.type === (cur.earth.up ? 'earthset' : 'earthrise')) ?? null;
   const m = ev.metrics;
   const answer: AnswerState = deriveAnswerState({
     tScrub, sunElevDeg: cur.sun.elevationDeg, sunDiskPct: 100 * cur.sun.diskFraction, sunUp: geomSunUp,
     opsMinElevDeg: d.minSunElevationOpsDeg > 0 ? d.minSunElevationOpsDeg : null, sunNext,
     darkSinceMs: !geomSunUp ? (lastSunset?.t ?? null) : null, opsResumeT: resume?.t ?? null,
-    earthElevDeg: cur.earth.elevationDeg, earthVisible: cur.earth.up, linkUp: cur.earth.up, dsnAware: false, earthNext, linkResumeT: null,
-    windowSunlitPct: m.sunlitPct, windowLinkPct: m.earthVisiblePct,
+    earthElevDeg: cur.earth.elevationDeg, earthVisible: cur.earth.up, linkUp: cur.linkUp, dsnAware: ev.dsnApplied, earthNext, linkResumeT,
+    windowSunlitPct: m.sunlitPct, windowLinkPct: val(ev.linkPct),
   });
 
   let opsMs = 0;
-  for (let i = 0; i < ev.samples.length - 1; i++) if (ev.samples[i].sun.up && ev.samples[i].earth.up) opsMs += ev.times[i + 1] - ev.times[i];
-  const earthUp = ev.samples.map((s) => s.earth.up);
-  const touch = req.touchdownMs != null && inEphemerisRange(eph, req.touchdownMs) ? stateAt(eph, site, horizon, d, req.touchdownMs) : null;
+  for (let i = 0; i < ev.samples.length - 1; i++) if (ev.samples[i].sun.up && ev.samples[i].linkUp) opsMs += ev.times[i + 1] - ev.times[i];
+  const linkUp = ev.samples.map((s) => s.linkUp);
+  const touch = req.touchdownMs != null && inEphemerisRange(eph, req.touchdownMs) ? stateAt(eph, site, horizon, d, req.touchdownMs, dsn) : null;
 
   const metrics: MetricSet = {
     sunElevationDeg: val(cur.sun.elevationDeg), sunClearanceDeg: val(cur.sun.clearanceDeg), sunDiskPct: val(100 * cur.sun.diskFraction),
     earthElevationDeg: val(cur.earth.elevationDeg), dteMarginDeg: val(cur.earth.clearanceDeg),
-    sunlitPct: m.sunlitPct, linkPct: m.earthVisiblePct, // link = Earth visible until DSN data exists
-    longestNightH: m.longestNightH, longestCommGapH: val(longestFalseRunHours(ev.times, earthUp)), opsHours: val(opsMs / 3_600_000),
+    sunlitPct: m.sunlitPct, linkPct: val(ev.linkPct), // Earth visible AND, when the DSN rule applies, a complex above the mask
+    longestNightH: m.longestNightH, longestCommGapH: val(longestFalseRunHours(ev.times, linkUp)), opsHours: val(opsMs / 3_600_000),
     energyPerDayWh: req.power ? val(energyPerDayWh(series.powerW, series.stepMs)) : nulls,
     sunElevationAtTouchdownDeg: touch ? val(touch.sun.elevationDeg) : null,
     padSlopeDeg: req.padSlopeDeg != null ? val(req.padSlopeDeg) : null,
@@ -128,7 +135,7 @@ export function buildScenarioResult(eph: Ephemeris, req: ScenarioRequest): Scena
       siteId: req.siteId ?? 'custom', tier: req.tier,
       tierBadge: 'Smooth-Moon horizon · terrain pending',
       sigmaSource: 'smooth-Moon bound', snapDistanceKm: null,
-      definitionsSummary: `Sun available = ≥${Math.round(d.sunDiskThreshold * 100)}% disk above the horizon${d.minSunElevationOpsDeg > 0 ? ` and ≥${d.minSunElevationOpsDeg}° elevation` : ''} @${req.heightM} m · Link = Earth ≥${d.earthMarginDeg}° above the horizon (DSN not applied)`,
+      definitionsSummary: `Sun available = ≥${Math.round(d.sunDiskThreshold * 100)}% disk above the horizon${d.minSunElevationOpsDeg > 0 ? ` and ≥${d.minSunElevationOpsDeg}° elevation` : ''} @${req.heightM} m · Link = Earth ≥${d.earthMarginDeg}° above the horizon${ev.dsnApplied ? ` + DSN ≥${d.dsnMaskDeg}°` : ' (DSN not applied)'}`,
       dataVersions: req.dataVersions, mock: eph.mock,
     },
     verdict: verdict.verdict,

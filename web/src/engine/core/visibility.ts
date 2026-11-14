@@ -59,7 +59,8 @@ export class Horizon {
     if (this.slopeDeg == null || this.uphillAzimuthDeg == null || this.dMinM == null) return terrain;
     const slope = this.slopeDeg * DEG;
     const near = Math.atan(Math.tan(slope) * Math.cos((azimuthDeg - this.uphillAzimuthDeg) * DEG) - this.observerHeightM / this.dMinM) / DEG;
-    return Math.max(terrain, Math.max(0, near));
+    const nearPositive = Math.max(0, near);
+    return nearPositive === 0 ? terrain : Math.max(terrain, nearPositive); // as reference/visibility.py: a flat or downhill plane never lifts a below-zero terrain horizon to 0
   }
 
   /** Min and max of the effective mask over [centre - halfWidth, centre + halfWidth] (sampled like the Python reference). */
