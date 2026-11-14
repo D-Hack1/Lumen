@@ -6,27 +6,29 @@
 import { color } from '../../ui/tokens';
 import { LayeredCanvas } from '../shared/LayeredCanvas';
 import { useVisualCopy, visualCopy } from '../shared/visualCopy';
+import { summariseDispersion, type Dispersion } from '../../engine/data/dispersion';
 import { binSlopes } from './dispersionBins';
 
 export interface DispersionHistogramProps {
-  /** Slope in degrees at each dispersion node (121 values). */
-  slopesDeg: ArrayLike<number>;
+  /** The loaded 11×11 grid (engine/data/dispersion.ts) — the single source for bins AND the quoted percentages. */
+  dispersion: Dispersion;
   /** Bin width in degrees (the mock sidecar says 0.5). */
   binWidthDeg?: number;
   /** Mission Profile limit; bars at or above it are flagged. */
   toleranceDeg?: number;
 }
 
-export function DispersionHistogram({ slopesDeg, binWidthDeg = 0.5, toleranceDeg }: DispersionHistogramProps) {
+export function DispersionHistogram({ dispersion, binWidthDeg = 0.5, toleranceDeg }: DispersionHistogramProps) {
+  const slopesDeg = dispersion.slopeDeg;
   const persona = useVisualCopy().persona; // part of the redraw key: a persona switch relabels the chart
   return (
     <LayeredCanvas
       className="dispersion-histogram"
-      staticKey={`${persona}:${slopesDeg.length}:${binWidthDeg}:${toleranceDeg}:${slopesDeg.length ? slopesDeg[0] + slopesDeg[slopesDeg.length - 1] : 0}`}
+      staticKey={`${persona}:${dispersion.siteId}:${slopesDeg.length}:${binWidthDeg}:${toleranceDeg}:${slopesDeg.length ? slopesDeg[0] + slopesDeg[slopesDeg.length - 1] : 0}`}
       drawStatic={(ctx, w, h) => {
         const n = slopesDeg.length;
         if (n === 0) return;
-        const { counts, withinTolerance } = binSlopes(slopesDeg, binWidthDeg);
+        const counts = binSlopes(slopesDeg, binWidthDeg);
         const axisH = 12;
         const capH = 12; // caption row above the bars, so the label never sits on them
         const plotTop = capH;
@@ -70,7 +72,7 @@ export function DispersionHistogram({ slopesDeg, binWidthDeg = 0.5, toleranceDeg
           ctx.setLineDash([]);
           ctx.fillStyle = color.text;
           ctx.textAlign = 'left';
-          ctx.fillText(c.t('disp.within', { pct: c.pct(withinTolerance(toleranceDeg)), tol: toleranceDeg }), 0, 9);
+          ctx.fillText(c.t('disp.within', { pct: c.pct(summariseDispersion(dispersion, toleranceDeg).pctBelowTolerance), tol: toleranceDeg }), 0, 9);
         }
         ctx.fillStyle = color.textFaint;
         ctx.textAlign = 'left';
