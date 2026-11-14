@@ -262,9 +262,9 @@ export interface QuickAnswerResult {
 export interface LayerEntry {
   id: string;
   label: string;
-  extent: '80S' | '85S';
+  extent: '80_90S' | '85_90S';
   url: string; // resolved, ready for <img>
-  legendStops: Array<[number, string]>;
+  legendStops: Array<{ value: number; label: string; color: string }>;
   source: string;
   derived: boolean;
 }
@@ -276,12 +276,19 @@ export interface LayerExtent {
   metresPerPx: number;
 }
 
+export interface RegionOutline {
+  id: string;
+  name: string;
+  centroid: { lat: number; lon: number };
+  /** SVG path in km, y flipped (svg_y = -y), same frame as the layers (half_extent_km of the 80_90S extent). */
+  svgPath: string;
+}
+
 export interface LayersResult {
   layers: LayerEntry[];
-  extents: Record<'80S' | '85S', LayerExtent> | null;
+  extents: Record<'80_90S' | '85_90S', LayerExtent> | null;
   sizePx: [number, number] | null;
-  regions: Array<{ id: string; name: string; centroid: { lat: number; lon: number }; approximateCentre: boolean }>;
-  regionsSvgUrl: string | null;
+  regions: RegionOutline[];
   loading: boolean;
   error: string | null;
 }
