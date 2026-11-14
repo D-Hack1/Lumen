@@ -85,6 +85,18 @@ def _site(site_id: str, sites_path: Path | None = None) -> dict[str, Any]:
     raise KeyError(f"unknown site identifier: {site_id}")
 
 
+def _site_coordinates(site_id: str, site: dict[str, Any]) -> tuple[float, float]:
+    """Return authoritative computation coordinates for a registered site."""
+
+    coordinates = site.get("landing_coords") if site_id == "cy3_shiv_shakti" else None
+    coordinates = coordinates or site
+    latitude = coordinates.get("latitude_deg")
+    longitude = coordinates.get("longitude_deg_east")
+    if not isinstance(latitude, (int, float)) or not isinstance(longitude, (int, float)):
+        raise TypeError(f"{site_id} has no verified computation coordinates")
+    return float(latitude), float(longitude)
+
+
 def _pixel_distances_m(dem: DemWindow, latitude_deg: float, longitude_deg: float) -> np.ndarray:
     transformer = Transformer.from_crs(dem.crs, LUNAR_SPHERICAL_CRS, always_xy=True)
     rows, cols = dem.elevation.shape
@@ -315,20 +327,41 @@ def generate_tier_a_mask(
     geometric_growth_factor: float,
     sites_path: Path | None = None,
     producer: str = "lumen_pipeline.terrain.masks",
+    require_complete_crops: bool = False,
 ) -> MaskArtifact:
-    """Generate and publish one Tier-A mask from already-read crops."""
+    """Generate and publish one Tier-A mask from already-read crops.
+
+    S-4 callers retain the historical partial-crop behavior by leaving
+    ``require_complete_crops`` disabled. S-5 publication enables it.
+    """
 
     if crops.near is None:
-        raise CropCoverageError("IM-2 Tier-A mask requires a verified near-field crop")
+        raise CropCoverageError(f"{site_id} Tier-A mask requires a verified near-field crop")
     git_commit = _git_commit()
     if not isinstance(git_commit, str) or re.fullmatch(r"[0-9a-fA-F]{40}", git_commit) is None:
         raise ValueError("Tier-A publication requires a valid 40-character Git commit hash")
     site = _site(site_id, sites_path)
+    site_latitude, site_longitude = _site_coordinates(site_id, site)
     near = fit_near_field(
         crops.near,
-        latitude_deg=site["latitude_deg"],
-        longitude_deg=site["longitude_deg_east"],
+        latitude_deg=site_latitude,
+        longitude_deg=site_longitude,
     )
+    require_complete_crops = require_complete_crops or site_id in {
+        "shackleton_ridge",
+        "cy3_shiv_shakti",
+    }
+    if require_complete_crops:
+        missing_crops = tuple(
+            name
+            for name, crop in (("near", crops.near), ("mid", crops.mid), ("far", crops.far))
+            if crop is None
+        )
+        if missing_crops:
+            raise CropCoverageError(
+                f"{site_id} Tier-A mask requires complete near/mid/far coverage; "
+                f"unavailable crops: {', '.join(missing_crops)}"
+            )
     heights = (1.0, 2.0, 5.0, 10.0)
     results: list[HorizonResult] = []
     for crop in (crops.near, crops.mid, crops.far):
@@ -336,15 +369,15 @@ def generate_tier_a_mask(
             continue
         restricted = _restrict_crop(
             crop,
-            latitude_deg=site["latitude_deg"],
-            longitude_deg=site["longitude_deg_east"],
+            latitude_deg=site_latitude,
+            longitude_deg=site_longitude,
             elevation=near.filtered_elevation if crop is crops.near else None,
         )
         results.append(
             raycast_horizon(
                 restricted,
-                latitude_deg=site["latitude_deg"],
-                longitude_deg_east=site["longitude_deg_east"],
+                latitude_deg=site_latitude,
+                longitude_deg_east=site_longitude,
                 observer_heights_m=heights,
                 bin_width_deg=0.1,
                 max_range_km=250.0,

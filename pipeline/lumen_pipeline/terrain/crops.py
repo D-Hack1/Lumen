@@ -118,6 +118,34 @@ _CROP_SPECS = (
     CropSpec("far", 80.0, 250.0, ("regional_240m_lola_pgda_90",), 240.0),
 )
 
+_CY3_CROP_SPECS = (
+    CropSpec(
+        "near",
+        0.0,
+        5.0,
+        (
+            "chandrayaan3_lroc_vikramsite_dtm",
+            "chandrayaan3_lola_30m_pgda_90",
+            "regional_240m_lola_pgda_90",
+        ),
+        5.0,
+    ),
+    CropSpec(
+        "mid",
+        5.0,
+        80.0,
+        ("chandrayaan3_lola_30m_pgda_90", "regional_240m_lola_pgda_90"),
+        30.0,
+    ),
+    CropSpec("far", 80.0, 250.0, ("regional_240m_lola_pgda_90",), 240.0),
+)
+
+
+def _crop_specs(site_id: str) -> tuple[CropSpec, ...]:
+    """Return the site-specific ladder without changing the default S-4 ladder."""
+
+    return _CY3_CROP_SPECS if site_id == "cy3_shiv_shakti" else _CROP_SPECS
+
 
 def _latitude_coverage(value: str | None) -> tuple[float, float] | None:
     if not value:
@@ -278,7 +306,7 @@ def build_crops(
     selected_products = products if products is not None else load_products()
     crops: dict[str, TerrainCrop | None] = {}
     unavailable: dict[str, str] = {}
-    for spec in _CROP_SPECS:
+    for spec in _crop_specs(site_id):
         try:
             product = _select_product(spec, selected_products, latitude_deg)
             dem = reader.read_site_window(
