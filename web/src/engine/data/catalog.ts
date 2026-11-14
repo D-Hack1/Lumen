@@ -5,6 +5,14 @@ import type { SiteRecord, Sparkline } from '../types';
 
 const VERSIONS = [1];
 
+interface RawCoords {
+  latitude_deg: number;
+  longitude_deg_east: number;
+  source: string;
+}
+
+const coords = (c: RawCoords) => ({ lat: c.latitude_deg, lon: c.longitude_deg_east, source: c.source });
+
 interface RawSite {
   id: string;
   name: string;
@@ -12,10 +20,10 @@ interface RawSite {
   agency: string | null;
   date: string | null;
   as_published_date: string | null;
-  lat: number;
-  lon: number;
-  landing_coords: SiteRecord['landingCoords'];
-  target_coords: SiteRecord['targetCoords'];
+  latitude_deg: number;
+  longitude_deg_east: number;
+  landing_coords: RawCoords;
+  target_coords: RawCoords | null;
   coord_note: string | null;
   touchdown_utc: string | null;
   touchdown_precision: 'minute' | 'second' | null;
@@ -55,10 +63,10 @@ async function doLoad(): Promise<Catalog> {
     agency: s.agency,
     date: s.date,
     asPublishedDate: s.as_published_date,
-    lat: s.lat,
-    lon: s.lon,
-    landingCoords: s.landing_coords,
-    targetCoords: s.target_coords,
+    lat: s.latitude_deg,
+    lon: s.longitude_deg_east,
+    landingCoords: coords(s.landing_coords),
+    targetCoords: s.target_coords ? coords(s.target_coords) : null,
     coordNote: s.coord_note,
     touchdownUtc: s.touchdown_utc ? Date.parse(s.touchdown_utc) : null,
     touchdownPrecision: s.touchdown_precision,

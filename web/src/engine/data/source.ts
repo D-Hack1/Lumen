@@ -25,7 +25,7 @@ const jsonCache = new Map<string, Promise<unknown>>();
 const binCache = new Map<string, Promise<ArrayBuffer>>();
 
 /** Fetch + cache JSON. Optionally require a header `version` in `supportedVersions`. */
-export function fetchJson<T>(path: string, supportedVersions?: number[]): Promise<T> {
+export function fetchJson<T>(path: string, supportedVersions?: Array<number | string>): Promise<T> {
   const url = dataUrl(path);
   let p = jsonCache.get(url);
   if (!p) {
@@ -57,9 +57,9 @@ export function fetchBuffer(path: string): Promise<ArrayBuffer> {
   return p;
 }
 
-export function checkVersion(label: string, header: unknown, supported: number[]): void {
+export function checkVersion(label: string, header: unknown, supported: Array<number | string>): void {
   const v = (header as { version?: unknown } | null)?.version;
-  if (typeof v !== 'number' || !supported.includes(v)) {
+  if ((typeof v !== 'number' && typeof v !== 'string') || !supported.includes(v)) {
     throw new DataError(`${label}: unsupported data version ${String(v)} (supported: ${supported.join(', ')})`);
   }
 }
