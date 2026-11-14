@@ -1,0 +1,286 @@
+{
+  "case_schema": {
+    "input_time_scale": "ET seconds",
+    "required": [
+      "id",
+      "input",
+      "expected"
+    ]
+  },
+  "cases": [
+    {
+      "expected": {
+        "visibility": [
+          {
+            "clearance_deg": 2.0,
+            "disk_fraction": 1.0,
+            "elevation_deg": 2.0,
+            "visible": true
+          },
+          {
+            "clearance_deg": -2.0,
+            "disk_fraction": 0.0,
+            "elevation_deg": -2.0,
+            "visible": false
+          }
+        ]
+      },
+      "id": "synthetic_flat_visibility_boundaries",
+      "input": {
+        "horizon_deg": 0.0,
+        "range_et": [
+          0,
+          120
+        ],
+        "site_id": "synthetic_flat",
+        "sun_distance_km": 149597870.7,
+        "time_scale": "ET seconds"
+      }
+    },
+    {
+      "expected": {
+        "visibility": [
+          {
+            "clearance_deg": 1.0,
+            "elevation_deg": 5.0,
+            "visible": true
+          },
+          {
+            "clearance_deg": -1.0,
+            "elevation_deg": 3.0,
+            "visible": false
+          }
+        ]
+      },
+      "id": "synthetic_terrain_mask_boundary",
+      "input": {
+        "horizon_deg": 4.0,
+        "range_et": [
+          0,
+          120
+        ],
+        "site_id": "synthetic_ridge",
+        "sun_distance_km": 149597870.7,
+        "time_scale": "ET seconds"
+      }
+    },
+    {
+      "expected": {
+        "limb_clearance_offset_deg": {
+          "disk_0_pct": 0.25,
+          "disk_100_pct": -0.25,
+          "disk_50_pct": 0.0
+        }
+      },
+      "id": "synthetic_disk_limb_conventions",
+      "input": {
+        "range_et": [
+          0,
+          0
+        ],
+        "site_id": "synthetic_disk",
+        "solar_radius_deg": 0.25,
+        "time_scale": "ET seconds"
+      }
+    },
+    {
+      "expected": {
+        "events": [],
+        "window": {
+          "end_et": 240.0,
+          "partial_start": true,
+          "start_et": 0.0
+        }
+      },
+      "id": "synthetic_event_at_window_start",
+      "input": {
+        "range_et": [
+          0,
+          240
+        ],
+        "site_id": "synthetic_window_start",
+        "time_scale": "ET seconds",
+        "visible_when": "et >= 0"
+      }
+    },
+    {
+      "expected": {
+        "clearance_rate_deg_per_hour": -32.4
+      },
+      "id": "synthetic_total_clearance_rate",
+      "input": {
+        "azimuth_deg": "10 + 0.1 * et",
+        "elevation_deg": "5 + 0.001 * et",
+        "mask_bin_width_deg": 0.1,
+        "mask_deg_per_bin": 0.01,
+        "range_et": [
+          -20,
+          220
+        ],
+        "site_id": "synthetic_moving_mask",
+        "time_scale": "ET seconds"
+      }
+    },
+    {
+      "expected": {
+        "numeric_bounds": [
+          0.8,
+          1.0,
+          1.2
+        ],
+        "shifted_masks_deg": [
+          0.8,
+          1.0,
+          1.2
+        ]
+      },
+      "id": "synthetic_three_pass_bounds",
+      "input": {
+        "mask_deg": 1.0,
+        "sigma_deg": 0.2,
+        "site_id": "synthetic_sigma",
+        "time_scale": "ET seconds"
+      }
+    },
+    {
+      "expected": {
+        "delta_t_seconds": 20.0,
+        "dt_method": "exact",
+        "grazing_reason": null
+      },
+      "id": "synthetic_exact_event_uncertainty",
+      "input": {
+        "event_times_et": [
+          80.0,
+          100.0,
+          120.0
+        ],
+        "site_id": "synthetic_exact",
+        "time_scale": "ET seconds"
+      }
+    },
+    {
+      "expected": {
+        "delta_t_seconds": "infinity",
+        "grazing_reason": "rate"
+      },
+      "id": "synthetic_grazing_rate",
+      "input": {
+        "constant_clearance_deg": 0.0,
+        "sigma_deg": 0.2,
+        "site_id": "synthetic_grazing",
+        "time_scale": "ET seconds"
+      }
+    },
+    {
+      "expected": {
+        "cross_slope_effective_deg": -1.0,
+        "flat_or_downhill_effective_deg": -1.0,
+        "uphill_effective_deg": 6.25
+      },
+      "id": "synthetic_near_zone_slope_edges",
+      "input": {
+        "d_min_m": 15.0,
+        "observer_height_m": 1.0,
+        "site_id": "synthetic_pad",
+        "slope_deg": 10.0,
+        "terrain_horizon_deg": -1.0,
+        "time_scale": "ET seconds",
+        "uphill_azimuth_deg": 0.0
+      }
+    },
+    {
+      "expected": {
+        "label": "smooth-Moon bound",
+        "terrain_sigma": null
+      },
+      "id": "synthetic_tier_c_smooth_moon",
+      "input": {
+        "observer_height_m": 2.0,
+        "site_id": "synthetic_tier_c",
+        "terrain_mode": "smooth_moon",
+        "time_scale": "ET seconds"
+      }
+    },
+    {
+      "expected": {
+        "definitions_preset": "isroVikramOps",
+        "visible": false
+      },
+      "id": "synthetic_min_sun_elevation_ops",
+      "input": {
+        "disk_threshold": 0.5,
+        "elevation_deg": 5.0,
+        "min_sun_elevation_ops_deg": 6.0,
+        "site_id": "synthetic_ops",
+        "time_scale": "ET seconds"
+      }
+    },
+    {
+      "expected": {
+        "generation_w": [
+          680.5,
+          0.0
+        ],
+        "net_w": [
+          670.5,
+          -10.0
+        ],
+        "stored_energy_wh": [
+          500.0,
+          830.25
+        ]
+      },
+      "id": "synthetic_power_eclipse_soc",
+      "input": {
+        "battery_capacity_wh": 1000.0,
+        "disk_fractions": [
+          1.0,
+          0.0
+        ],
+        "initial_soc_fraction": 0.5,
+        "load_w": [
+          10.0,
+          10.0
+        ],
+        "panel_area_m2": 2.0,
+        "panel_efficiency": 0.25,
+        "panel_normal": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "site_id": "synthetic_power",
+        "sun_distance_km": 149597870.7,
+        "time_scale": "ET seconds",
+        "times_et": [
+          0.0,
+          3600.0
+        ],
+        "usable_depth_of_discharge": 1.0
+      }
+    }
+  ],
+  "description": "Deterministic R3 edge vectors for reference and browser parity; not production terrain or site results.",
+  "kind": "synthetic_reference_vectors",
+  "provenance": {
+    "dem_data": "none",
+    "dsn_data": "none",
+    "source": "hand-derived R3 reference cases",
+    "synthetic": true,
+    "terrain_artifacts": "none"
+  },
+  "set": 2,
+  "tolerances": {
+    "angle_deg": 0.005,
+    "delta_t_percent": 5.0,
+    "event_time_s": 10.0
+  },
+  "units": {
+    "angle": "deg",
+    "distance": "km",
+    "time": "ET seconds",
+    "uncertainty": "s"
+  },
+  "version": "1.0.0"
+}
