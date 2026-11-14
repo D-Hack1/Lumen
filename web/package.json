@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "e2e": "playwright test -c e2e/playwright.config.ts",
+    "e2e:real": "playwright test -c e2e/playwright.real.config.ts",
     "e2e:install": "playwright install chromium",
     "typecheck": "tsc --noEmit -p .",
     "lint": "eslint .",

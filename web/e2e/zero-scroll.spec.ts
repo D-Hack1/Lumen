@@ -2,11 +2,13 @@
 // §5.1 zero-scroll check with the worst-case fixture at V1/V2/V3/V4/V4b (+ V1 at 110% zoom as a stress case).
 // Per viewport × view: no page scroll; no bento cell overflows except whitelisted scroll containers; Cockpit slot
 // heights match the §4 budgets; Mission Bar does not overflow; Fast Lane elements have no transitions.
-// Screenshots → e2e/screens/phase-1/<viewport>-<view>.png
+// Phase 3: the Site Explorer worst case (30 cards, long names, all chips, ISRO preset chip, Educator copy) is checked
+// per viewport: every chip and the agency filter inside the search slot, the card list as the column's only scroller.
+// Screenshots → e2e/screens/phase-<PHASE>/<viewport>-<view>.png
 import { expect, test, type Page } from '@playwright/test';
 import { colBudget, pickCols, pickDensity, sideBudget, slotBudget } from '../src/ui/tokens';
 
-const PHASE = 2;
+const PHASE = 3;
 const VIEWPORTS = [
   { name: 'V1', width: 1920, height: 960 },
   { name: 'V2', width: 1536, height: 754 },
@@ -100,6 +102,52 @@ for (const vp of VIEWPORTS) {
         await check(`compare-${tab}`);
       }
       expect(failures).toEqual([]);
+    });
+
+    test('site explorer worst case: 30 cards, all chips visible, list is the only scroller', async ({ page }) => {
+      await open(page, VIEWS[0]);
+      const r = await page.evaluate(() => {
+        const slot = document.querySelector('[data-slot="search"]')!.getBoundingClientRect();
+        const inside = (el: Element) => {
+          const b = el.getBoundingClientRect();
+          return (
+            b.width > 0 &&
+            b.top >= slot.top - 0.5 &&
+            b.bottom <= slot.bottom + 0.5 &&
+            b.left >= slot.left - 0.5 &&
+            b.right <= slot.right + 0.5
+          );
+        };
+        const chips = [...document.querySelectorAll('.sb-chips .ui-chip')];
+        const list = document.querySelector<HTMLElement>('[data-slot="siteList"]')!;
+        const scrollers = [...document.querySelectorAll<HTMLElement>('[data-col="left"] *')].filter((el) => {
+          const o = getComputedStyle(el).overflowY;
+          return (o === 'auto' || o === 'scroll') && el.scrollHeight > el.clientHeight + 1;
+        });
+        return {
+          cards: document.querySelectorAll('.sb-card').length,
+          chips: chips.length,
+          chipsInside: chips.every(inside),
+          chipText: chips.map(
+            (c) =>
+              (c.querySelector('.truncate') as HTMLElement).scrollWidth <=
+              (c.querySelector('.truncate') as HTMLElement).clientWidth + 1,
+          ),
+          agencyInside: inside(document.querySelector('.sb-agency')!),
+          searchInside: inside(document.querySelector('.sb-search__input')!),
+          listScrolls: list.scrollHeight > list.clientHeight,
+          scrollers: scrollers.map((el) => el.dataset.slot ?? el.className),
+          presetChip: document.querySelector('.def-bar__preset')?.textContent ?? null,
+        };
+      });
+      expect(r.cards).toBe(30);
+      expect(r.chips).toBe(6);
+      expect(r.chipsInside, 'all 6 category chips inside the search slot').toBe(true);
+      expect(r.chipText.every(Boolean), 'no chip label truncated').toBe(true);
+      expect(r.agencyInside && r.searchInside).toBe(true);
+      expect(r.listScrolls, 'the card list scrolls internally').toBe(true);
+      expect(r.scrollers, 'only the site-card list scrolls in the left column').toEqual(['siteList']);
+      expect(r.presetChip).toMatch(/ISRO/);
     });
 
     test('cockpit: slot sizes match §4 budgets', async ({ page }) => {

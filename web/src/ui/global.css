@@ -121,6 +121,7 @@ button {
   :root {
     --dur-fast: 80ms;
     --dur-base: 80ms;
+    --dur-popover: 80ms;
     --dur-drawer: 80ms;
     --dur-view: 80ms;
     --dur-row: 80ms;

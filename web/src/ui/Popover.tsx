@@ -1,6 +1,7 @@
 // Owner: Abhinav
-// Popover — anchored panel (verdict → Mission Profile now; Definitions ✎ in Phase 3).
-// Motion (§1.2, emil rules): transform + opacity only, origin-aware scale 0.96 → 1, enter 180 ms, exit 120 ms
+// Popover — anchored panel (verdict → Mission Profile; Definitions ✎).
+// Motion (§1.2, emil rules): transform + opacity only, origin-aware scale 0.96 → 1 growing from the anchor point
+// (transform-origin = where the anchor meets the panel, also when the panel is clamped), enter 150 ms, exit 120 ms
 // (exit ≤ enter), strong ease-out, no overshoot. Interruptible: every change starts from the element's current
 // animated opacity/scale, so open–close–open spam reverses smoothly instead of jumping. Reduced motion → 80 ms
 // opacity only. Dismiss: Esc (focus returns to the anchor), pointer-down outside, or the caller's close button.
@@ -23,6 +24,8 @@ export interface PopoverProps {
   align?: 'start' | 'end';
   id?: string;
   className?: string;
+  /** Other triggers that toggle this popover — pointer-down on them is not an "outside" dismiss. */
+  insideRefs?: RefObject<HTMLElement>[];
   children: ReactNode;
 }
 
@@ -36,7 +39,17 @@ function currentFrame(el: HTMLElement): { o: number; s: number } {
   return { o: Number.isFinite(o) ? o : 1, s: m ? Number.parseFloat(m[1]) : 1 };
 }
 
-export function Popover({ open, onClose, anchor, label, align = 'end', id, className, children }: PopoverProps) {
+export function Popover({
+  open,
+  onClose,
+  anchor,
+  label,
+  align = 'end',
+  id,
+  className,
+  insideRefs,
+  children,
+}: PopoverProps) {
   const ref = useRef<HTMLDivElement>(null);
   const anim = useRef<Animation | null>(null);
   const [mounted, setMounted] = useState(open);
@@ -55,11 +68,15 @@ export function Popover({ open, onClose, anchor, label, align = 'end', id, class
       const w = el.offsetWidth;
       const h = el.offsetHeight;
       const left = align === 'end' ? a.right - w : a.left;
-      const x = Math.min(Math.max(4, left), window.innerWidth - w - 4);
-      const y = Math.min(a.bottom + 6, window.innerHeight - h - 4);
-      el.style.left = `${Math.round(x)}px`;
-      el.style.top = `${Math.round(Math.max(4, y))}px`;
-      el.style.transformOrigin = `${align === 'end' ? 'right' : 'left'} top`;
+      const x = Math.round(Math.min(Math.max(4, left), window.innerWidth - w - 4));
+      const below = a.bottom + 6 + h <= window.innerHeight - 4 || a.top - 6 - h < 4;
+      const y = Math.round(Math.max(4, below ? Math.min(a.bottom + 6, window.innerHeight - h - 4) : a.top - 6 - h));
+      el.style.left = `${x}px`;
+      el.style.top = `${y}px`;
+      // Origin-aware: grow from the anchor's centre on the edge facing it (clamped into the panel).
+      const ox = Math.min(Math.max(0, a.left + a.width / 2 - x), w);
+      el.style.transformOrigin = `${Math.round(ox)}px ${below ? 'top' : 'bottom'}`;
+      el.dataset.side = below ? 'bottom' : 'top';
     };
     place();
     window.addEventListener('resize', place);
@@ -84,7 +101,7 @@ export function Popover({ open, onClose, anchor, label, align = 'end', id, class
         { opacity: to.o, transform: `scale(${to.s})` },
       ],
       {
-        duration: rm ? motion.durReduced : open ? motion.durBase : motion.durFast,
+        duration: rm ? motion.durReduced : open ? motion.durPopover : motion.durFast,
         easing: motion.easeOut,
         fill: 'forwards',
       },
@@ -111,6 +128,7 @@ export function Popover({ open, onClose, anchor, label, align = 'end', id, class
     const onDown = (e: PointerEvent) => {
       const t = e.target as Node;
       if (ref.current?.contains(t) || anchor.current?.contains(t)) return;
+      if (insideRefs?.some((r) => r.current?.contains(t))) return;
       onCloseRef.current();
     };
     document.addEventListener('keydown', onKey, true);
@@ -119,7 +137,7 @@ export function Popover({ open, onClose, anchor, label, align = 'end', id, class
       document.removeEventListener('keydown', onKey, true);
       document.removeEventListener('pointerdown', onDown, true);
     };
-  }, [open, anchor]);
+  }, [open, anchor, insideRefs]);
 
   if (!mounted || typeof document === 'undefined') return null;
   return createPortal(

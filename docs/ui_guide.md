@@ -1,6 +1,6 @@
 # ui_guide.md
 
-_Owner: Abhinav_ · Phase 1 (foundations). Read this before building any component that goes into a bento slot.
+_Owner: Abhinav_ · Phases 1–3. Read this before building any component that goes into a bento slot.
 
 ## 1. Shell and views
 - The app root is locked to the viewport (`100dvh`, `overflow: hidden`). **The page never scrolls.**
@@ -45,6 +45,21 @@ Import from `web/src/ui` (barrel): `Panel, Card, Chip, Badge, InfoBadge, Segment
 - **Data encodings, always paired with a pattern or shape:** Sun = amber `color.sun` (solid) · Earth only = blue **dots** (`createDotPattern`) · Sun + Earth = teal `color.both` (solid) · blocked = grey **hatch** (`createHatchPattern`). In CSS, use `cssStateFill(state)`.
 - **Numbers:** add the `num` class (tabular monospace) to every live value, ± and unit.
 - **Motion:** use the tokens in `motion.*` and animate only `transform` and `opacity`. Containers only (popover, drawer, toast, tabs, segmented). **Never on data.**
+- **Token names:** `color.surface2` → `var(--c-surface2)`, `color.textOnAccent` → `var(--c-text-on-accent)` (digits stay attached). `src/ui/tokens.test.ts` fails if any stylesheet in `src/` uses a `var(--…)` that is not defined, so a typo can't silently render transparent.
+
+### 4.1 InfoBadge — one badge for everyone (Phase 3)
+- `import { InfoBadge } from 'src/ui'` and pass **only** `term`: `<InfoBadge term="sun_elevation" />` or the visible label `<InfoBadge term={t('metric.sunlit')} />`. Ids, labels and aliases all resolve.
+- The glossary binding is installed once at boot (`features/guidance/InfoBadgeBinding.tsx`). It reads `public/content/glossary.json` (Gowri) and falls back to the PLAN §8.10 text (`content/glossaryFallback.ts`, tagged "draft") until the file lands. You never fetch or map glossary data yourself.
+- Tooltip: Formula · Impact · Source & σ · **Learn more →** (opens Methodology at `#gloss-<id>`). 300 ms open delay, 0 ms when moving between badges, 100 ms fade, click pins it open, one tip at a time. Headings follow the persona.
+- Unknown term → the term is the title, marked "draft". Ask in `#lumen-changes` for a glossary id, or for an alias in `glossaryFallback.ts`.
+
+### 4.2 CreditLine — image and map-layer credits (Phase 3)
+- Ebin (Lens body images): `<CreditLine ids={['sun_sdo', 'earth_epic']} overlay corner="br" />` inside the positioned Lens container.
+- Nived (Basemap layer): `<CreditLine entry={layerCredit(layer.source, layer.derived)} overlay />` (`layerCredit` from `src/content/credits.ts`); for the procedural relief use `id="basemap_procedural"`.
+- Entries live in `src/content/credits.ts` (credit, what, license, sourceUrl) and are mirrored in `docs/credits_frontend.md`. Add a new image → ask Abhinav for an entry. Static text, no motion, no blur: safe next to live canvases.
+
+### 4.3 Popover
+- `<Popover open anchor={ref} label="…" align="start|end" insideRefs={[otherTriggerRef]}>`. Enter 150 ms (`motion.durPopover`), exit 120 ms, scale 0.96 → 1 from the anchor point (also when clamped to the viewport), interruptible, Esc / outside pointer-down closes. `insideRefs` lists other buttons that toggle the same popover so they don't count as "outside".
 
 ## 5. Hot path (Fast Lane, guide §1.3) — mandatory for charts and maps
 - Tag hot elements with `data-hotpath`. A global CSS rule disables transitions and animations on them.
@@ -52,12 +67,19 @@ Import from `web/src/ui` (barrel): `Panel, Card, Chip, Badge, InfoBadge, Segment
   - `crosshairBus` (`web/src/state/buses.ts`): `{ tHover, tScrub, source }`. Use `crosshair.setHover(t, 'barcode')`, `crosshair.setScrubLive(t)`, then `crosshair.commitScrub(t)` on release.
   - `slipBus`: `{ slipDays, dragging }`. Commit on release with `useScenario.getState().setSlip(d)`.
   - `padDragBus`: `{ tiltMagDeg, tiltDirDeg, yawDeg, dragging }`. Commit with `setTilt` / `setYaw`.
+  - `siteHoverBus`: `{ siteId }` — Site Explorer card hover. **Nived:** the Basemap may subscribe to pulse its own pins; today `features/sidebar/pinPulse.ts` toggles `.is-card-hover` on the pin (matched by `<title>` until pins carry `data-site`) or on `[data-offmap="<id>"]`.
 - `bus.subscribe(fn)` calls `fn` **once per frame at most**, inside the shared frame bus (`web/src/state/frameBus.ts`). Draw imperatively from it: canvas calls, or ref `textContent` / attribute writes.
 - For continuous animation (playback), use `frameBus.loop((now, dt) => …)`. Never start your own `requestAnimationFrame` loop.
 - Committed (human-speed) state is `useScenario(selector)` (`web/src/state/scenarioStore.ts`). Labels come from `useCopy(key)` (`web/src/state/copy.ts`).
 
 ## 6. Worst-case fixture
-Open `/?fixture=worst-case` to fill every slot with worst-case content: Educator copy, "No sunrise before window end (+60 d)", grazing ranges, 4 Compare rows, 30 Scan rows, a 9-row Windows Table, long site names and all badges. `npm run e2e` checks zero scroll and per-slot overflow at V1–V4b, and saves screenshots to `web/e2e/screens/phase-N/`. When your real component lands, its slot entry in the fixture is removed and the same content arrives through the mock engine's forced states.
+Open `/?fixture=worst-case` to fill every slot with worst-case content: Educator copy, "No sunrise before window end (+60 d)", grazing ranges, 4 Compare rows, 30 Scan rows, a 9-row Windows Table, long site names and all badges. Phase 3: the Site Explorer gets 30 site cards (`fixture.sites`, every category / agency / tier, CY-3 landing + target, minute and second touchdowns, "as published" with and without a date) and the Definitions Bar shows the ISRO preset chip with Educator wording. `npm run e2e` checks zero scroll and per-slot overflow at V1–V4b, and saves screenshots to `web/e2e/screens/phase-N/`. When your real component lands, its slot entry in the fixture is removed and the same content arrives through the mock engine's forced states.
 
-## 7. Keyboard map
+## 7. Site Explorer and Definitions Bar (Phase 3)
+- **Left column = 3 slots** rendered by `features/sidebar/Sidebar.tsx`: `search` (search, agency filter, 6 category chips — always 2 rows), `map` (Nived's `Basemap`, unchanged), `siteList` (the column's only scroller).
+- Card: click = `selectSite(id)`, Shift-click or **+ Compare** = `addCompareRow({ site })` + toast, hover = `siteHoverBus`. Verdict dot = the engine's verdict for the selected site or a Compare row; other sites stay ○ pending (no per-site verdict API yet).
+- Search: a typed `lat, lon` (`−84.79, 29.20`, `84.79S 29.2E`) offers **Analyse custom point** (Enter → `setCustomPoint`) and **Quick Answer** (Nived's `useQuickAnswer`, shown in a popover with "Open in Cockpit"). `focusSiteSearch()` focuses the field (for the Mission Bar).
+- Definitions Bar: one line built from the store (`features/definitions/definitionsText.ts`); ✎ opens the editor (Sun disk threshold, observer height 1/2/5/10 m, Earth margin, DTE disk threshold, DSN mode + mask, min Sun elevation for ops) and the one-click **ISRO Vikram ops (min Sun elevation 6°)** preset. Sliders commit on release (one recompute). A non-default preset shows a chip (`Preset: ISRO ops` / `Custom rules`) with × reset.
+
+## 8. Keyboard map
 Phase 1 provides arrow-key navigation inside segmented controls and tabs. The full map (1/2/3, S/E/X/T, Q, ←/→, Space, Esc) arrives in Phase 5.
