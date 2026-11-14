@@ -11,6 +11,7 @@ import { inEphemerisRange } from './interp';
 import { evaluateVerdict, type VerdictProfile, type VerdictWeights } from './verdict';
 import { longestFalseRunHours } from './metrics';
 import { FINE_STEP_MS } from './events';
+import { energyPerDayWh, powerSeries, type PowerConfig } from './padPower';
 import { Horizon } from './visibility';
 
 /** Everything the worker needs, as plain serialisable data (no store, no catalog objects). */
@@ -33,6 +34,8 @@ export interface ScenarioRequest {
   profile: VerdictProfile;
   weights: VerdictWeights;
   dataVersions: Record<string, number | string>;
+  /** Panel preset, yaw, tilt and pad ground normal; omitted/null = no power model (powerW stays 0, no energy metric). */
+  power?: PowerConfig | null;
 }
 
 const nulls: Bounded = { value: null, lo: null, hi: null };
@@ -44,21 +47,26 @@ function emptyError(message: string): ScenarioResult {
   return { status: 'error', error: message, meta: null, verdict: 'PENDING', verdictReasons: [], viability: null, answer: null, events: [], windows: [], series: null, metrics: null };
 }
 
-function buildSeries(ev: Evaluation): Series {
+function buildSeries(ev: Evaluation, power: PowerConfig | null): Series {
   const n = ev.samples.length;
   const f = () => new Float32Array(n);
   const u = () => new Uint8Array(n);
   const s: Series = {
     t0: ev.times[0], stepMs: FINE_STEP_MS, sunElevDeg: f(), sunAzDeg: f(), sunClearanceDeg: f(), sunDiskPct: f(), earthElevDeg: f(), earthAzDeg: f(),
-    earthClearanceDeg: f(), earthDiskPct: f(), earthRangeKm: f(), powerW: f(), sunUp: u(), earthUp: u(), linkUp: u(), sigmaBandDeg: f(),
+    earthClearanceDeg: f(), earthDiskPct: f(), earthRangeKm: f(), powerW: f(), flatPowerW: f(), sunUp: u(), earthUp: u(), linkUp: u(), sigmaBandDeg: f(),
   };
   ev.samples.forEach((p, i) => {
     s.sunElevDeg[i] = p.sun.elevationDeg; s.sunAzDeg[i] = p.sun.azimuthDeg; s.sunClearanceDeg[i] = p.sun.clearanceDeg; s.sunDiskPct[i] = 100 * p.sun.diskFraction;
     s.earthElevDeg[i] = p.earth.elevationDeg; s.earthAzDeg[i] = p.earth.azimuthDeg; s.earthClearanceDeg[i] = p.earth.clearanceDeg; s.earthDiskPct[i] = 100 * p.earth.diskFraction; s.earthRangeKm[i] = p.earth.distanceKm;
     s.sunUp[i] = p.sun.up ? 1 : 0; s.earthUp[i] = p.earth.up ? 1 : 0;
     s.linkUp[i] = p.earth.up ? 1 : 0; // no DSN data yet: link == Earth visible
-    // powerW and sigmaBandDeg stay 0: no power model / sigma yet
+    // sigmaBandDeg stays 0: no sigma yet
   });
+  if (power) {
+    const g = powerSeries(power, ev.samples.map((p) => ({ azimuthDeg: p.sun.azimuthDeg, elevationDeg: p.sun.elevationDeg, distanceKm: p.sun.distanceKm, diskFraction: p.sun.diskFraction })));
+    s.powerW.set(g.powerW);
+    s.flatPowerW.set(g.flatW);
+  }
   return s;
 }
 
@@ -73,7 +81,7 @@ export function buildScenarioResult(eph: Ephemeris, req: ScenarioRequest): Scena
   const horizon = new Horizon({ observerHeightM: req.heightM });
   const d = req.definitions;
   const ev = evaluate({ eph, site, horizon, startMs: req.startMs, durationDays: req.durationDays, definitions: d });
-  const series = buildSeries(ev);
+  const series = buildSeries(ev, req.power ?? null);
 
   const tScrub = Math.min(Math.max(req.tScrubMs, req.startMs), endMs);
   const cur = stateAt(eph, site, horizon, d, tScrub);
@@ -105,7 +113,7 @@ export function buildScenarioResult(eph: Ephemeris, req: ScenarioRequest): Scena
     earthElevationDeg: val(cur.earth.elevationDeg), dteMarginDeg: val(cur.earth.clearanceDeg),
     sunlitPct: m.sunlitPct, linkPct: m.earthVisiblePct, // link = Earth visible until DSN data exists
     longestNightH: m.longestNightH, longestCommGapH: val(longestFalseRunHours(ev.times, earthUp)), opsHours: val(opsMs / 3_600_000),
-    energyPerDayWh: nulls,
+    energyPerDayWh: req.power ? val(energyPerDayWh(series.powerW, series.stepMs)) : nulls,
     sunElevationAtTouchdownDeg: touch ? val(touch.sun.elevationDeg) : null,
     padSlopeDeg: req.padSlopeDeg != null ? val(req.padSlopeDeg) : null,
     psrDistanceKm: req.psr ? { km: req.psr.distanceKm, bearingDeg: req.psr.bearingDeg, areaKm2: req.psr.areaKm2, source: req.psr.source } : null,

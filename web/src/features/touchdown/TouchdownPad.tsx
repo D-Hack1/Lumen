@@ -122,7 +122,7 @@ export function TouchdownPad() {
       </div>
 
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-        <PanelPowerBars preset={preset} series={series} slopeDeg={slope ?? 0} downhillAzDeg={downhill ?? 0} />
+        <PanelPowerBars preset={preset} series={series} slopeDeg={slope ?? 0} downhillAzDeg={downhill ?? 0} yawAuto={yaw == null} />
       </div>
     </div>
   );

@@ -7,7 +7,7 @@ import { assembleCompare } from './compare/compare';
 import { evaluateScenario, latestWins } from './client';
 import { loadCatalog } from './data/catalog';
 import { dataMode } from './data/source';
-import { makeRequest } from './requests';
+import { makeRequest, padNormalFor } from './requests';
 import { mockCompare } from '../mocks/mockResult';
 import { getScenario, useScenario } from '../state/scenarioStore';
 import type { CompareResults } from './types';
@@ -41,7 +41,10 @@ async function run(): Promise<void> {
     if (s.compareRows.length === 0) return publish(IDLE);
     const { sites } = await loadCatalog();
     if (dataMode() === 'mock') return publish(mockCompare(sites));
-    const reqs = s.compareRows.map((r) => ({ id: r.id, req: makeRequest(s, sites, { siteRef: r.site, landingUtc: r.landingUtc, heightM: r.heightM, scrubUtc: r.landingUtc + s.slipDays * 86_400_000 }) }));
+    const reqs = await Promise.all(s.compareRows.map(async (r) => ({
+      id: r.id,
+      req: makeRequest(s, sites, { siteRef: r.site, landingUtc: r.landingUtc, heightM: r.heightM, scrubUtc: r.landingUtc + s.slipDays * 86_400_000, panel: { preset: r.panelPreset, yawDeg: r.yawDeg, tilt: r.tilt }, groundNormal: await padNormalFor(r.site) }),
+    })));
     const evaluated = await evaluateBatch(reqs);
     if (evaluated) publish(assembleCompare(evaluated, s.compareRows.find((r) => r.baseline)?.id ?? null));
   } catch {
