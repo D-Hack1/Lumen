@@ -1,0 +1,32 @@
+{
+  "dem_source": "polar_60m_lola_pgda_90",
+  "dispersion_available": false,
+  "files_present": {
+    "dispersion_bin": null,
+    "dispersion_json": null,
+    "mask_bin": null,
+    "mask_json": null,
+    "pad_json": "terrain/pad/cy3_shiv_shakti.json",
+    "sigma_bin": null,
+    "sigma_json": null
+  },
+  "git_commit": "3893813395c2e5f764d79c9f93fddbc4c8d959ab",
+  "mask_available": false,
+  "near_field_res_m": 60.0,
+  "pad_available": true,
+  "pad_headline": {
+    "downhill_aspect_deg": 10.641259650773463,
+    "slope_deg": 0.5137536572065825,
+    "under_resolved": null,
+    "uphill_az_deg": 190.64125965077343
+  },
+  "psr": null,
+  "run_timestamp_utc": "2026-11-14T23:47:24.597646Z",
+  "sigma_available": false,
+  "site_id": "cy3_shiv_shakti",
+  "tier": "pending",
+  "unavailable": {
+    "mid": "Read failed. See previous exception for details."
+  },
+  "version": "0.1.0"
+}
