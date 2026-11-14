@@ -72,11 +72,8 @@ test.describe('Definitions Bar + ISRO preset', () => {
     await expect(page.getByTestId('definitions-line')).toContainText('@10 m');
   });
 
-  // Phase 3 exit check with Nived's MOCK data path. Known gap (reported): engine/resultStore.ts mock branch calls
-  // mockScenarioResult(sites[0]) without site / scrub / minSunElevationOps, so in mock mode the Answer Strip cannot
-  // react to any scenario change. Marked as an expected failure: it flips to "unexpectedly passed" once Nived fixes it.
+  // Phase 3 exit check with the MOCK data path (the mock now honours site / scrub / minSunElevationOps; this was a known gap).
   test('CY-3 (mock) + ISRO preset → Answer Strip "Below ops elevation (6°)"', async ({ page }) => {
-    test.fail(true, 'Nived: mock resultStore ignores scenario (site, scrub, minSunElevationOps)');
     await openScenario(page, cy3Scenario(2));
     await page.getByRole('button', { name: 'Edit definitions' }).click();
     await page.getByRole('button', { name: 'ISRO Vikram ops (min Sun elevation 6°)' }).click();
@@ -220,6 +217,6 @@ test.describe('InfoBadge (glossary)', () => {
   test('Metric Deck badges (Nived) resolve through the same binding', async ({ page }) => {
     await openScenario(page, {});
     await page.locator('[data-slot="metricDeck"] .ui-info').first().click(); // click = open now, pinned
-    await expect(page.getByRole('tooltip')).toContainText('angle of Sun centre above the local horizontal plane');
+    await expect(page.getByRole('tooltip')).toContainText('angle(Sun direction, local horizontal)') // glossary text as updated in #41;
   });
 });

@@ -50,11 +50,11 @@ function buildSeries(ev: Evaluation): Series {
   const u = () => new Uint8Array(n);
   const s: Series = {
     t0: ev.times[0], stepMs: FINE_STEP_MS, sunElevDeg: f(), sunAzDeg: f(), sunClearanceDeg: f(), sunDiskPct: f(), earthElevDeg: f(), earthAzDeg: f(),
-    earthClearanceDeg: f(), earthDiskPct: f(), powerW: f(), sunUp: u(), earthUp: u(), linkUp: u(), sigmaBandDeg: f(),
+    earthClearanceDeg: f(), earthDiskPct: f(), earthRangeKm: f(), powerW: f(), sunUp: u(), earthUp: u(), linkUp: u(), sigmaBandDeg: f(),
   };
   ev.samples.forEach((p, i) => {
     s.sunElevDeg[i] = p.sun.elevationDeg; s.sunAzDeg[i] = p.sun.azimuthDeg; s.sunClearanceDeg[i] = p.sun.clearanceDeg; s.sunDiskPct[i] = 100 * p.sun.diskFraction;
-    s.earthElevDeg[i] = p.earth.elevationDeg; s.earthAzDeg[i] = p.earth.azimuthDeg; s.earthClearanceDeg[i] = p.earth.clearanceDeg; s.earthDiskPct[i] = 100 * p.earth.diskFraction;
+    s.earthElevDeg[i] = p.earth.elevationDeg; s.earthAzDeg[i] = p.earth.azimuthDeg; s.earthClearanceDeg[i] = p.earth.clearanceDeg; s.earthDiskPct[i] = 100 * p.earth.diskFraction; s.earthRangeKm[i] = p.earth.distanceKm;
     s.sunUp[i] = p.sun.up ? 1 : 0; s.earthUp[i] = p.earth.up ? 1 : 0;
     s.linkUp[i] = p.earth.up ? 1 : 0; // no DSN data yet: link == Earth visible
     // powerW and sigmaBandDeg stay 0: no power model / sigma yet

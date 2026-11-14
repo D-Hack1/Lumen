@@ -4,12 +4,13 @@
 // re-rendered the whole tab every frame. Values now write straight into DOM refs from the bus subscription —
 // `series` itself only changes at human rate (new scenario), so that part can stay a normal render.
 import { useEffect, useRef } from 'react';
+import { fmtLightTime, fmtRangeKm } from '../../engine/format';
 import { useResult } from '../../engine/hooks';
 import { crosshairBus } from '../../state/buses';
 import { color } from '../../ui/tokens';
 import { DsnLanes } from './DsnLanes';
 
-function sampleAt(series: NonNullable<ReturnType<typeof useResult>['series']>, t: number) {
+export function sampleAt(series: NonNullable<ReturnType<typeof useResult>['series']>, t: number) {
   const i = Math.max(0, Math.min(series.sunElevDeg.length - 1, Math.round((t - series.t0) / series.stepMs)));
   return {
     sunElevDeg: series.sunElevDeg[i],
@@ -17,6 +18,7 @@ function sampleAt(series: NonNullable<ReturnType<typeof useResult>['series']>, t
     earthElevDeg: series.earthElevDeg[i],
     earthAzDeg: series.earthAzDeg[i],
     earthDiskPct: series.earthDiskPct[i],
+    earthRangeKm: series.earthRangeKm[i],
     linkUp: series.linkUp[i],
   };
 }
@@ -28,6 +30,8 @@ export function PointingLink() {
   const earthRef = useRef<HTMLElement>(null);
   const diskRef = useRef<HTMLElement>(null);
   const linkRef = useRef<HTMLElement>(null);
+  const rangeRef = useRef<HTMLElement>(null);
+  const lightRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (!series) return;
@@ -36,6 +40,8 @@ export function PointingLink() {
       if (sunRef.current) sunRef.current.textContent = `${s.sunAzDeg.toFixed(1)}° / ${s.sunElevDeg.toFixed(1)}°`;
       if (earthRef.current) earthRef.current.textContent = `${s.earthAzDeg.toFixed(1)}° / ${s.earthElevDeg.toFixed(1)}°`;
       if (diskRef.current) diskRef.current.textContent = `${s.earthDiskPct.toFixed(0)}%`;
+      if (rangeRef.current) rangeRef.current.textContent = fmtRangeKm(s.earthRangeKm);
+      if (lightRef.current) lightRef.current.textContent = fmtLightTime(s.earthRangeKm);
       if (linkRef.current) {
         linkRef.current.textContent = s.linkUp ? 'UP' : 'DOWN';
         linkRef.current.style.color = s.linkUp ? color.go : color.nogo;
@@ -67,6 +73,8 @@ export function PointingLink() {
           [
             ['Sun az / el', sunRef],
             ['Earth az / el', earthRef],
+            ['Earth range', rangeRef],
+            ['Light time (1-way)', lightRef],
             ['Earth disk', diskRef],
             ['Link', linkRef],
           ] as const

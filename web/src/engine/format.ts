@@ -50,3 +50,12 @@ export const fmtDeg = (x: number, digits = 2): string => `${signed(x, digits)}°
 export function fill(template: string, vars: Record<string, string | number>): string {
   return template.replace(/\{(\w+)\}/g, (_, k: string) => String(vars[k] ?? `{${k}}`));
 }
+
+/** Speed of light, km/s (exact). */
+export const SPEED_OF_LIGHT_KM_S = 299_792.458;
+export const lightTimeSeconds = (rangeKm: number): number => rangeKm / SPEED_OF_LIGHT_KM_S;
+const physical = (rangeKm: number): boolean => Number.isFinite(rangeKm) && rangeKm > 0;
+/** 384,400 km; 'n/a' for a missing or non-physical range (never NaN or 0). */
+export const fmtRangeKm = (rangeKm: number): string => (physical(rangeKm) ? `${Math.round(rangeKm).toLocaleString('en-US')} km` : 'n/a');
+/** One-way light time, 1.28 s. */
+export const fmtLightTime = (rangeKm: number): string => (physical(rangeKm) ? `${lightTimeSeconds(rangeKm).toFixed(2)} s` : 'n/a');
