@@ -1,23 +1,30 @@
 {
-  "schema": "sparklines",
-  "version": 1,
-  "mock": true,
-  "note": "MOCK DATA \u2014 synthetic values, not for science or demo claims",
-  "start_utc": "2025-01-01T00:00:00Z",
-  "start_unix_s": 1735689600,
-  "days": 400,
+  "version": "1",
+  "shape": [
+    4,
+    2,
+    400
+  ],
   "dtype": "uint8",
-  "unit_pct": 1,
-  "definitions": "mock defaults (2 m, 50% disk, Earth \u22651\u00b0 + DSN \u226510\u00b0)",
-  "series": [
+  "fields": [
     "sunlit_pct",
     "link_pct"
   ],
-  "layout": "[site][series][day], sites in `sites` order",
+  "units": "percent",
+  "scale": null,
+  "offset": null,
+  "producer": "web/src/engine/mock/make_mock.py",
+  "created_utc": "2026-01-01T00:00:00Z",
+  "sha256": "affc74e6994f2426763a47caa6e18f4af517f54c9255f1caf6625501be70d08b",
+  "mock": true,
+  "note": "DRAFT extras: sites/start_utc/days are not yet in data_catalog.md; layout [site][series][day]",
+  "start_utc": "2025-01-01T00:00:00Z",
+  "days": 400,
   "sites": [
     "im2_athena",
     "cy3_shiv_shakti",
     "shackleton_ridge",
     "blue_ghost_m1"
-  ]
+  ],
+  "definitions": "mock defaults (2 m, 50% disk, Earth >=1 deg + DSN >=10 deg)"
 }

@@ -20,7 +20,10 @@ const STATUS_TEXT = { stub: 'stub', missing: 'stub missing', later: 'phase', liv
 export function Slot({ id, children, className, bare }: SlotProps) {
   const spec = SLOTS[id];
   const label = useCopy(`slot.${id}`);
-  const fixture = useFixture()?.slots[id];
+  // Worst-case stand-ins only fill slots whose real component isn't built yet (my later-phase slots). Teammate
+  // components always render themselves; their worst-case content arrives through Nived's forced mock states.
+  const fixtureAll = useFixture()?.slots[id];
+  const fixture = spec.status === 'later' ? fixtureAll : undefined;
   const sizeRef = useRef<HTMLSpanElement>(null);
   const boxRef = useRef<HTMLElement>(null);
 
@@ -37,7 +40,10 @@ export function Slot({ id, children, className, bare }: SlotProps) {
     return () => ro.disconnect();
   }, [fixture]);
 
-  const showPlaceholder = !bare && !fixture && spec.status !== 'live';
+  const hasContent = children != null && children !== false;
+  // Full placeholder only for empty slots; a slot with a stub gets a small corner tag instead.
+  const showPlaceholder = !bare && !fixture && !hasContent && spec.status !== 'live';
+  const showTag = !bare && !fixture && hasContent && spec.status === 'stub';
   const status = spec.status === 'later' ? `phase ${spec.phase}` : STATUS_TEXT[spec.status];
 
   return (
@@ -52,6 +58,11 @@ export function Slot({ id, children, className, bare }: SlotProps) {
       aria-label={label}
     >
       {fixture ?? children}
+      {showTag && (
+        <span className="slot__tag" aria-hidden="true">
+          {spec.owner} · {spec.component} · stub
+        </span>
+      )}
       {showPlaceholder && (
         <div className="slot__ph" aria-hidden={children ? 'true' : undefined}>
           <span className="slot__ph-label">{label}</span>
