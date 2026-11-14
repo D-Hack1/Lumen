@@ -92,6 +92,11 @@ def synthetic_golden_payload() -> dict[str, object]:
             "input": {"site_id": "synthetic_dsn", "time_scale": "ET seconds", "range_et": [0, 1200], "station_order": ["DSS-14", "DSS-43", "DSS-63"], "station_elevations_deg": [[20.0, 0.0, 20.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]], "cadence_s": 600, "interpolation": "linear", "dsn_mask_deg": 5.0, "earth_visible": True},
             "expected": {"dsn_off": {"link_pct": 100.0, "longest_comm_gap_hours": 0.0}, "dsn_aware": {"event_types": ["link_down", "link_recovery"], "event_times_et": [450.0, 750.0], "link_pct": 75.0, "longest_comm_gap_hours": 1.0 / 12.0}},
         },
+        {
+            "id": "synthetic_dsn_out_of_coverage",
+            "input": {"site_id": "synthetic_dsn_coverage", "time_scale": "ET seconds", "range_et": [0, 1800], "station_order": ["DSS-14", "DSS-43", "DSS-63"], "station_elevations_deg": [[20.0, 0.0, 20.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]], "cadence_s": 600, "interpolation": "linear", "dsn_mask_deg": 5.0, "earth_visible": True},
+            "expected": {"dsn_aware": {"event_types": ["link_down", "link_recovery", "link_down"], "event_times_et": [450.0, 750.0, 1200.0], "link_pct": 50.0, "longest_comm_gap_hours": 1.0 / 6.0}},
+        },
     ]
     return {
         "version": "1.0.0",
@@ -123,6 +128,7 @@ def synthetic_golden_payload() -> dict[str, object]:
             },
             "python_only": {
                 "synthetic_guarded_span_spike": "TS has no envelope-guarded coarse sampler or exact span-extrema proof.",
+                "synthetic_dsn_out_of_coverage": "TS has no DSN-aware link-window metrics.",
             },
         },
         "cases": cases,
