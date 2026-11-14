@@ -79,6 +79,7 @@
 /web/src/features/touchdown/       @ebin
 /web/src/features/compareVisuals/  @ebin
 /web/src/features/sparkline/       @ebin
+/web/src/features/shared/          @ebin   # LayeredCanvas base (Fast Lane), used by all Ebin charts
 /web/src/features/answer/          @nived
 /web/src/features/metrics/         @nived
 /web/src/features/map/             @nived
