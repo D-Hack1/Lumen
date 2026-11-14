@@ -8,6 +8,7 @@ import { frameBus } from '../../state/frameBus';
 import { crosshairBus } from '../../state/buses';
 import { useScenario } from '../../state/scenarioStore';
 import { useResult } from '../../engine/hooks';
+import { COACH, coachAnchor } from '../shared/coachAnchors';
 
 const SPEEDS = [0.5, 1, 2, 6, 24] as const; // simulated days per real second
 
@@ -51,7 +52,7 @@ export function RibbonTransport() {
   }, [playing, speedIdx, t1]);
 
   return (
-    <div className="ribbon-transport" style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-3)', height: 32 }}>
+    <div className="ribbon-transport" {...coachAnchor(COACH.ribbonTransport)} style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-3)', height: 32 }}>
       <button type="button" aria-label={playing ? 'Pause' : 'Play'} onClick={() => setPlaying((p) => !p)}>
         {playing ? '⏸' : '▶'}
       </button>
