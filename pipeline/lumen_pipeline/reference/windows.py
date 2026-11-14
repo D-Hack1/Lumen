@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+import math
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+
+from lumen_pipeline.reference.events import Event
 
 
 @dataclass(frozen=True)
@@ -18,6 +21,70 @@ class Window:
     @property
     def duration_hours(self) -> float:
         return (self.end_et - self.start_et) / 3600.0
+
+    @property
+    def duration_seconds(self) -> float:
+        return self.end_et - self.start_et
+
+
+def windows_from_events(
+    type: str,
+    start_et: float,
+    end_et: float,
+    initially_visible: bool,
+    events: Sequence[Event],
+    *,
+    down_event: str,
+    up_event: str,
+    peak_elevation_deg: Callable[[float, float], float],
+) -> list[Window]:
+    """Build half-open visible windows from refined transition events.
+
+    ``events`` must be chronological and use only the supplied down/up labels.
+    The caller owns the definition of each predicate (sun, earth, link, or
+    ops) and supplies the matching peak-elevation calculation.
+    """
+    if not start_et < end_et:
+        raise ValueError("window range must have positive duration")
+
+    visible = initially_visible
+    window_start = start_et if visible else None
+    window_partial_start = initially_visible
+    windows: list[Window] = []
+    previous_et = start_et
+
+    def close_window(window_end: float, *, partial_end: bool) -> None:
+        nonlocal window_start
+        if window_start is None or window_end <= window_start:
+            return
+        peak = peak_elevation_deg(window_start, window_end)
+        if not math.isfinite(peak):
+            raise ValueError("peak_elevation_deg must return a finite value")
+        windows.append(Window(type, window_start, window_end, peak, window_partial_start, partial_end))
+        window_start = None
+
+    for event in events:
+        if event.type not in (down_event, up_event):
+            raise ValueError(f"unexpected {type} event type: {event.type}")
+        if not start_et <= event.et <= end_et or event.et < previous_et:
+            raise ValueError("events must be chronological and within the window range")
+        previous_et = event.et
+
+        if event.type == down_event:
+            if not visible:
+                raise ValueError(f"{down_event} cannot follow an invisible state")
+            close_window(event.et, partial_end=False)
+            visible = False
+        else:
+            if visible:
+                raise ValueError(f"{up_event} cannot follow a visible state")
+            window_start = event.et
+            window_partial_start = False
+            visible = True
+
+    if visible:
+        close_window(end_et, partial_end=True)
+    return windows
 
 
 def merge_windows(
