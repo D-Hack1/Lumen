@@ -5,7 +5,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { loadCatalog } from '../data/catalog';
 import { loadLayers } from '../data/layers';
 import { dataUrl, checkVersion } from '../data/source';
-import { mockScenarioResult } from '../mock/mockResult';
+import { mockScenarioResult } from '../../mocks/mockResult';
 
 beforeAll(() => stubFetch());
 
@@ -29,7 +29,7 @@ describe('mock dataset', () => {
   it('loads layers and regions', async () => {
     const l = await loadLayers();
     expect(l.layers.length).toBe(10);
-    expect(l.extents?.['85_90S'].halfExtentKm).toBeLessThan(l.extents!['80_90S'].halfExtentKm);
+    expect(l.extents?.['85S'].halfExtentKm).toBeLessThan(l.extents!['80S'].halfExtentKm);
     expect(l.regions.length).toBe(3);
     expect(l.regions[0].svgPath).toMatch(/^M /);
     expect(l.layers.every((x) => x.legendStops.every((g) => /^#[0-9a-f]{6}$/i.test(g.color)))).toBe(true);

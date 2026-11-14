@@ -54,7 +54,7 @@ export const SLOTS: Record<SlotId, SlotSpec> = {
     phase: 3,
     budget: 'search',
   },
-  map: { owner: 'Nived', component: 'Basemap', path: 'features/map/Basemap', status: 'stub', budget: 'map' },
+  map: { owner: 'Nived', component: 'Basemap', path: 'features/map/Basemap', status: 'live', budget: 'map' },
   siteList: {
     owner: 'Abhinav',
     component: 'SiteCard list',
@@ -69,7 +69,7 @@ export const SLOTS: Record<SlotId, SlotSpec> = {
     owner: 'Nived',
     component: 'AnswerStrip',
     path: 'features/answer/AnswerStrip',
-    status: 'stub',
+    status: 'live',
     budget: 'answer',
   },
   definitions: {
@@ -107,7 +107,7 @@ export const SLOTS: Record<SlotId, SlotSpec> = {
     owner: 'Nived',
     component: 'MetricDeck',
     path: 'features/metrics/MetricDeck',
-    status: 'stub',
+    status: 'live',
     budget: 'metricDeck',
   },
   touchdown: {
@@ -167,7 +167,7 @@ export const SLOTS: Record<SlotId, SlotSpec> = {
     owner: 'Nived',
     component: 'ScanPanel',
     path: 'features/compareResults/ScanPanel',
-    status: 'stub',
+    status: 'live',
     budget: 'flex',
     scroll: true,
   },
@@ -175,7 +175,7 @@ export const SLOTS: Record<SlotId, SlotSpec> = {
     owner: 'Nived',
     component: 'DeltaTable',
     path: 'features/compareResults/DeltaTable',
-    status: 'stub',
+    status: 'live',
     budget: 'deltaTable',
   },
   compareWindows: {

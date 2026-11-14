@@ -22,7 +22,7 @@ uses only what is listed here.
 | `useResult()` | `ScenarioResult` | Reads the active scenario from Abhinav's store (`useScenario`) and recomputes in the worker (debounced, stale jobs cancelled). |
 | `useCompareResults()` | `CompareResults` `{ status, rows: {scenarioId, result, deltaVsBaseline}[], baselineId }` | One row per compare scenario (≤4). |
 | `useQuickAnswer(input \| null)` | `QuickAnswerResult` | `null` input → idle. |
-| `useLayers()` | `LayersResult` `{ layers, extents, sizePx, regions, loading, error }` | Layer `url`s are ready for `<img>`. `extents` keys are `'80_90S'`/`'85_90S'`. `regions[].svgPath` is in km, y flipped (same frame as the layers). |
+| `useLayers()` | `LayersResult` `{ layers, extents, sizePx, regions, loading, error }` | Layer `url`s are ready for `<img>`. `extents` keys are `'80S'`/`'85S'` (same ids as the store; the contract's `80_90S`/`85_90S` are mapped in the loader). `regions[].svgPath` is in km, y flipped (same frame as the layers). |
 
 ### `ScenarioResult`
 | Field | Type | Meaning |

@@ -1,6 +1,7 @@
 // Owner: Nived
 // Deterministic FAKE results (N-3). Shapes match types.ts exactly so UI can be built now.
 // Replaced by the real worker output at N-5..N-10. Nothing here is physics.
+import { deriveAnswerState } from '../engine/answerState';
 import type {
   AnswerState,
   Bounded,
@@ -16,7 +17,7 @@ import type {
   SiteRecord,
   Verdict,
   WindowRecord,
-} from '../types';
+} from '../engine/types';
 
 const H = 3_600_000;
 const D = 24 * H;
@@ -26,6 +27,8 @@ const SYNODIC = 29.530589 * D;
 export const MOCK_LANDING = Date.UTC(2025, 2, 6, 17, 28, 50);
 
 const b = (value: number, spread = 0): Bounded => ({ value, lo: value - spread, hi: value + spread });
+/** For quantities that cannot be negative (hours, percent, Wh): the lower bound is clamped at 0. */
+const nn = (value: number, spread = 0): Bounded => ({ value, lo: Math.max(0, value - spread), hi: value + spread });
 
 export function mockScenarioResult(
   site: Pick<SiteRecord, 'id' | 'tier' | 'nearFieldResM' | 'sigmaSource' | 'psr' | 'padSlopeDeg' | 'mock'> | null,
@@ -33,6 +36,7 @@ export function mockScenarioResult(
   durationDays = 14,
   tScrub = landingUtc + 2 * D,
   seedPhase = 0,
+  opsMinElevDeg = 0,
 ): ScenarioResult {
   const tier = site?.tier ?? 'A';
   const n = Math.round((durationDays * D) / STEP) + 1;
@@ -106,41 +110,46 @@ export function mockScenarioResult(
   const sunlit = frac(s.sunUp);
   const link = frac(s.linkUp);
   const spread = tier === 'C' ? 0 : tier === 'B' ? 12 : 5;
-  const answer: AnswerState = {
-    tScrub,
-    sun: {
-      elevDeg: s.sunElevDeg[idx], diskPct: s.sunDiskPct[idx], up: sunUp,
-      state: sunNext ? (sunUp ? 'sunsetIn' : 'sunriseIn') : sunUp ? 'staysUpPastEnd' : 'noSunriseBeforeEnd',
-      nextEventT: sunNext?.t ?? null, nextEventPmMs: sunNext?.dtMs ?? null, grazing: !!sunNext?.grazing,
-      darkForMs: sunUp ? null : 31 * H, opsMinElevDeg: null,
-    },
-    earth: {
-      elevDeg: s.earthElevDeg[idx], visible: s.earthDiskPct[idx] >= 50, linkUp: !!s.linkUp[idx],
-      state: earthNext ? (earthUp ? 'earthsetIn' : 'earthriseIn') : 'earthsetIn',
-      nextEventT: earthNext?.t ?? null, nextEventPmMs: earthNext?.dtMs ?? null, grazing: !!earthNext?.grazing,
-    },
+  let darkIdx = idx;
+  while (darkIdx > 0 && !s.sunUp[darkIdx]) darkIdx--;
+  const linkIdx = (() => {
+    for (let i = idx; i < n; i++) if (s.linkUp[i]) return i;
+    return -1;
+  })();
+  const answer: AnswerState = deriveAnswerState({
+    tScrub, sunElevDeg: s.sunElevDeg[idx], sunDiskPct: s.sunDiskPct[idx], sunUp, opsMinElevDeg: opsMinElevDeg || null,
+    sunNext, darkSinceMs: !sunUp && darkIdx > 0 ? landingUtc + darkIdx * STEP : null,
+    opsResumeT: null, earthElevDeg: s.earthElevDeg[idx], earthVisible: s.earthDiskPct[idx] >= 50, linkUp: !!s.linkUp[idx],
+    dsnAware: true, earthNext, linkResumeT: linkIdx >= 0 ? landingUtc + linkIdx * STEP : null,
     windowSunlitPct: { value: sunlit, lo: Math.max(0, sunlit - spread), hi: Math.min(100, sunlit + spread) },
     windowLinkPct: { value: link, lo: Math.max(0, link - spread), hi: Math.min(100, link + spread) },
-  };
+  });
 
   const longest = (up: Uint8Array, want: 0 | 1) => {
     let best = 0, run = 0;
-    for (let i = 0; i < n; i++) (up[i] === want ? (run++, (best = Math.max(best, run))) : (run = 0));
+    for (let i = 0; i < n; i++) {
+      if (up[i] === want) {
+        run++;
+        best = Math.max(best, run);
+      } else {
+        run = 0;
+      }
+    }
     return (best * STEP) / H;
   };
   const sp = (x: number) => (tier === 'C' ? 0 : x);
   const metrics: MetricSet = {
     sunElevationDeg: b(s.sunElevDeg[idx], sp(0.1)),
     sunClearanceDeg: b(s.sunClearanceDeg[idx], sp(0.1)),
-    sunDiskPct: b(s.sunDiskPct[idx], sp(4)),
+    sunDiskPct: { value: s.sunDiskPct[idx], lo: Math.max(0, s.sunDiskPct[idx] - sp(4)), hi: Math.min(100, s.sunDiskPct[idx] + sp(4)) },
     earthElevationDeg: b(s.earthElevDeg[idx], sp(0.1)),
     dteMarginDeg: b(s.earthClearanceDeg[idx] - 1, sp(0.1)),
     sunlitPct: answer.windowSunlitPct,
     linkPct: answer.windowLinkPct,
-    longestNightH: b(longest(s.sunUp, 0), sp(8)),
-    longestCommGapH: b(longest(s.linkUp, 0), sp(6)),
-    opsHours: b(((s.sunUp.reduce((a, v, i) => a + (v && s.linkUp[i] ? 1 : 0), 0)) * STEP) / H, sp(6)),
-    energyPerDayWh: b(260, sp(40)),
+    longestNightH: nn(longest(s.sunUp, 0), sp(8)),
+    longestCommGapH: nn(longest(s.linkUp, 0), sp(6)),
+    opsHours: nn(((s.sunUp.reduce((a, v, i) => a + (v && s.linkUp[i] ? 1 : 0), 0)) * STEP) / H, sp(6)),
+    energyPerDayWh: nn(260, sp(40)),
     sunElevationAtTouchdownDeg: site && tier !== 'pending' ? b(s.sunElevDeg[0], sp(0.1)) : null,
     padSlopeDeg: site?.padSlopeDeg != null ? b(site.padSlopeDeg, 1) : null,
     psrDistanceKm: site?.psr ? { km: site.psr.distanceKm, bearingDeg: site.psr.bearingDeg, areaKm2: site.psr.areaKm2, source: site.psr.source } : null,
@@ -189,7 +198,7 @@ export function mockScan(params: ScanParams, sites: SiteRecord[]): ScanCandidate
       const verdict: Verdict = vi > 75 ? 'GO' : vi > 55 ? 'MARGINAL' : 'NO-GO';
       out.push({
         siteId: id, landingUtc: params.baseLandingUtc + d * D, viabilityIndex: vi, verdict, provisional: true, boundsStatus: 'nominal',
-        sunlitPct: b(vi, 5), linkPct: b(vi * 0.7, 5), longestNightH: b(100 - vi, 8),
+        sunlitPct: b(vi, 5), linkPct: b(vi * 0.7, 5), longestNightH: nn(100 - vi, 8),
       });
     }
   }

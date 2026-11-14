@@ -137,20 +137,6 @@ export const worstCaseFixture: Fixture = {
         ))}
       </div>
     ),
-    answer: (
-      <div className="fx-grid fx-grid--3">
-        <Cell label="Sun now" value="−0.42° · 0% disk · DOWN" badge={<Badge tone="blocked">down</Badge>} />
-        <Cell label="Sunrise (Shadow Exit)" value="No sunrise before window end (+60 d) · dark for 31 h so far" />
-        <Cell label="Window sunlit" value="12% [8–17%] · smooth-Moon bound" />
-        <Cell
-          label="Earth now"
-          value="+2.10° · link ✗ · Link resumes in 2 h (DSN)"
-          badge={<Badge tone="earth">visible</Badge>}
-        />
-        <Cell label="Earthrise" value="Sunset ~12–30 h (grazing — timing poorly constrained)" />
-        <Cell label="Window link" value="41% [35–48%]" />
-      </div>
-    ),
     definitions: (
       <div className="fx-line truncate">
         <span className="fx-strong">Rules ✎</span> The Sun counts as “up” when at least half of its disk clears the
@@ -206,27 +192,6 @@ export const worstCaseFixture: Fixture = {
         <span className="num">+1 d ▶</span>
         <Badge tone="neutral">slipped +30 d</Badge>
         <span className="fx-faint">reset</span>
-      </div>
-    ),
-    metricDeck: (
-      <div className="fx-pad fx-stack fx-stack--tight">
-        <div className="fx-hero num">
-          1.24° <span className="fx-faint">± 0.18°</span>
-        </div>
-        <div className="fx-grid fx-grid--2">
-          {[
-            ['Clearance / disk', '+0.40° ± 0.10° · 100%'],
-            ['Earth el / margin', '−0.80° · −1.9° [−2.1–−1.7]'],
-            ['Sunlit %', '62% [55–68%]'],
-            ['Link %', '48% [41–55%]'],
-            ['Longest night', '96 h [80–120 h]'],
-            ['Comm gap', '131 h [118–140 h]'],
-            ['Ops hours', '210 h [188–231 h]'],
-            ['PSR distance', '2.4 km · 212° · 0.6 km² (derived)'],
-          ].map(([l, v]) => (
-            <Cell key={l} label={l} value={v} />
-          ))}
-        </div>
       </div>
     ),
     touchdown: (
@@ -312,12 +277,6 @@ export const worstCaseFixture: Fixture = {
       </div>
     ),
     scan: <Table cols={['#', 'Site', 'Landing', 'Verdict', 'Sunlit', 'Link', 'Night']} rows={scanRows} />,
-    deltaTable: (
-      <Table
-        cols={['Row', 'Δ sunlit', 'Δ link', 'Δ night']}
-        rows={['B', 'C', 'D', 'A ★'].map((r, i) => [r, `−${4 + i}% ± 2%`, `+${2 + i}% ± 3%`, `+${12 + i} h ± 4 h`])}
-      />
-    ),
     compareWindows: (
       <Table
         cols={['Type', 'Start ±', 'End ±', 'Duration', 'Flags']}

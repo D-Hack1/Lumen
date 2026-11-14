@@ -13,7 +13,7 @@
   "units": "percent",
   "scale": null,
   "offset": null,
-  "producer": "web/src/engine/mock/make_mock.py",
+  "producer": "web/src/mocks/make_mock.py",
   "created_utc": "2026-01-01T00:00:00Z",
   "sha256": "affc74e6994f2426763a47caa6e18f4af517f54c9255f1caf6625501be70d08b",
   "mock": true,
