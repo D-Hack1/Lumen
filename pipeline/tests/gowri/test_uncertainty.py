@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from lumen_pipeline.reference.events import Event
+from lumen_pipeline.reference.events import Event, detect_events
 from lumen_pipeline.reference.uncertainty import (
     GRAZING_DT_SECONDS,
     annotate_event,
@@ -69,7 +69,9 @@ def test_fast_uncertainty_uses_limb_and_flags_grazing():
     assert grazing.delta_t_seconds == np.inf
     assert grazing.grazing_reason == "rate"
 
-    from_event = fast_uncertainty_for_event(Event("sunset", 0.0, -1.0, 1.0), geometry, horizon, lambda _: 0.2)
+    from_event = fast_uncertainty_for_event(
+        Event("sunset", 0.0, bracket_start_et=-1.0, bracket_end_et=1.0), geometry, horizon, lambda _: 0.2
+    )
     assert from_event.delta_t_seconds == pytest.approx(7200.0)
 
 
@@ -100,6 +102,25 @@ def test_exact_event_time_half_spread_vanishing_and_annotation():
 
     wide = exact_event_uncertainty(nominal, Event("sunset", 0.0), Event("sunset", 2.0 * GRAZING_DT_SECONDS + 1000.0))
     assert wide.grazing_reason == "dt_limit"
+
+
+def test_event_constructor_detection_and_annotation_preserve_compatibility():
+    legacy = Event("sunset", 10.0, "exact", "rate")
+    assert legacy.dt_method == "exact"
+    assert legacy.grazing_reason == "rate"
+    assert legacy.bracket_start_et is None
+    assert legacy.bracket_end_et is None
+    assert legacy.dt_seconds is None
+
+    detected = detect_events(0.0, 240.0, lambda et: et < 55.0, down="sunset", up="shadowExit")[0]
+    assert detected.bracket_start_et is not None
+    assert detected.bracket_end_et is not None
+    assert detected.bracket_start_et <= detected.et <= detected.bracket_end_et
+
+    annotated = annotate_event(detected, exact_event_uncertainty(detected, Event("sunset", 40.0), Event("sunset", 60.0)))
+    assert annotated.bracket_start_et == detected.bracket_start_et
+    assert annotated.bracket_end_et == detected.bracket_end_et
+    assert annotated.dt_seconds == 10.0
 
 
 def test_exact_path_resolves_both_shifted_masks():
