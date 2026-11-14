@@ -9,7 +9,7 @@ built from PLAN_FINAL §6 + R3 delta D-11; reconcile with `contracts/data_*.md` 
 | File | Format |
 |---|---|
 | `ephem/ephem.{json,bin}` | float32 × 12 per record: `sun_pos[3] sun_vel[3] earth_pos[3] earth_vel[3]` (km, km/s, `MOON_ME`). Header: `epoch_unix_s`, `step_s`, `count`. **Mock step is 6 h** (real: 1 h) — read `step_s`, never assume. Range 2023-01-01 → 2031-01-01. |
-| `dsn/dsn.{json,bin}` | uint8, station-major (`stations[k]` = bytes `[k*count,(k+1)*count)`); `el_deg = v*0.5 + offset_deg`; 255 = no data. Mock step 30 min (real: 10 min). |
+| `dsn/dsn.{json,bin}` | Little-endian signed int16, station-major (`stations[k]` = int16 values `[k*count,(k+1)*count)`); `stored = round(el_deg * 2)`, valid `[-180, 180]`, `el_deg = stored / 2`. Mock step 30 min (real: 10 min). |
 | `catalog/sites.json` | 4 sites (IM-2, CY-3, Shackleton ridge, Blue Ghost) incl. R3 fields (`landing_coords`, `target_coords`, `touchdown_precision`…). Rotation matrix rows = `[n_ref, e, u]`. Blue Ghost is **Tier C** (no mask/pad/PSR). |
 | `catalog/sparklines.{json,bin}` | uint8 %, layout `[site][series: sunlit,link][day]`, 400 days from `start_unix_s`. |
 | `terrain/masks/<id>.{json,bin}` | int16 (0.01°) `[height][bin]` then uint16 distance (100 m) `[height][bin]`; 3600 bins × 4 heights (1/2/5/10 m). Header has `d_min_m`, `z0_m`, `median_filter_radius_m`, `global_extremes` (min/max per height). Contains a narrow ridge spike on purpose. |
