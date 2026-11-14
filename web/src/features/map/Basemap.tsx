@@ -1,48 +1,61 @@
 // Owner: Nived
-// South Pole Basemap (guide 3.1). Layer stack, bottom to top:
-//   L0 procedural schematic relief (always; canvas, drawn once) · graticule (rings + meridians, 0 deg E emphasised)
-//   L1/L2 raster layer from layers.json when available (opacity) · L3 Artemis region outlines · L4 site pins
-//   off-map edge indicators (e.g. Chandrayaan-3, 625 km from the pole) · Site Inset (Landing vs Target, 100 m bar)
+// South Pole Basemap. Honest by construction (UI critique M4): a labelled graticule, the real region outlines, and site pins -
+// no invented terrain. Layer controls appear only once a layer raster exists. Layer stack, bottom to top:
+//   graticule (labelled rings, 0 deg E "toward Earth") - raster layer (when loaded) - Artemis region outlines - site pins -
+//   selected-site label - Site Inset (Landing vs Target, 100 m scale bar).
 // Fast Lane: the pointer readout is written to a ref (no React state, no transitions). Clicks use store actions.
 import { useEffect, useMemo, useRef } from 'react';
 import { fill } from '../../engine/format';
 import { useCatalog, useLayers } from '../../engine/hooks';
 import { colatKm, halfExtentKm, MOON_RADIUS_KM, project, unproject } from '../../engine/projection';
-import type { MapExtent } from '../../engine/types';
+import type { MapExtent, SiteRecord } from '../../engine/types';
 import { loadPsr, type PsrRaster } from '../../engine/data/psr';
 import { useCopyFn } from '../../state/copy';
 import { getScenario, useScenario, type MapLayerId } from '../../state/scenarioStore';
 import { Segmented } from '../../ui/Segmented';
 import { Slider } from '../../ui/Slider';
+import { extentContains, EXTENT_LIMIT_DEG, smallestExtentContaining } from './extent';
 import { insetOffsetsM } from './inset';
-import { drawRelief } from './proceduralRelief';
 import './map.css';
 
-const LAT_LIMIT: Record<MapExtent, number> = { '80S': 80, '85S': 85 };
 const RINGS: Record<MapExtent, number[]> = { '80S': [80, 82, 84, 86, 88], '85S': [85, 86, 87, 88, 89] };
 const LAYER_IDS: MapLayerId[] = ['illumination', 'earth_visibility', 'slope_hazard', 'psr', 'psr_distance'];
-const CANVAS = 480;
+const ringRadiusKm = (latS: number) => 2 * MOON_RADIUS_KM * Math.tan(((90 - latS) * Math.PI) / 360);
+const fmtLat = (lat: number) => `${Math.abs(lat).toFixed(1)}°${lat < 0 ? 'S' : 'N'}`;
 
-export function Basemap() {
+export interface BasemapProps {
+  /** Override the catalog / scenario store (tests, forced states). */
+  sites?: SiteRecord[];
+  selectedId?: string | null;
+  extent?: MapExtent;
+}
+
+export function Basemap(props: BasemapProps) {
   const t = useCopyFn();
-  const { sites } = useCatalog();
+  const catalog = useCatalog();
   const layersRes = useLayers();
   const layers = useScenario((s) => s.layers);
   const siteRef = useScenario((s) => s.site);
-  const extent = layers.extent;
-  const half = layersRes.extents?.[extent]?.halfExtentKm ?? halfExtentKm(LAT_LIMIT[extent]);
-  const canvas = useRef<HTMLCanvasElement>(null);
+  const sites = props.sites ?? catalog.sites;
+  const selectedId = props.selectedId !== undefined ? props.selectedId : siteRef.kind === 'site' ? siteRef.id : null;
+  const extent: MapExtent = props.extent ?? layers.extent;
+  const half = layersRes.extents?.[extent]?.halfExtentKm ?? halfExtentKm(EXTENT_LIMIT_DEG[extent]);
   const square = useRef<HTMLDivElement>(null);
   const readout = useRef<HTMLDivElement>(null);
   const img = useRef<HTMLImageElement>(null);
   const psr = useRef<PsrRaster | null>(null);
+  const lastSelected = useRef<string | null>(null);
 
-  // L0: draw the procedural relief once per extent change (human speed).
+  const selected = sites.find((s) => s.id === selectedId) ?? null;
+  const selectedExtent = selected ? smallestExtentContaining(selected.landingCoords.lat) : null;
+
+  // When the user picks a site that this map does not show, switch to the map that does (once per selection).
   useEffect(() => {
-    const c = canvas.current;
-    const ctx = c?.getContext('2d');
-    if (c && ctx) drawRelief(ctx, CANVAS, extent === '80S' ? 80 : 85);
-  }, [extent]);
+    if (selected && selected.id !== lastSelected.current) {
+      lastSelected.current = selected.id;
+      if (!extentContains(extent, selected.landingCoords.lat) && selectedExtent) getScenario().setLayers({ extent: selectedExtent });
+    }
+  }, [selected, selectedExtent, extent]);
   useEffect(() => {
     let live = true;
     loadPsr().then((r) => live && (psr.current = r), () => undefined);
@@ -52,8 +65,7 @@ export function Basemap() {
   }, []);
 
   const layer = layersRes.layers.find((l) => l.id === layers.layer && l.extent === extent);
-  const selectedId = siteRef.kind === 'site' ? siteRef.id : null;
-  const selected = sites.find((s) => s.id === selectedId) ?? null;
+  const hasLayers = layersRes.layers.length > 0;
   const pins = useMemo(
     () =>
       sites.map((s) => {
@@ -62,7 +74,6 @@ export function Basemap() {
       }),
     [sites, half],
   );
-  const offMap = pins.filter((p) => !p.inside).sort((a, b) => a.s.lat - b.s.lat).slice(0, 3);
   const inset = selected ? insetOffsetsM(selected) : null;
 
   // Fast Lane readout: write textContent by ref on pointer move.
@@ -70,11 +81,12 @@ export function Basemap() {
     const r = square.current!.getBoundingClientRect();
     return { x: ((e.clientX - r.left) / r.width - 0.5) * 2 * half, y: -((e.clientY - r.top) / r.height - 0.5) * 2 * half };
   };
+  const defaultReadout = selected ? `${selected.name} · ${fmtLat(selected.landingCoords.lat)} ${selected.landingCoords.lon.toFixed(1)}°E` : '';
   const onMove = (e: React.PointerEvent) => {
     const el = readout.current;
     if (!el) return;
     const { x, y } = toKm(e);
-    if (Math.hypot(x, y) > half) return void (el.textContent = t('map.cursor'));
+    if (Math.hypot(x, y) > half) return void (el.textContent = defaultReadout);
     const g = unproject(x, y);
     const d = psr.current?.distanceKm(x, y);
     el.textContent = `${Math.abs(g.lat).toFixed(2)}°S ${g.lon.toFixed(1)}°E` + (d != null && !Number.isNaN(d) ? ` · PSR ${d.toFixed(1)} km` : '');
@@ -86,7 +98,9 @@ export function Basemap() {
     getScenario().setCustomPoint(Math.round(g.lat * 1000) / 1000, Math.round(g.lon * 1000) / 1000);
   };
 
-  const pinR = half * 0.022;
+  const pinR = half * 0.03;
+  const fs = half * 0.09; // SVG text size in map units: ~11-12 px on screen at the smallest map (nothing under 11 px)
+  const outside = selected && !extentContains(extent, selected.landingCoords.lat);
   return (
     <div className="basemap" data-extent={extent}>
       <div className="basemap__bar">
@@ -97,42 +111,57 @@ export function Basemap() {
           onChange={(v) => getScenario().setLayers({ extent: v })}
           options={[{ value: '80S', label: t('map.extent.80S') }, { value: '85S', label: t('map.extent.85S') }]}
         />
-        <select
-          className="basemap__layer"
-          aria-label="Map layer"
-          value={layers.layer ?? ''}
-          onChange={(e) => getScenario().setLayers({ layer: (e.target.value || null) as MapLayerId | null })}
-        >
-          <option value="">{t('map.layer.none')}</option>
-          {LAYER_IDS.map((id) => (
-            <option key={id} value={id}>
-              {t(`map.layer.${id}`)}
-            </option>
-          ))}
-        </select>
-        <Slider
-          className="basemap__opacity"
-          ariaLabel={t('map.opacity')}
-          min={0}
-          max={1}
-          step={0.05}
-          value={layers.opacity}
-          onLive={(v) => img.current && (img.current.style.opacity = String(v))}
-          onCommit={(v) => getScenario().setLayers({ opacity: v })}
-        />
+        {hasLayers && (
+          <>
+            <select
+              className="basemap__layer"
+              aria-label="Map layer"
+              value={layers.layer ?? ''}
+              onChange={(e) => getScenario().setLayers({ layer: (e.target.value || null) as MapLayerId | null })}
+            >
+              <option value="">{t('map.layer.none')}</option>
+              {LAYER_IDS.map((id) => (
+                <option key={id} value={id}>
+                  {t(`map.layer.${id}`)}
+                </option>
+              ))}
+            </select>
+            <Slider
+              className="basemap__opacity"
+              ariaLabel={t('map.opacity')}
+              min={0}
+              max={1}
+              step={0.05}
+              value={layers.opacity}
+              onLive={(v) => img.current && (img.current.style.opacity = String(v))}
+              onCommit={(v) => getScenario().setLayers({ opacity: v })}
+            />
+          </>
+        )}
       </div>
       <div className="basemap__stage">
         <div ref={square} className="basemap__square" onPointerMove={onMove} onClick={onTerrainClick} role="img" aria-label={t('slot.map')}>
-          <canvas ref={canvas} width={CANVAS} height={CANVAS} aria-hidden="true" />
           {layer && <img ref={img} src={layer.url} alt="" style={{ opacity: layers.opacity }} data-layer={layer.id} />}
-          <svg viewBox={`${-half} ${-half} ${2 * half} ${2 * half}`} aria-hidden="false">
+          <svg viewBox={`${-half} ${-half} ${2 * half} ${2 * half}`}>
+            <circle className="basemap__disk" cx={0} cy={0} r={half} />
             {RINGS[extent].map((lat) => (
-              <circle key={lat} className="basemap__ring" cx={0} cy={0} r={2 * MOON_RADIUS_KM * Math.tan(((90 - lat) * Math.PI) / 360)} />
+              <circle key={lat} className="basemap__ring" cx={0} cy={0} r={ringRadiusKm(lat)} />
             ))}
             {Array.from({ length: 12 }, (_, i) => {
               const a = (i * 30 * Math.PI) / 180;
               return <line key={i} className={i === 0 ? 'basemap__meridian basemap__meridian--zero' : 'basemap__meridian'} x1={0} y1={0} x2={Math.sin(a) * half} y2={-Math.cos(a) * half} />;
             })}
+            {RINGS[extent].map((lat) => (
+              <text key={`l${lat}`} className="basemap__tick" x={fs * 0.4} y={-ringRadiusKm(lat) + fs * 1.05} fontSize={fs}>
+                {`${lat}°S`}
+              </text>
+            ))}
+            <text className="basemap__earth" textAnchor="end" x={-fs * 0.5} y={-half * 0.78} fontSize={fs}>
+              <tspan>{'0\u00b0E'}</tspan>
+              <tspan x={-fs * 0.5} dy={fs * 1.1}>
+                {t('map.towardEarth')}
+              </tspan>
+            </text>
             {layersRes.regions.map((g) => (
               <path key={g.id} className="basemap__region" d={g.svgPath}>
                 <title>{g.name}</title>
@@ -154,8 +183,12 @@ export function Basemap() {
                 <title>{s.name}</title>
               </circle>
             ))}
+            {pins.filter((p) => p.inside && p.s.id === selectedId).map(({ s, x, y }) => (
+              <text key={`n${s.id}`} className="basemap__name" textAnchor={x > 0 ? 'end' : 'start'} x={x > 0 ? x - pinR * 1.6 : x + pinR * 1.6} y={y + fs * 0.35} fontSize={fs}>
+                {s.name}
+              </text>
+            ))}
           </svg>
-          <span className="basemap__tag">{t('map.schematic')}</span>
           {inset && selected && (
             <div className="basemap__inset" data-testid="site-inset">
               <svg viewBox="-1000 -1000 2000 2000" role="img" aria-label={selected.name}>
@@ -172,15 +205,22 @@ export function Basemap() {
         </div>
       </div>
       <div ref={readout} className="basemap__readout" aria-live="off">
-        {t('map.cursor')}
+        {defaultReadout}
       </div>
-      {offMap.length > 0 && (
-        <div className="basemap__off">
-          {offMap.map(({ s }) => (
-            <span key={s.id} className="truncate" data-offmap={s.id}>
-              {fill(t('map.offMap'), { name: s.name.split(' ')[0], lat: `${Math.abs(s.lat).toFixed(1)}°${s.lat < 0 ? 'S' : 'N'}`, lon: `${s.lon.toFixed(1)}°E`, km: Math.round(colatKm(s.lat)) })}
+      {outside && selected && (
+        <div className="basemap__notice" role="status">
+          {selectedExtent ? (
+            <>
+              <span className="truncate">{fill(t('map.outside'), { name: selected.name })}</span>
+              <button type="button" className="basemap__show" onClick={() => getScenario().setLayers({ extent: selectedExtent })}>
+                {fill(t('map.show'), { extent: t(`map.extent.${selectedExtent}`) })}
+              </button>
+            </>
+          ) : (
+            <span className="truncate">
+              {fill(t('map.notOnMap'), { name: selected.name, lat: fmtLat(selected.landingCoords.lat), lon: `${selected.landingCoords.lon.toFixed(1)}°E`, km: Math.round(colatKm(selected.landingCoords.lat)) })}
             </span>
-          ))}
+          )}
         </div>
       )}
     </div>
