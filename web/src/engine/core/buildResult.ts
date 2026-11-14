@@ -8,6 +8,7 @@ import type { AnswerState, Bounded, EventRecord, MetricSet, ScenarioResult, Seri
 import { evaluate, stateAt, DEFAULT_DEFINITIONS, type Definitions, type Evaluation } from './evaluate';
 import { makeSite, type Mat3 } from './geometry';
 import { inEphemerisRange } from './interp';
+import { evaluateVerdict, type VerdictProfile, type VerdictWeights } from './verdict';
 import { longestFalseRunHours } from './metrics';
 import { FINE_STEP_MS } from './events';
 import { Horizon } from './visibility';
@@ -28,6 +29,9 @@ export interface ScenarioRequest {
   durationDays: number;
   tScrubMs: number;
   definitions: Definitions;
+  /** Mission Profile thresholds and Viability Index weights (from the store). */
+  profile: VerdictProfile;
+  weights: VerdictWeights;
   dataVersions: Record<string, number | string>;
 }
 
@@ -37,7 +41,7 @@ const val = (v: number | null): Bounded => ({ value: v, lo: null, hi: null });
 const DAY = 86_400_000;
 
 function emptyError(message: string): ScenarioResult {
-  return { status: 'error', error: message, meta: null, verdict: 'PENDING', verdictReasons: [], answer: null, events: [], windows: [], series: null, metrics: null };
+  return { status: 'error', error: message, meta: null, verdict: 'PENDING', verdictReasons: [], viability: null, answer: null, events: [], windows: [], series: null, metrics: null };
 }
 
 function buildSeries(ev: Evaluation): Series {
@@ -107,6 +111,9 @@ export function buildScenarioResult(eph: Ephemeris, req: ScenarioRequest): Scena
     psrDistanceKm: req.psr ? { km: req.psr.distanceKm, bearingDeg: req.psr.bearingDeg, areaKm2: req.psr.areaKm2, source: req.psr.source } : null,
   };
 
+  // No terrain yet => every value is a smooth-Moon best case: a failure is certain, a pass is only PENDING (see verdict.ts).
+  const verdict = evaluateVerdict({ metrics, windowHours: req.durationDays * 24, profile: req.profile, weights: req.weights, boundsKind: 'optimistic' });
+
   return {
     status: 'ready', error: null,
     meta: {
@@ -116,8 +123,9 @@ export function buildScenarioResult(eph: Ephemeris, req: ScenarioRequest): Scena
       definitionsSummary: `Sun available = ≥${Math.round(d.sunDiskThreshold * 100)}% disk above the horizon${d.minSunElevationOpsDeg > 0 ? ` and ≥${d.minSunElevationOpsDeg}° elevation` : ''} @${req.heightM} m · Link = Earth ≥${d.earthMarginDeg}° above the horizon (DSN not applied)`,
       dataVersions: req.dataVersions, mock: eph.mock,
     },
-    verdict: 'PENDING',
-    verdictReasons: ['Terrain mask, uncertainty bounds and DSN data are not available yet, so no go/no-go is given.'],
+    verdict: verdict.verdict,
+    verdictReasons: verdict.reasons,
+    viability: { index: verdict.viabilityIndex, components: verdict.components },
     answer, events, windows: ev.windowRecords, series, metrics,
   };
 }
