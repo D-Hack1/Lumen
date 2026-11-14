@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 
 def parse_utc(value: str) -> datetime:
     """Parse an ISO-8601 UTC timestamp, accepting a trailing ``Z``."""
-    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    parsed = datetime.fromisoformat(value)
     if parsed.tzinfo is None:
         raise ValueError("UTC timestamp must include an offset or Z")
     return parsed.astimezone(UTC)
