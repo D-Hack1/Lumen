@@ -210,7 +210,7 @@ export function rightColumnTabs(w: number, h: number): boolean {
 
 // ---------- CSS generation ----------
 // camelCase → kebab; digits stay attached (surface2 → surface2, textOnAccent → text-on-accent). Splitting digits
-// (`surface-2`) silently broke every var(--c-surface1…4) reference until Phase 3 — tokens.test.ts guards it now.
+// (`surface-2`) silently broke every var(--c-surface1…4) reference until Phase 3 — tokens.test.ts and cssVars.test.ts guard it now.
 export const kebab = (s: string) => s.replace(/[A-Z]+/g, (m) => '-' + m.toLowerCase()).replace(/^-/, '');
 const px = (n: number) => `${n}px`;
 

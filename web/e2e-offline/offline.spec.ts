@@ -27,9 +27,9 @@ test('the app, real data and the engine all work with no network at all', async 
   let recordOnline = true;
   page.on('response', (r) => {
     if (!recordOnline || r.status() !== 200 || new URL(r.url()).origin !== new URL(page.url()).origin) return;
-    // The preview server answers unknown paths with index.html and status 200 (SPA fallback). A data file that came back as
-    // HTML did NOT work online, so it must not be counted.
-    const isDataFile = /\.(json|bin|png|svg)$/.test(new URL(r.url()).pathname);
+    // The preview server answers unknown paths with index.html and status 200 (SPA fallback). A data file or image that came back as
+    // HTML did NOT work online (it does not exist), so it must not be counted.
+    const isDataFile = /\.(json|bin|png|svg|webp|jpe?g|avif|gif|ico|woff2?)$/.test(new URL(r.url()).pathname);
     if (isDataFile && (r.headers()['content-type'] ?? '').includes('text/html')) return;
     okOnline.add(r.url());
   });

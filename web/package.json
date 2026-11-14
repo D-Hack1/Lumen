@@ -15,7 +15,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "e2e:offline": "playwright test -c e2e-offline/playwright.config.ts"
+    "e2e:offline": "playwright test -c e2e-offline/playwright.config.ts",
+    "e2e:perf": "playwright test -c e2e-perf/playwright.config.ts"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "^5.1.0",

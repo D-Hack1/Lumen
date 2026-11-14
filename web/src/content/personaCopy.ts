@@ -138,6 +138,11 @@ export const planner: CopyTable = {
   'answer.grazingFull': 'grazing \u2014 timing poorly constrained',
   'answer.smoothMoon': 'smooth-Moon bound',
 
+  // ---- shared panel states (Nived) ----
+  'state.loading': 'Calculating\u2026',
+  'state.error': 'Can\u2019t compute this scenario',
+  'state.errorUnknown': 'Something went wrong. Try changing the date or the site.',
+
   // ---- Metric Deck (Nived) ----
   'metric.sunElevation': 'Sun elevation',
   'metric.clearance': 'Clearance / disk',
@@ -151,6 +156,11 @@ export const planner: CopyTable = {
   'metric.psrDerived': 'derived',
   'metric.psrWording': 'permanently shadowed region (a cold trap that may host ice)',
   'metric.empty': 'No result yet',
+  'metric.more': '+{n} more',
+  'verdict.headline.GO': 'Meets the profile',
+  'verdict.headline.MARGINAL': 'Borderline',
+  'verdict.headline.NO-GO': 'Does not meet the profile',
+  'verdict.headline.PENDING': 'Needs terrain data',
 
   // ---- Basemap (Nived) ----
   'map.extent.80S': '80\u201390\u00b0S',
@@ -162,9 +172,10 @@ export const planner: CopyTable = {
   'map.layer.psr': 'PSR (derived)',
   'map.layer.psr_distance': 'Distance to PSR',
   'map.opacity': 'Layer opacity',
-  'map.schematic': 'schematic relief',
-  'map.cursor': 'Move over the map',
-  'map.offMap': '{name} \u2192 {lat}, {lon} \u00b7 {km} km',
+  'map.towardEarth': 'toward Earth',
+  'map.outside': '{name} is outside this view',
+  'map.show': 'Show {extent}',
+  'map.notOnMap': '{name} is not on the south-pole maps ({lat}, {lon} \u00b7 {km} km from the pole)',
   'map.inset.landing': 'Landing',
   'map.inset.target': 'Target',
   'map.inset.scale': '100 m',
@@ -399,6 +410,10 @@ export const educator: CopyTable = {
   'metric.link': 'Time in radio contact',
   'metric.longestNight': 'Longest dark spell',
   'metric.commGap': 'Longest radio silence',
+  'verdict.headline.GO': 'Looks promising',
+  'verdict.headline.MARGINAL': 'Close call',
+  'verdict.headline.NO-GO': 'Not a good fit',
+  'verdict.headline.PENDING': 'We can\u2019t be sure yet',
 
   // ---- Site Explorer sidebar ----
   'sb.search': 'Find a place, or type “lat, lon”',

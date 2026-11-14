@@ -6,10 +6,13 @@ import { loadCatalog } from './data/catalog';
 import { loadEphem } from './data/ephem';
 import { dataMode } from './data/source';
 import { mockQuickAnswer } from '../mocks/mockResult';
+import { perf } from './perf';
 import type { QuickAnswerInput, QuickAnswerResult } from './types';
 
-export async function quickAnswer(input: QuickAnswerInput): Promise<QuickAnswerResult> {
-  const { sites } = await loadCatalog();
-  if (dataMode() === 'mock') return mockQuickAnswer(input, sites);
-  return buildQuickAnswer(await loadEphem(), input, sites);
+export function quickAnswer(input: QuickAnswerInput): Promise<QuickAnswerResult> {
+  return perf.timeAsync('quickAnswer', async () => {
+    const { sites } = await loadCatalog();
+    if (dataMode() === 'mock') return mockQuickAnswer(input, sites);
+    return buildQuickAnswer(await loadEphem(), input, sites);
+  });
 }

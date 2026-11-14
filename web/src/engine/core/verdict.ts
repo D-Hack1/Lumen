@@ -86,6 +86,7 @@ export function evaluateVerdict(input: VerdictInput): VerdictResult {
     { id: 'slope', label: 'Pad slope', unit: '°', kind: 'max', limit: p.maxPadSlopeDeg, value: m.padSlopeDeg },
   ];
   const reasons: string[] = [];
+  const optimistic: string[] = []; // requirements that pass only on the smooth-Moon bound: reported once, together
   const requirements: RequirementResult[] = specs.map((s) => {
     const v = s.value?.value ?? null;
     const word = s.kind === 'min' ? 'below the minimum' : 'above the maximum';
@@ -99,7 +100,7 @@ export function evaluateVerdict(input: VerdictInput): VerdictResult {
       return { id: s.id, status: 'fail' }; // fails even at the nominal value (certain, even on an optimistic bound)
     }
     if (input.boundsKind === 'optimistic') {
-      reasons.push(`${s.label} passes only on the smooth-Moon bound; terrain data is needed to confirm.`);
+      optimistic.push(s.label);
       return { id: s.id, status: 'unknown' };
     }
     // Conservative bound: the worse end of the range (lo for a minimum, hi for a maximum). No bound => the nominal value.
@@ -115,6 +116,15 @@ export function evaluateVerdict(input: VerdictInput): VerdictResult {
     }
     return { id: s.id, status: 'pass' };
   });
+  if (optimistic.length > 0) {
+    const names = optimistic.map((n, i) => (i === 0 ? n : n.charAt(0).toLowerCase() + n.slice(1)));
+    const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+    // Combined line goes first among the "cannot confirm" reasons, ahead of the per-requirement "no data yet" lines.
+    const firstUnknown = reasons.findIndex((r) => r.endsWith('no data yet.'));
+    const line = `${list} ${names.length === 1 ? 'passes' : 'pass'} only on the smooth-Moon bound; terrain data is needed to confirm.`;
+    if (firstUnknown === -1) reasons.push(line);
+    else reasons.splice(firstUnknown, 0, line);
+  }
   const has = (st: RequirementStatus) => requirements.some((r) => r.status === st);
   const components: VerdictComponent[] = specs.map((s) => ({ id: s.id, score: componentScore(s), weight: input.weights[WEIGHT_KEY[s.id]] }));
   const scored = components.filter((c) => c.score != null);
