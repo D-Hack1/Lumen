@@ -20,20 +20,28 @@ export function Sparkline({ values, highlight, tone = 'sun', className }: Sparkl
       drawStatic={(ctx, w, h) => {
         const n = values.length;
         if (n < 2) return;
-        let max = 0;
-        for (let i = 0; i < n; i++) if (values[i] > max) max = values[i];
-        max = Math.max(max, 1);
+        // Fixed 0–100 domain: every card shares one scale, so a 20 % site never looks like a 90 % site.
+        const max = 100;
 
         const xAt = (i: number) => (i / (n - 1)) * w;
         const yAt = (v: number) => h - (v / max) * (h - 2) - 1;
 
         if (highlight) {
           const [a, b] = highlight;
-          ctx.fillStyle = tone === 'sun' ? color.sunSoft : color.earthSoft;
+          ctx.fillStyle = color.surface4;
           ctx.fillRect(xAt(Math.max(0, a)), 0, xAt(Math.min(n - 1, b)) - xAt(Math.max(0, a)), h);
         }
 
-        ctx.strokeStyle = tone === 'sun' ? color.sun : color.earth;
+        const stroke = tone === 'sun' ? color.sun : color.earth;
+        ctx.fillStyle = tone === 'sun' ? color.sunSoft : color.earthSoft;
+        ctx.beginPath();
+        ctx.moveTo(0, h);
+        for (let i = 0; i < n; i++) ctx.lineTo(xAt(i), yAt(values[i]));
+        ctx.lineTo(w, h);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = stroke;
         ctx.lineWidth = 1.25;
         ctx.beginPath();
         for (let i = 0; i < n; i++) {
