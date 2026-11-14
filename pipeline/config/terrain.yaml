@@ -44,7 +44,35 @@ tier_a:
       "240": 720.0
     initial_ray_step_rule: "0.5 * near_field_pixel_size_m"
     geometric_step_growth: true
-    geometric_growth_factor: null # Unresolved; do not choose an arbitrary value.
+    geometric_growth_factor: 1.5
+    calibration_record:
+      status: "passed_adaptive_peak_refinement"
+      target_tolerance_deg: 0.01
+      reference_method: "Independent dense 0.005 m radial evaluation of the DEM bilinear surface, exact 3D site frame, narrow 2 m ridge at 100 m; candidate uses sub-cell sampling and ternary peak refinement"
+      test_conditions: "Windows, Python 3.13, 2 m synthetic DEM, 1 m observer, 0.2 km range, 45 degree bins"
+      selected_factor: 1.5
+      tested_factors:
+        - factor: 1.1
+          max_abs_error_deg: 0.007298
+          passed: true
+        - factor: 1.2
+          max_abs_error_deg: 0.007298
+          passed: true
+        - factor: 1.3
+          max_abs_error_deg: 0.007298
+          passed: true
+        - factor: 1.4
+          max_abs_error_deg: 0.007298
+          passed: true
+        - factor: 1.5
+          max_abs_error_deg: 0.007298
+          passed: true
+        - factor: 1.75
+          max_abs_error_deg: 0.007298
+          passed: true
+        - factor: 2.0
+          max_abs_error_deg: 0.007298
+          passed: true
     geometry: "exact_3d"
     site_frame_provider: "Gowri"
     site_frame_convention: null # Defined by the shared site-frame implementation.

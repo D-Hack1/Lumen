@@ -111,7 +111,11 @@ _CROP_SPECS = (
         "near",
         0.0,
         5.0,
-        ("site_specific_5m_lola_pgda_78", "polar_5m_lola_pgda_81"),
+        (
+            "site_specific_5m_lola_pgda_78",
+            "polar_5m_lola_pgda_81",
+            "polar_10m_lola_pgda_90",
+        ),
         5.0,
     ),
     CropSpec("mid", 5.0, 80.0, ("polar_20m_lola_pgda_90",), 20.0),
