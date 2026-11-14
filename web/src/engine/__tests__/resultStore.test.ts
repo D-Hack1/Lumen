@@ -22,7 +22,10 @@ function until(pred: () => boolean, ms = 8000): Promise<void> {
         resolve();
       }
     });
-    const t = setTimeout(() => (off(), reject(new Error('timed out waiting for a result'))), ms);
+    const t = setTimeout(() => {
+      off();
+      reject(new Error('timed out waiting for a result'));
+    }, ms);
   });
 }
 

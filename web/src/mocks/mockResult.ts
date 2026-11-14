@@ -166,7 +166,7 @@ export function mockScenarioResult(
       definitionsSummary: 'Sun available = ≥50% disk above terrain @2 m · Link = Earth ≥1° above terrain + DSN ≥10° (MOCK)',
       dataVersions: { ephem: 1, catalog: 1, mock: 1 }, mock: true,
     },
-    verdict, verdictReasons: ['MOCK verdict: placeholder thresholds'], answer, events, windows, series: s, metrics,
+    verdict, verdictReasons: ['MOCK verdict: placeholder thresholds'], viability: null, answer, events, windows, series: s, metrics,
   };
 }
 
