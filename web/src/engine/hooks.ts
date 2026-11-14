@@ -9,7 +9,10 @@ import { loadLayers } from './data/layers';
 import { getCompare, subscribeCompare } from './compareStore';
 import { quickAnswer } from './quickAnswer';
 import { getResult, subscribeResult } from './resultStore';
+import { getSiteVerdicts, subscribeSiteVerdicts, type SiteVerdicts } from './siteVerdicts';
+import { useScenario } from '../state/scenarioStore';
 import type {
+  Verdict,
   CatalogResult,
   CompareResults,
   LayersResult,
@@ -62,6 +65,23 @@ export function useResult(): ScenarioResult {
 /** Compare rows A-D evaluated once each (real mode) with deltas against the baseline; mock mode returns the fake set. */
 export function useCompareResults(): CompareResults {
   return useSyncExternalStore(subscribeCompare, getCompare, getCompare);
+}
+
+/** Verdicts of every catalog site at the current landing date and window (one shared stage-1 pass). */
+export function useSiteVerdicts(): SiteVerdicts {
+  return useSyncExternalStore(subscribeSiteVerdicts, getSiteVerdicts, getSiteVerdicts);
+}
+
+/**
+ * One site's verdict for a card or Compare row. For the selected site this is the Cockpit's exact verdict, so the card and the
+ * Answer Strip can never disagree; other sites get the provisional stage-1 verdict. 'PENDING' while nothing is computed yet.
+ */
+export function useSiteVerdict(siteId: string): { verdict: Verdict; viabilityIndex: number | null; provisional: boolean } {
+  const all = useSiteVerdicts();
+  const result = useResult();
+  const selected = useScenario((s) => (s.site.kind === 'site' ? s.site.id : null));
+  if (selected === siteId && result.status === 'ready') return { verdict: result.verdict, viabilityIndex: result.viability?.index ?? null, provisional: false };
+  return all.bySite[siteId] ?? { verdict: 'PENDING', viabilityIndex: null, provisional: true };
 }
 
 export function useQuickAnswer(input: QuickAnswerInput | null): QuickAnswerResult {

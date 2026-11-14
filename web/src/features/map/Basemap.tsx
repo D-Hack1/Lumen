@@ -16,6 +16,7 @@ import { Segmented } from '../../ui/Segmented';
 import { Slider } from '../../ui/Slider';
 import { extentContains, EXTENT_LIMIT_DEG, smallestExtentContaining } from './extent';
 import { insetOffsetsM } from './inset';
+import { baseImageStyle, MOON_BASE_CREDIT, MOON_BASE_URL } from './moonBase';
 import './map.css';
 
 const RINGS: Record<MapExtent, number[]> = { '80S': [80, 82, 84, 86, 88], '85S': [85, 86, 87, 88, 89] };
@@ -141,6 +142,9 @@ export function Basemap(props: BasemapProps) {
       </div>
       <div className="basemap__stage">
         <div ref={square} className="basemap__square" onPointerMove={onMove} onClick={onTerrainClick} role="img" aria-label={t('slot.map')}>
+          <div className="basemap__base" aria-hidden>
+            <img src={MOON_BASE_URL} alt="" style={baseImageStyle(half)} data-testid="moon-base" draggable={false} />
+          </div>
           {layer && <img ref={img} src={layer.url} alt="" style={{ opacity: layers.opacity }} data-layer={layer.id} />}
           <svg viewBox={`${-half} ${-half} ${2 * half} ${2 * half}`}>
             <circle className="basemap__disk" cx={0} cy={0} r={half} />
@@ -170,6 +174,7 @@ export function Basemap(props: BasemapProps) {
             {pins.filter((p) => p.inside).map(({ s, x, y }) => (
               <circle
                 key={s.id}
+                data-site={s.id}
                 className={s.id === selectedId ? 'basemap__pin is-selected' : 'basemap__pin'}
                 cx={x}
                 cy={y}
@@ -204,6 +209,7 @@ export function Basemap(props: BasemapProps) {
           )}
         </div>
       </div>
+      <div className="basemap__credit">LROC base image · {MOON_BASE_CREDIT}</div>
       <div ref={readout} className="basemap__readout" aria-live="off">
         {defaultReadout}
       </div>

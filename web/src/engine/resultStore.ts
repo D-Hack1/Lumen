@@ -47,7 +47,11 @@ async function run(): Promise<void> {
   const s = getScenario();
   try {
     const { sites } = await loadCatalog();
-    if (dataMode() === 'mock') return publish(mockScenarioResult(sites[0] ?? null));
+    if (dataMode() === 'mock') {
+      // The mock honours the scenario too: the selected site (custom points fall back to the first site), the landing and scrub times, the ops-elevation floor.
+      const site = (s.site.kind === 'site' ? sites.find((x) => x.id === (s.site as { id: string }).id) : null) ?? sites[0] ?? null;
+      return publish(mockScenarioResult(site, s.landingUtc, s.durationDays, s.scrubUtc, 0, s.definitions.minSunElevationOps));
+    }
     const req = makeRequest(s, sites, { siteRef: s.site, landingUtc: s.landingUtc, heightM: s.heightM, scrubUtc: s.scrubUtc });
     const r = await evaluateLatest(req);
     if (r) publish(r); // null = superseded by a newer scenario: drop it
