@@ -19,6 +19,8 @@ import { Chip } from '../../ui/Chip';
 import { AngleDial } from './AngleDial';
 import { SlopeCompass } from './SlopeCompass';
 import { usePad } from './usePad';
+import { useDispersion } from './useDispersion';
+import { DispersionHistogram } from './DispersionHistogram';
 import { PanelPowerBars } from './PanelPowerBars';
 
 const HEIGHTS: MastHeightM[] = [1, 2, 5, 10];
@@ -38,6 +40,7 @@ export function TouchdownPad() {
   const t = useCopyFn();
   const siteRef = useScenario((s) => s.site);
   const { pad } = usePad(siteRef.kind === 'site' ? siteRef.id : null);
+  const dispersion = useDispersion(siteRef.kind === 'site' ? siteRef.id : null);
   const tiltLabelRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
@@ -120,6 +123,12 @@ export function TouchdownPad() {
           onCommit={(v) => setTilt({ ...tilt, magnitudeDeg: v })}
         />
       </div>
+
+      {dispersion && (
+        <div style={{ height: 52, flexShrink: 0 }}>
+          <DispersionHistogram slopesDeg={dispersion.slopeDeg} toleranceDeg={maxSlope} />
+        </div>
+      )}
 
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
         <PanelPowerBars preset={preset} series={series} slopeDeg={slope ?? 0} downhillAzDeg={downhill ?? 0} yawAuto={yaw == null} />
