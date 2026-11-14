@@ -17,8 +17,8 @@ export function sampleTimes(startMs: number, endMs: number): number[] {
   return times;
 }
 
-/** Bisect a bracket [left, right] that contains exactly one predicate change; returns the midpoint of the final interval. */
-export function refineTransition(predicate: (tMs: number) => boolean, left: number, right: number): number {
+/** Bisect a bracket [left, right] that contains exactly one predicate change. Returns the midpoint AND the final (<= 10 s) bracket. */
+export function refineTransitionBracket(predicate: (tMs: number) => boolean, left: number, right: number): { t: number; left: number; right: number } {
   const leftValue = predicate(left);
   if (leftValue === predicate(right)) throw new Error('bisection bracket does not contain a transition');
   while (right - left > BISECTION_TOLERANCE_MS) {
@@ -26,7 +26,12 @@ export function refineTransition(predicate: (tMs: number) => boolean, left: numb
     if (predicate(middle) === leftValue) left = middle;
     else right = middle;
   }
-  return (left + right) / 2;
+  return { t: (left + right) / 2, left, right };
+}
+
+/** Bisect to the midpoint of the final bracket (Python twin: `_refine_transition`). */
+export function refineTransition(predicate: (tMs: number) => boolean, left: number, right: number): number {
+  return refineTransitionBracket(predicate, left, right).t;
 }
 
 /** Events at every false->true (`up`) and true->false (`down`) change; `values` may be passed to avoid re-sampling. */
@@ -42,13 +47,16 @@ export function detectEvents(
   const events: EventRecord[] = [];
   for (let i = 0; i < times.length - 1; i++) {
     if (values[i] !== values[i + 1]) {
+      const r = refineTransitionBracket(predicate, times[i], times[i + 1]);
       events.push({
         type: values[i + 1] ? kinds.up : kinds.down,
-        t: refineTransition(predicate, times[i], times[i + 1]),
-        dtMs: null, // ± needs the uncertainty pass (N-6); null = not computed
+        t: r.t,
+        dtMs: null, // +/- is added by annotateEvent (core/uncertainty.ts) when sigma is available; null = not computed
         grazing: false,
         grazingReason: null,
         dtMethod: 'fast',
+        bracketStartMs: r.left, // kept: the one-sided clearance rate picks its side from the bracket (R3 D-8)
+        bracketEndMs: r.right,
       });
     }
   }

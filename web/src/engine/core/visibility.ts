@@ -32,6 +32,11 @@ export class Horizon {
     this.observerHeightM = init.observerHeightM ?? 0;
   }
 
+  /** The same horizon with a different terrain mask. Near-zone plane parameters and observer height are kept (R3: the +/- sigma passes shift only the mask). */
+  withElevations(elevationsDeg: ArrayLike<number>): Horizon {
+    return new Horizon({ elevationsDeg, binWidthDeg: this.binWidthDeg, slopeDeg: this.slopeDeg, uphillAzimuthDeg: this.uphillAzimuthDeg, dMinM: this.dMinM, observerHeightM: this.observerHeightM });
+  }
+
   /** Smooth-sphere dip when there is no mask; otherwise periodic linear interpolation between bin centres. */
   elevationAt(azimuthDeg: number): number {
     const values = this.elevationsDeg;
