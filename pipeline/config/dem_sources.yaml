@@ -266,11 +266,18 @@ selection_ladders:
       - regional_240m_lola_pgda_90
     active_source: null
     rule: >
-      Use the LROC DTM only after its pixel data, confidence map, frame and
-      vertical reference pass verification. Otherwise use the 60 m PGDA-90
-      source for the regional mid-field and the 240 m source for far-field.
-      Do not select the 30 m 75S product; its footprint does not cover CY-3.
-      Record the actual source used for each crop.
+      Full PLAN_FINAL §4.1 near-field source ladder, all three items wired
+      into the near crop in strict order: (1) use the LROC DTM only after
+      its pixel data, confidence map, frame and vertical reference pass
+      verification; (2) otherwise the 60 m PGDA-90 source, the finest
+      verified LOLA product covering 69.37°S, which also serves as the
+      regional mid-field source; (3) otherwise the 60-90S 240 m product,
+      the plan's explicitly "guaranteed" near-field fallback of last resort,
+      selected only when both (1) and (2) are unavailable or unverified.
+      Under present conditions (DTM unverified, 60 m verified and reachable)
+      item (2) is selected and item (3) is never reached. Do not select the
+      30 m 75S product; its footprint does not cover CY-3. Record the
+      actual source used for each crop.
 
   shackleton_ridge:
     site_id: "shackleton_ridge"
