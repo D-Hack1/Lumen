@@ -15,6 +15,9 @@ import { useSiteMask } from './useSiteMask';
 
 const MIN_MARKER_PX = 4;
 
+// Module-level so the array reference is stable across renders (LayeredCanvas resubscribes when it changes).
+const OVERLAY_BUSES = [crosshairBus] as const;
+
 function sampleIndex(series: NonNullable<ReturnType<typeof useResult>['series']>, t: number): number {
   return Math.max(0, Math.min(series.sunElevDeg.length - 1, Math.round((t - series.t0) / series.stepMs)));
 }
@@ -111,6 +114,7 @@ export function RibbonPanorama() {
             drawBody(tScrub, false);
             if (tHover != null) drawBody(tHover, true);
           }}
+          overlayBuses={OVERLAY_BUSES}
         />
       </div>
     </div>
