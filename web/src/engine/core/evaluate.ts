@@ -5,11 +5,11 @@
 import type { Ephemeris } from '../data/ephem';
 import type { DsnSeries } from '../data/dsn';
 import { dsnLinkUp } from './dsn';
-import { detectEvents, sampleTimes } from './events';
+import { detectEvents, detectTransitions, sampleTimes } from './events';
 import { bodyAt, makeSite, type Site } from './geometry';
 import { firstPassMetrics } from './metrics';
 import { availability, Horizon, type AvailabilityOptions } from './visibility';
-import { mergeWindows, toWindowRecord, type RawWindow } from './windows';
+import { longestWindowGapHours, mergeWindows, toWindowRecord, windowDurationMs, windowPercentage, windowsFromEvents, type RawWindow } from './windows';
 import type { EventRecord, WindowRecord } from '../types';
 import type { FirstPassMetrics } from './metrics';
 
@@ -52,6 +52,13 @@ export interface SamplePoint {
   linkUp: boolean;
 }
 
+/** The canonical demo metrics (Gowri, G-10 final): refined-window durations rather than 2-minute sample counts. */
+export interface RefinedResult {
+  /** Sun, Earth, ops, and (only when the DSN rule applies) link windows: ordered, half-open, endpoints refined to ~10 s. */
+  windows: RawWindow[];
+  metrics: { sunlitPct: number; earthVisiblePct: number; linkPct: number; longestNightH: number; longestCommGapH: number; opsHours: number };
+}
+
 export interface Evaluation {
   times: number[];
   samples: SamplePoint[];
@@ -59,7 +66,9 @@ export interface Evaluation {
   earthEvents: EventRecord[];
   windows: RawWindow[];
   windowRecords: WindowRecord[];
+  /** Sample-based first-pass metrics (what Golden Set 1 was generated with). The app shows `refined`. */
   metrics: FirstPassMetrics;
+  refined: RefinedResult;
   /** Per sample: the link (see SamplePoint.linkUp). Equal to Earth-visible when the DSN rule does not apply. */
   linkUp: boolean[];
   /** Share of the window with the link up, percent (interval-weighted, as the other percentages). */
@@ -108,10 +117,48 @@ export function evaluate(input: EvaluateInput): Evaluation {
     sunClearanceDeg: samples.map((s) => s.sun.clearanceDeg), earthClearanceDeg: samples.map((s) => s.earth.clearanceDeg),
     sunDiskFraction: samples.map((s) => s.sun.diskFraction),
   });
-  let linkMs = 0;
-  for (let i = 0; i < times.length - 1; i++) if (linkUp[i]) linkMs += times[i + 1] - times[i];
-  const linkPct = (100 * linkMs) / (times[times.length - 1] - times[0]);
-  return { times, samples, sunEvents, earthEvents, windows, windowRecords: windows.map(toWindowRecord), metrics, linkUp, linkPct, dsnApplied: applied };
+  const refined = refineWindows(eph, site, horizon, d, dsn, times, samples, input.startMs, endMs, sunEvents, earthEvents, applied);
+  return { times, samples, sunEvents, earthEvents, windows, windowRecords: windows.map(toWindowRecord), metrics, refined, linkUp, linkPct: refined.metrics.linkPct, dsnApplied: applied };
+}
+
+/**
+ * Refined windows: each body/link/ops state change is bisected to ~10 s (the same transitions as the events), the windows are built from those
+ * transitions, and every metric is taken from the window durations. A window's peak is the body's maximum elevation over its refined start, its
+ * refined end and the 2-minute grid samples strictly between them.
+ */
+function refineWindows(
+  eph: Ephemeris, site: Site, horizon: Horizon, d: Definitions, dsn: DsnSeries | null,
+  times: number[], samples: SamplePoint[], startMs: number, endMs: number, sunEvents: EventRecord[], earthEvents: EventRecord[], applied: boolean,
+): RefinedResult {
+  const sunEl = samples.map((s) => s.sun.elevationDeg);
+  const earthEl = samples.map((s) => s.earth.elevationDeg);
+  const peakOf = (body: 'sun' | 'earth', grid: number[]) => (a: number, b: number): number => {
+    let best = Math.max(bodyAt(eph, body, a, site).elevationDeg, bodyAt(eph, body, b, site).elevationDeg);
+    for (let i = 0; i < times.length; i++) if (times[i] > a && times[i] < b) best = Math.max(best, grid[i]);
+    return best;
+  };
+  const sunUp = samples.map((s) => s.sun.up);
+  const earthUp = samples.map((s) => s.earth.up);
+  const linkUp = samples.map((s) => s.linkUp);
+  const opsUp = samples.map((s) => s.sun.up && s.linkUp);
+  const at = (t: number) => stateAt(eph, site, horizon, d, t, dsn);
+  const linkTransitions = applied ? detectTransitions(startMs, endMs, (t) => at(t).linkUp, 'linkDown', 'linkUp', { times, values: linkUp }) : [];
+  const opsTransitions = detectTransitions(startMs, endMs, (t) => at(t).sun.up && at(t).linkUp, 'opsEnd', 'opsStart', { times, values: opsUp });
+  const sun = windowsFromEvents('sun', startMs, endMs, sunUp[0], sunEvents, { downEvent: 'sunset', upEvent: 'shadowExit', peakElevationDeg: peakOf('sun', sunEl) });
+  const earth = windowsFromEvents('earth', startMs, endMs, earthUp[0], earthEvents, { downEvent: 'earthset', upEvent: 'earthrise', peakElevationDeg: peakOf('earth', earthEl) });
+  const link = applied ? windowsFromEvents('link', startMs, endMs, linkUp[0], linkTransitions, { downEvent: 'linkDown', upEvent: 'linkUp', peakElevationDeg: peakOf('earth', earthEl) }) : earth;
+  const ops = windowsFromEvents('ops', startMs, endMs, opsUp[0], opsTransitions, { downEvent: 'opsEnd', upEvent: 'opsStart', peakElevationDeg: peakOf('sun', sunEl) });
+  return {
+    windows: [...sun, ...earth, ...(applied ? link : []), ...ops],
+    metrics: {
+      sunlitPct: windowPercentage(startMs, endMs, sun),
+      earthVisiblePct: windowPercentage(startMs, endMs, earth),
+      linkPct: windowPercentage(startMs, endMs, link),
+      longestNightH: longestWindowGapHours(startMs, endMs, sun),
+      longestCommGapH: longestWindowGapHours(startMs, endMs, link),
+      opsHours: windowDurationMs(ops) / 3_600_000,
+    },
+  };
 }
 
 /** Convenience for the smooth-Moon (Tier C) case: no terrain, observer on the reference sphere. */

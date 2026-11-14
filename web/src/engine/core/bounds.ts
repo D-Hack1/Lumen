@@ -23,9 +23,12 @@ export interface BoundsOptions {
 
 export interface MetricBounds {
   sunlitPct: Bounded;
-  /** Link % (Earth visible AND, when the DSN rule applies, a complex above the mask); equals Earth-visible % without DSN. */
   earthVisiblePct: Bounded;
+  /** Link % (Earth visible AND, when the DSN rule applies, a complex above the mask); equals Earth-visible % without DSN. */
+  linkPct: Bounded;
   longestNightH: Bounded;
+  longestCommGapH: Bounded;
+  opsHours: Bounded;
 }
 
 export interface BoundedEvaluation {
@@ -62,7 +65,10 @@ export function evaluateWithBounds(input: EvaluateInput, opts: BoundsOptions): B
     const nominal = evaluate(input);
     return {
       hasBounds: false, nominal, lower: nominal, upper: nominal,
-      metrics: { sunlitPct: unbounded(nominal.metrics.sunlitPct.value), earthVisiblePct: unbounded(nominal.linkPct), longestNightH: unbounded(nominal.metrics.longestNightH.value) },
+      metrics: {
+        sunlitPct: unbounded(nominal.refined.metrics.sunlitPct), earthVisiblePct: unbounded(nominal.refined.metrics.earthVisiblePct), linkPct: unbounded(nominal.refined.metrics.linkPct),
+        longestNightH: unbounded(nominal.refined.metrics.longestNightH), longestCommGapH: unbounded(nominal.refined.metrics.longestCommGapH), opsHours: unbounded(nominal.refined.metrics.opsHours),
+      },
       sunEvents: nominal.sunEvents, earthEvents: nominal.earthEvents, fastSunEvents: nominal.sunEvents, fastEarthEvents: nominal.earthEvents,
     };
   }
@@ -91,7 +97,11 @@ export function evaluateWithBounds(input: EvaluateInput, opts: BoundsOptions): B
 
   return {
     hasBounds: true, nominal, lower, upper,
-    metrics: { sunlitPct: metric((e) => e.metrics.sunlitPct.value), earthVisiblePct: metric((e) => e.linkPct), longestNightH: metric((e) => e.metrics.longestNightH.value) },
+    // canonical method: refined-window durations (Gowri, G-10 final)
+    metrics: {
+      sunlitPct: metric((e) => e.refined.metrics.sunlitPct), earthVisiblePct: metric((e) => e.refined.metrics.earthVisiblePct), linkPct: metric((e) => e.refined.metrics.linkPct),
+      longestNightH: metric((e) => e.refined.metrics.longestNightH), longestCommGapH: metric((e) => e.refined.metrics.longestCommGapH), opsHours: metric((e) => e.refined.metrics.opsHours),
+    },
     sunEvents: exact(nominal.sunEvents, lower.sunEvents, upper.sunEvents),
     earthEvents: exact(nominal.earthEvents, lower.earthEvents, upper.earthEvents),
     fastSunEvents: fast(nominal.sunEvents, 'sun'),

@@ -34,6 +34,7 @@ import numpy as np  # noqa: E402
 
 from lumen_pipeline.reference.events import Event, detect_events, sample_times  # noqa: E402
 from lumen_pipeline.reference.interp import Ephemeris  # noqa: E402
+from lumen_pipeline.reference.bounds import WindowSpec, evaluate_with_bounds  # noqa: E402
 from lumen_pipeline.reference.metrics import first_pass_metrics  # noqa: E402
 from lumen_pipeline.reference.uncertainty import (  # noqa: E402
     exact_event_uncertainty_from_masks,
@@ -95,10 +96,6 @@ m_nom, sun_nom, earth_nom = run_pass(H0)
 m_hi, sun_hi, earth_hi = run_pass(shift_horizon_mask(H0, SIGMA_BINS, direction=1))
 
 
-def bounds(key: str):
-    return list(numeric_bounds(type("P", (), {"lower_mask": m_lo[key]["value"], "nominal": m_nom[key]["value"], "upper_mask": m_hi[key]["value"]})()))
-
-
 def pair(nominal: Event, shifted: list[Event]):
     """Nearest same-type event within 36 h, else None (vanished)."""
     same = [e for e in shifted if e.type == nominal.type and abs(e.et - nominal.et) <= PAIR_WINDOW_S]
@@ -124,10 +121,28 @@ def annotate(events: list[Event], body: str, lo: list[Event], hi: list[Event]):
     return out
 
 
+def _spec(type_, body, down, up):
+    def visible(et, h):
+        g = eph.body_at(body, et, LAT, LON, HEIGHT)
+        kw = {"disk_threshold": 0.5} if body == "sun" else {"disk_threshold": 0.5, "margin_deg": 1.0}
+        return bool(availability(body, g.elevation_deg, g.azimuth_deg, g.distance_km, h, **kw)[2])
+
+    return WindowSpec(type_, down, up, visible, lambda a, b, h: eph.body_at(body, a, LAT, LON, HEIGHT).elevation_deg)
+
+
+# CANONICAL metric method (Gowri, G-10 final): refined-window durations, via her own evaluate_with_bounds (sun + Earth specs, no DSN here).
+SCEN = evaluate_with_bounds(start_et, end_et, H0, SIGMA_BINS, [_spec("sun", "sun", "sunset", "shadowExit"), _spec("earth", "earth", "earthset", "earthrise")], pair_event=pair)
+
+
+def bounds_of(key):
+    b = SCEN.metrics[key]
+    return [b.lo, b.value, b.hi]
+
+
 expected = {
     "sunEvents": annotate(sun_nom, "sun", sun_lo, sun_hi),
     "earthEvents": annotate(earth_nom, "earth", earth_lo, earth_hi),
-    "metrics": {k: {"lo": b[0], "nominal": b[1], "hi": b[2]} for k in ("sunlitPct", "earthVisiblePct", "longestNightH") for b in [bounds(k)]},
+    "metrics": {k: {"lo": b[0], "nominal": b[1], "hi": b[2]} for k in ("sunlitPct", "earthVisiblePct", "longestNightH") for b in [bounds_of(k)]},
     "counts": {"sunNominal": len(sun_nom), "sunLower": len(sun_lo), "sunUpper": len(sun_hi), "earthNominal": len(earth_nom), "earthLower": len(earth_lo), "earthUpper": len(earth_hi)},
 }
 OUT.parent.mkdir(parents=True, exist_ok=True)

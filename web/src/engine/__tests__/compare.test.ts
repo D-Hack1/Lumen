@@ -13,7 +13,7 @@ import type { ScenarioRequest } from '../core/buildResult';
 import { DEFAULT_DEFINITIONS } from '../core/evaluate';
 import { loadEphem, type Ephemeris } from '../data/ephem';
 import { setDataMode } from '../data/source';
-import { PUBLIC, stubFetch } from './helpers';
+import { IM2_REFINED, PUBLIC, stubFetch } from './helpers';
 
 const EPHEM_BIN = join(PUBLIC, 'data/ephem/ephem.bin');
 const GOLDEN = join(PUBLIC, 'data/golden/golden_set1.json');
@@ -44,7 +44,7 @@ describe.skipIf(!run)('buildCompareResults (real data)', () => {
     expect(r.rows.map((x) => x.scenarioId)).toEqual(['A', 'B']);
     expect(r.rows.map((x) => x.result.meta!.siteId)).toEqual(['im2_athena', 'blue_ghost_m1']);
     expect(r.baselineId).toBe('A');
-    expect(r.rows[0].result.metrics!.sunlitPct.value!).toBeCloseTo(golden.sunlitPct.value, 4); // golden, from Python
+    expect(r.rows[0].result.metrics!.sunlitPct.value!).toBeCloseTo(IM2_REFINED.sunlitPct, 3); // her Python, refined windows
   });
 
   it('deltas are against the baseline row; the baseline row itself has none', () => {

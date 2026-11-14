@@ -79,7 +79,7 @@ describe.skipIf(!run)('DSN-aware link in the engine (real IM-2 ephemeris)', () =
     expect(link.length).toBeGreaterThan(5);
     for (const w of link) {
       expect(earth.some((e) => e.start <= w.start + 1 && e.end >= w.end - 1), `link window ${new Date(w.start).toISOString()}`).toBe(true);
-      const i = Math.round((w.start - r.series!.t0) / r.series!.stepMs);
+      const i = Math.ceil((w.start - r.series!.t0) / r.series!.stepMs); // the window starts at a refined instant between samples: the next sample is inside it
       expect(r.series!.linkUp[i]).toBe(1);
     }
   });

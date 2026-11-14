@@ -34,6 +34,35 @@ export function refineTransition(predicate: (tMs: number) => boolean, left: numb
   return refineTransitionBracket(predicate, left, right).t;
 }
 
+/** A refined state change with its final bisection bracket, with a free-form label (sun/earth events, DSN link, ops...). */
+export interface Transition {
+  type: string;
+  t: number;
+  bracketStartMs: number;
+  bracketEndMs: number;
+}
+
+/** Transitions at every false->true (`up`) and true->false (`down`) change; `sampled` may carry already-evaluated grid values to avoid re-sampling. */
+export function detectTransitions(
+  startMs: number,
+  endMs: number,
+  predicate: (tMs: number) => boolean,
+  down: string,
+  up: string,
+  sampled?: { times: number[]; values: boolean[] },
+): Transition[] {
+  const times = sampled?.times ?? sampleTimes(startMs, endMs);
+  const values = sampled?.values ?? times.map(predicate);
+  const out: Transition[] = [];
+  for (let i = 0; i < times.length - 1; i++) {
+    if (values[i] !== values[i + 1]) {
+      const r = refineTransitionBracket(predicate, times[i], times[i + 1]);
+      out.push({ type: values[i + 1] ? up : down, t: r.t, bracketStartMs: r.left, bracketEndMs: r.right });
+    }
+  }
+  return out;
+}
+
 /** Events at every false->true (`up`) and true->false (`down`) change; `values` may be passed to avoid re-sampling. */
 export function detectEvents(
   startMs: number,
@@ -42,23 +71,14 @@ export function detectEvents(
   kinds: { down: EventType; up: EventType },
   sampled?: { times: number[]; values: boolean[] },
 ): EventRecord[] {
-  const times = sampled?.times ?? sampleTimes(startMs, endMs);
-  const values = sampled?.values ?? times.map(predicate);
-  const events: EventRecord[] = [];
-  for (let i = 0; i < times.length - 1; i++) {
-    if (values[i] !== values[i + 1]) {
-      const r = refineTransitionBracket(predicate, times[i], times[i + 1]);
-      events.push({
-        type: values[i + 1] ? kinds.up : kinds.down,
-        t: r.t,
-        dtMs: null, // +/- is added by annotateEvent (core/uncertainty.ts) when sigma is available; null = not computed
-        grazing: false,
-        grazingReason: null,
-        dtMethod: 'fast',
-        bracketStartMs: r.left, // kept: the one-sided clearance rate picks its side from the bracket (R3 D-8)
-        bracketEndMs: r.right,
-      });
-    }
-  }
-  return events;
+  return detectTransitions(startMs, endMs, predicate, kinds.down, kinds.up, sampled).map((x) => ({
+    type: x.type as EventType,
+    t: x.t,
+    dtMs: null, // +/- is added by annotateEvent (core/uncertainty.ts) when sigma is available; null = not computed
+    grazing: false,
+    grazingReason: null,
+    dtMethod: 'fast' as const,
+    bracketStartMs: x.bracketStartMs, // kept: the one-sided clearance rate picks its side from the bracket (R3 D-8)
+    bracketEndMs: x.bracketEndMs,
+  }));
 }
