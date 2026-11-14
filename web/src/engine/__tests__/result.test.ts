@@ -6,6 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { evaluateScenario, latestWins } from '../client';
 import { buildScenarioResult, type ScenarioRequest } from '../core/buildResult';
 import { DEFAULT_DEFINITIONS } from '../core/evaluate';
+import { bodyAt, makeSite } from '../core/geometry';
 import { loadEphem, type Ephemeris } from '../data/ephem';
 import { setDataMode } from '../data/source';
 import { PUBLIC, stubFetch } from './helpers';
@@ -84,6 +85,23 @@ describe.skipIf(!run)('buildScenarioResult (real IM-2 ephemeris)', () => {
     expect(s.stepMs).toBe(120_000);
     expect(r.events.map((e) => e.t)).toEqual([...r.events.map((e) => e.t)].sort((a, b) => a - b));
     expect(r.windows.filter((w) => w.type === 'sun').length).toBeGreaterThan(0);
+  });
+
+  it('series carries the Earth range (km) for Pointing: physical, and equal to the engine geometry at each sample', () => {
+    const r = buildScenarioResult(eph, base);
+    const s = r.series!;
+    expect(s.earthRangeKm).toBeInstanceOf(Float32Array);
+    expect(s.earthRangeKm.length).toBe(s.earthElevDeg.length);
+    // Independent physical bounds: Earth-Moon centre distance 356,400-406,700 km, plus/minus the Moon radius for a surface site.
+    for (const km of s.earthRangeKm) {
+      expect(km).toBeGreaterThan(354_000);
+      expect(km).toBeLessThan(408_500);
+    }
+    // Wiring: sample i equals the geometry (range parity with the Python reference is covered in core.parity.test.ts).
+    for (const i of [0, 100, 5000, s.earthRangeKm.length - 1]) {
+      const g = bodyAt(eph, 'earth', s.t0 + i * s.stepMs, makeSite(base.latDeg, base.lonDegEast, base.heightM));
+      expect(Math.abs(s.earthRangeKm[i] - g.distanceKm)).toBeLessThan(0.05); // float32 storage
+    }
   });
 
   it('the client runs the same evaluation in-thread when there is no Worker (tests/SSR)', async () => {

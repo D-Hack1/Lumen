@@ -106,6 +106,8 @@ export interface Series {
   earthAzDeg: Float32Array;
   earthClearanceDeg: Float32Array;
   earthDiskPct: Float32Array;
+  /** Topocentric Earth range in km (light time = range / c). */
+  earthRangeKm: Float32Array;
   powerW: Float32Array;
   sunUp: Uint8Array;
   earthUp: Uint8Array;
