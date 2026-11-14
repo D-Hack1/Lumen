@@ -117,6 +117,8 @@ def link_available(
         raise ValueError("DSN mode must be off or dsnAware")
     if dsn is None:
         raise ValueError("DSN-aware link evaluation requires a DSN series")
+    if et < dsn.start_et or et > dsn.end_et:
+        return False
     return dsn.any_station_above(et, dsn_mask_deg, interpolation=interpolation)
 
 

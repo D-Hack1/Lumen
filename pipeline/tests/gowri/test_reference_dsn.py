@@ -56,6 +56,8 @@ def test_link_availability_obeys_dsn_off_coverage_mask_and_threshold_equality():
         dsn_mask_deg=10.0,
         interpolation="linear",
     )
+    assert not link_available(-1.0, True, dsn_mode="dsnAware", dsn=series, dsn_mask_deg=10.0, interpolation="linear")
+    assert not link_available(600.1, True, dsn_mode="dsnAware", dsn=series, dsn_mask_deg=10.0, interpolation="linear")
 
 
 def test_link_windows_refine_dsn_recovery_and_comm_gap_with_continuous_earth_visibility():
@@ -78,4 +80,24 @@ def test_link_windows_refine_dsn_recovery_and_comm_gap_with_continuous_earth_vis
     assert [window.end_et for window in result.windows] == pytest.approx([300.0, 1200.0], abs=5.0)
     assert [(window.partial_start, window.partial_end) for window in result.windows] == [(True, False), (False, True)]
     assert result.link_pct == pytest.approx(50.0, abs=1.0)
+    assert result.longest_comm_gap_hours == pytest.approx(1.0 / 6.0, abs=0.01)
+
+
+def test_link_windows_treat_dsn_out_of_coverage_as_unavailable():
+    result = evaluate_link_windows(
+        0.0,
+        1800.0,
+        lambda _et: True,
+        lambda _start, _end: 20.0,
+        dsn_mode="dsnAware",
+        dsn=_series([[20, 0, 20], [0, 0, 0], [0, 0, 0]]),
+        dsn_mask_deg=5.0,
+        interpolation="linear",
+        down_event="link_down",
+        up_event="link_recovery",
+    )
+
+    assert [event.type for event in result.events] == ["link_down", "link_recovery", "link_down"]
+    assert [event.et for event in result.events] == pytest.approx([300.0, 900.0, 1200.0], abs=5.0)
+    assert result.link_pct == pytest.approx(33.958333333333336, abs=1.0)
     assert result.longest_comm_gap_hours == pytest.approx(1.0 / 6.0, abs=0.01)

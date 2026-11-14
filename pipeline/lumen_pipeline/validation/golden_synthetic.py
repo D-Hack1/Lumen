@@ -65,7 +65,7 @@ def synthetic_golden_payload() -> dict[str, object]:
         {
             "id": "synthetic_near_zone_slope_edges",
             "input": {"site_id": "synthetic_pad", "time_scale": "ET seconds", "terrain_horizon_deg": -1.0, "slope_deg": 10.0, "uphill_azimuth_deg": 0.0, "d_min_m": 15.0, "observer_height_m": 1.0},
-            "expected": {"flat_or_downhill_effective_deg": -1.0, "cross_slope_effective_deg": -1.0, "uphill_effective_deg": 6.25},
+            "expected": {"flat_or_downhill_effective_deg": -1.0, "cross_slope_effective_deg": -1.0, "uphill_effective_deg": 6.2597},
         },
         {
             "id": "synthetic_guarded_span_spike",
@@ -91,6 +91,11 @@ def synthetic_golden_payload() -> dict[str, object]:
             "id": "synthetic_dsn_link_modes",
             "input": {"site_id": "synthetic_dsn", "time_scale": "ET seconds", "range_et": [0, 1200], "station_order": ["DSS-14", "DSS-43", "DSS-63"], "station_elevations_deg": [[20.0, 0.0, 20.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]], "cadence_s": 600, "interpolation": "linear", "dsn_mask_deg": 5.0, "earth_visible": True},
             "expected": {"dsn_off": {"link_pct": 100.0, "longest_comm_gap_hours": 0.0}, "dsn_aware": {"event_types": ["link_down", "link_recovery"], "event_times_et": [450.0, 750.0], "link_pct": 75.0, "longest_comm_gap_hours": 1.0 / 12.0}},
+        },
+        {
+            "id": "synthetic_dsn_out_of_coverage",
+            "input": {"site_id": "synthetic_dsn_coverage", "time_scale": "ET seconds", "range_et": [0, 1800], "station_order": ["DSS-14", "DSS-43", "DSS-63"], "station_elevations_deg": [[20.0, 0.0, 20.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]], "cadence_s": 600, "interpolation": "linear", "dsn_mask_deg": 5.0, "earth_visible": True},
+            "expected": {"dsn_aware": {"event_types": ["link_down", "link_recovery", "link_down"], "event_times_et": [450.0, 750.0, 1200.0], "link_pct": 50.0, "longest_comm_gap_hours": 1.0 / 6.0}},
         },
     ]
     return {
@@ -123,6 +128,7 @@ def synthetic_golden_payload() -> dict[str, object]:
             },
             "python_only": {
                 "synthetic_guarded_span_spike": "TS has no envelope-guarded coarse sampler or exact span-extrema proof.",
+                "synthetic_dsn_out_of_coverage": "TS has no DSN-aware link-window metrics.",
             },
         },
         "cases": cases,

@@ -110,7 +110,7 @@ def test_synthetic_golden_events_uncertainty_and_slope_edges():
     expected_slope = _case(payload, "synthetic_near_zone_slope_edges")["expected"]
     assert slope.effective_at(180.0) == pytest.approx(expected_slope["flat_or_downhill_effective_deg"])
     assert slope.effective_at(90.0) == pytest.approx(expected_slope["cross_slope_effective_deg"])
-    assert slope.effective_at(0.0) == pytest.approx(expected_slope["uphill_effective_deg"], abs=0.01)
+    assert slope.effective_at(0.0) == pytest.approx(expected_slope["uphill_effective_deg"], abs=0.005)
 
 
 def test_synthetic_golden_ops_elevation_definition():
@@ -259,6 +259,25 @@ def test_synthetic_golden_dsn_modes_and_guarded_span_spike():
     assert on.longest_comm_gap_hours == pytest.approx(
         expected["dsn_aware"]["longest_comm_gap_hours"], abs=10.0 / 3600.0
     )
+
+    coverage_case = _case(payload, "synthetic_dsn_out_of_coverage")
+    coverage_input = coverage_case["input"]
+    coverage = evaluate_link_windows(
+        *coverage_input["range_et"],
+        lambda _et: coverage_input["earth_visible"],
+        lambda _start, _end: 0.0,
+        dsn_mode="dsnAware",
+        dsn=DsnSeries(0.0, coverage_input["cadence_s"], tuple(coverage_input["station_order"]), np.asarray(coverage_input["station_elevations_deg"], dtype=float)),
+        dsn_mask_deg=coverage_input["dsn_mask_deg"],
+        interpolation=coverage_input["interpolation"],
+        down_event="link_down",
+        up_event="link_recovery",
+    )
+    coverage_expected = coverage_case["expected"]["dsn_aware"]
+    assert [event.type for event in coverage.events] == coverage_expected["event_types"]
+    assert [event.et for event in coverage.events] == pytest.approx(coverage_expected["event_times_et"], abs=10.0)
+    assert coverage.link_pct == pytest.approx(coverage_expected["link_pct"], abs=1.0)
+    assert coverage.longest_comm_gap_hours == pytest.approx(coverage_expected["longest_comm_gap_hours"], abs=10.0 / 3600.0)
 
     spike_case = _case(payload, "synthetic_guarded_span_spike")
     spike_input = spike_case["input"]
