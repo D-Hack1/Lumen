@@ -1,10 +1,9 @@
 // Owner: Nived
-// JSON export (header block + payload). STUB (N-3): real round-trip at N-9.
+// JSON export: { header, windows | metrics }. Lossless: JSON.parse(exportJson(r)) gives back the same numbers (G11).
 import type { ScenarioResult } from '../types';
-import type { ExportKind } from './csv';
+import { exportHeader, type ExportKind } from './csv';
 
 export function exportJson(r: ScenarioResult, kind: ExportKind = 'windows'): string {
-  const header = { site: r.meta?.siteId ?? null, tier: r.meta?.tierBadge ?? null, sigmaSource: r.meta?.sigmaSource ?? null,
-    definitions: r.meta?.definitionsSummary ?? null, dataVersions: r.meta?.dataVersions ?? {}, mock: r.meta?.mock ?? false };
-  return JSON.stringify({ header, [kind]: kind === 'windows' ? r.windows : r.metrics }, null, 2);
+  const header = Object.fromEntries(exportHeader(r, kind));
+  return JSON.stringify({ header, [kind]: kind === 'windows' ? r.windows : r.metrics }, null, 2) + '\n';
 }

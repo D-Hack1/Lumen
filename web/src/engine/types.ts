@@ -48,6 +48,8 @@ export interface SiteRecord {
   sourceUrl: string | null;
   verificationStatus: string;
   provenanceNotes: string | null;
+  /** Site rotation, rows (east, north_reference, up): local = M * vec_MOON_ME. Null if the catalog omits it. */
+  rotationMatrix: [[number, number, number], [number, number, number], [number, number, number]] | null;
   mock: boolean;
 }
 
