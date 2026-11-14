@@ -1,19 +1,17 @@
 // Owner: Abhinav
 // Mission Cockpit — 3-column zero-scroll bento (PLAN_FINAL §8.3, guide §4).
 //
-// Teammate imports (agreed paths, WORK_DISTRIBUTION §5):
-//   Nived  ✓ AnswerStrip, MetricDeck, Basemap                — stubs exist, imported below
-//   Ebin   ✗ Ribbon, AnalysisPanel, Barcode, SlipBar, TouchdownPad — files exist but export nothing yet;
-//            placeholders are rendered by <Slot> until they do. To wire: uncomment the import + child.
+// Teammate imports (agreed paths, WORK_DISTRIBUTION §5) — all Phase 1 stubs merged:
+//   Nived: AnswerStrip, MetricDeck, Basemap · Ebin: Ribbon, AnalysisPanel, Barcode, SlipBar, TouchdownPad
 import { useState } from 'react';
 import { AnswerStrip } from '../../features/answer/AnswerStrip';
 import { Basemap } from '../../features/map/Basemap';
 import { MetricDeck } from '../../features/metrics/MetricDeck';
-// import { Ribbon } from '../../features/ribbon/Ribbon';                 // MISSING (Ebin)
-// import { AnalysisPanel } from '../../features/analysis/AnalysisPanel'; // MISSING (Ebin)
-// import { Barcode } from '../../features/barcode/Barcode';              // MISSING (Ebin)
-// import { SlipBar } from '../../features/barcode/SlipBar';              // MISSING (Ebin)
-// import { TouchdownPad } from '../../features/touchdown/TouchdownPad';  // MISSING (Ebin)
+import { Ribbon } from '../../features/ribbon/Ribbon';
+import { AnalysisPanel } from '../../features/analysis/AnalysisPanel';
+import { Barcode } from '../../features/barcode/Barcode';
+import { SlipBar } from '../../features/barcode/SlipBar';
+import { TouchdownPad } from '../../features/touchdown/TouchdownPad';
 import { useCopyFn } from '../../state/copy';
 import { Segmented } from '../../ui/Segmented';
 import { BentoColumn, BentoGrid } from '../layout/BentoGrid';
@@ -44,10 +42,18 @@ export function CockpitView() {
           <AnswerStrip />
         </Slot>
         <Slot id="definitions" />
-        <Slot id="ribbon">{/* <Ribbon /> */}</Slot>
-        <Slot id="analysis">{/* <AnalysisPanel /> */}</Slot>
-        <Slot id="barcode">{/* <Barcode /> */}</Slot>
-        <Slot id="slip">{/* <SlipBar /> */}</Slot>
+        <Slot id="ribbon">
+          <Ribbon />
+        </Slot>
+        <Slot id="analysis">
+          <AnalysisPanel />
+        </Slot>
+        <Slot id="barcode">
+          <Barcode />
+        </Slot>
+        <Slot id="slip">
+          <SlipBar />
+        </Slot>
       </BentoColumn>
 
       <BentoColumn side="right" className={rightTabs ? 'is-tabs' : undefined}>
@@ -71,7 +77,11 @@ export function CockpitView() {
             <MetricDeck />
           </Slot>
         )}
-        {(!rightTabs || rightTab === 'touchdown') && <Slot id="touchdown">{/* <TouchdownPad /> */}</Slot>}
+        {(!rightTabs || rightTab === 'touchdown') && (
+          <Slot id="touchdown">
+            <TouchdownPad />
+          </Slot>
+        )}
         <Slot id="profileBattery" />
       </BentoColumn>
     </BentoGrid>

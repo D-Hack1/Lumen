@@ -72,6 +72,20 @@ export const planner: CopyTable = {
   'compare.aligned': 'Aligned Barcodes',
   'compare.season': 'Season Strip',
   'compare.calendar': 'Calendar',
+
+  // keys used by Ebin's Phase 1 stubs
+  'ribbon.title': 'SKYLINE Ribbon',
+  'analysis.tabs': 'Analysis',
+  'analysis.power': 'Power & Elevation',
+  'analysis.windows': 'Windows Table',
+  'analysis.pointing': 'Pointing & Link',
+  'slip.label': 'Landing slip (days)',
+  'touchdown.preset': 'Panel preset',
+  'touchdown.preset.fourSide': '4 sides',
+  'touchdown.preset.singleHeading': '1 panel',
+  'touchdown.preset.horizontalDeck': 'Deck',
+  'touchdown.preset.trackingMast': 'Tracking mast',
+  'touchdown.height': 'Mast height',
 };
 
 /** Educator overrides — only keys whose wording differs. */

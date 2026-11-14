@@ -70,6 +70,38 @@ for (const vp of VIEWPORTS) {
       });
     }
 
+    // Tabbed slots: every tab's content must also fit (only the default tab is measured above).
+    test('every tab fits: right column, analysis, compare centre', async ({ page }) => {
+      const failures: unknown[] = [];
+      const check = async (label: string) => {
+        await page.waitForTimeout(200);
+        const r = await overflowReport(page);
+        const safeName = label.replace(/[^a-z0-9]+/gi, '-');
+        await page.screenshot({ path: `e2e/screens/phase-${PHASE}/${vp.name}-tab-${safeName}.png` });
+        if (r.cells.length || r.hot.length || r.page.scrollH > r.page.innerH || r.page.scrollW > r.page.innerW)
+          failures.push({ label, ...r });
+      };
+
+      await open(page, VIEWS[0]);
+      const analysis = page.locator('[data-slot="analysis"]');
+      for (const tab of ['Windows Table', 'Pointing & Link', 'Power & Elevation']) {
+        await analysis.getByRole('tab', { name: tab }).click();
+        await check(`cockpit-analysis-${tab}`);
+      }
+      const rightTabs = page.locator('.right-tabs');
+      if (await rightTabs.count()) {
+        await rightTabs.getByRole('tab', { name: 'Touchdown' }).click();
+        await check('cockpit-right-Touchdown');
+      }
+
+      await open(page, VIEWS[1]);
+      for (const tab of ['Season Strip', 'Calendar', 'Aligned Barcodes']) {
+        await page.locator('.compare-tabs').getByRole('radio', { name: tab }).click();
+        await check(`compare-${tab}`);
+      }
+      expect(failures).toEqual([]);
+    });
+
     test('cockpit: slot sizes match §4 budgets', async ({ page }) => {
       await open(page, VIEWS[0]);
       const d = pickDensity(vp.width, vp.height);

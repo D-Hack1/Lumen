@@ -176,3 +176,26 @@
   white-space: nowrap;
   inset: 2px;
 }
+
+/* Corner tag on slots that render a teammate stub (removed once the slot is 'live') */
+.slot__tag {
+  position: absolute;
+  right: 4px;
+  bottom: 3px;
+  z-index: 1;
+  padding: 0 4px;
+  border-radius: var(--r-sm);
+  background: var(--c-surface1);
+  color: var(--c-text-faint);
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  line-height: 14px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+/* Short slots have no free corner — the tag would cover the component's own controls. */
+.slot--barcode .slot__tag,
+.slot--slip .slot__tag,
+.slot--compareSlip .slot__tag {
+  display: none;
+}

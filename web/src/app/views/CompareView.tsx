@@ -1,16 +1,16 @@
 // Owner: Abhinav
 // Scenario Compare & Slip — zero-scroll bento (PLAN_FINAL §8.6; columns per WORK_DISTRIBUTION §5.1).
 //
-// Teammate imports:
-//   Nived ✓ ScanPanel, DeltaTable — stubs exist, imported below
-//   Ebin  ✗ SlipBar (global), AlignedBarcodes, SeasonStrip, FeasibilityCalendar, WindowsTable — no exports yet
+// Teammate imports — all Phase 1 stubs merged:
+//   Nived: ScanPanel, DeltaTable · Ebin: SlipBar (global), AlignedBarcodes, SeasonStrip, FeasibilityCalendar,
+//   WindowsTable
 import { DeltaTable } from '../../features/compareResults/DeltaTable';
 import { ScanPanel } from '../../features/compareResults/ScanPanel';
-// import { SlipBar } from '../../features/barcode/SlipBar';                           // MISSING (Ebin)
-// import { AlignedBarcodes } from '../../features/compareVisuals/AlignedBarcodes';    // MISSING (Ebin)
-// import { SeasonStrip } from '../../features/compareVisuals/SeasonStrip';            // MISSING (Ebin)
-// import { FeasibilityCalendar } from '../../features/compareVisuals/FeasibilityCalendar'; // MISSING (Ebin)
-// import { WindowsTable } from '../../features/analysis/WindowsTable';                // MISSING (Ebin)
+import { SlipBar } from '../../features/barcode/SlipBar';
+import { AlignedBarcodes } from '../../features/compareVisuals/AlignedBarcodes';
+import { SeasonStrip } from '../../features/compareVisuals/SeasonStrip';
+import { FeasibilityCalendar } from '../../features/compareVisuals/FeasibilityCalendar';
+import { WindowsTable } from '../../features/analysis/WindowsTable';
 import { useCopyFn } from '../../state/copy';
 import { useScenario, type CompareCentreTab } from '../../state/scenarioStore';
 import { Segmented } from '../../ui/Segmented';
@@ -30,7 +30,9 @@ export function CompareView() {
       </BentoColumn>
 
       <BentoColumn side="centre">
-        <Slot id="compareSlip">{/* <SlipBar scope="global" /> */}</Slot>
+        <Slot id="compareSlip">
+          <SlipBar />
+        </Slot>
         <div className="compare-tabs" data-slot="compareTabs" data-budget="compareTabs">
           <Segmented<CompareCentreTab>
             size="sm"
@@ -45,7 +47,7 @@ export function CompareView() {
           />
         </div>
         <Slot id="compareVisual">
-          {/* {tab === 'aligned' ? <AlignedBarcodes /> : tab === 'season' ? <SeasonStrip /> : <FeasibilityCalendar />} */}
+          {tab === 'aligned' ? <AlignedBarcodes /> : tab === 'season' ? <SeasonStrip /> : <FeasibilityCalendar />}
         </Slot>
       </BentoColumn>
 
@@ -56,7 +58,9 @@ export function CompareView() {
         <Slot id="deltaTable">
           <DeltaTable />
         </Slot>
-        <Slot id="compareWindows">{/* <WindowsTable rowId={selectedRow} /> */}</Slot>
+        <Slot id="compareWindows">
+          <WindowsTable />
+        </Slot>
       </BentoColumn>
     </BentoGrid>
   );
