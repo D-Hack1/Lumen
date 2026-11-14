@@ -30,7 +30,8 @@ export function pwaOptions(dataMode: LumenDataMode = 'mock'): Partial<VitePWAOpt
     },
     workbox: {
       // App shell + only the data folder this build uses (never ship both sets offline).
-      globPatterns: ['**/*.{js,css,html,woff2,svg,png}', `${dataDir}/**/*.{json,bin,png,svg}`, 'content/**/*.json'],
+      // Every asset type the app can reference must be listed, or it silently disappears offline (webp body images did).
+      globPatterns: ['**/*.{js,css,html,woff2,svg,png,webp,jpg,jpeg,avif,gif,ico}', `${dataDir}/**/*.{json,bin,png,svg}`, 'content/**/*.json'],
       globIgnores: dataMode === 'real' ? ['data-mock/**'] : ['data/**'],
       maximumFileSizeToCacheInBytes: MAX_FILE_BYTES,
       navigateFallback: 'index.html',
