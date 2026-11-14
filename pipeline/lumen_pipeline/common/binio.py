@@ -10,7 +10,6 @@ from typing import Any
 
 import numpy as np
 
-
 _DTYPES = {"float32": np.dtype("<f4"), "uint8": np.dtype("u1")}
 
 
