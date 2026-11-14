@@ -1,0 +1,23 @@
+{
+  "schema": "site_summary",
+  "version": 1,
+  "mock": true,
+  "note": "MOCK DATA \u2014 synthetic values, not for science or demo claims",
+  "site_id": "im2_athena",
+  "tier": "A",
+  "near_field_res_m": 5,
+  "dem_source": "MOCK-DEM",
+  "files": {
+    "mask": "masks/im2_athena.json",
+    "sigma": "sigma/im2_athena.bin",
+    "pad": "pad/im2_athena.json",
+    "dispersion": "dispersion/im2_athena.json"
+  },
+  "psr": {
+    "distance_km": 4.2,
+    "bearing_deg": 312.0,
+    "nearest_psr_area_km2": 2.8,
+    "source": "derived"
+  },
+  "run_utc": "2026-01-01T00:00:00Z"
+}

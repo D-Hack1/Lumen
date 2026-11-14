@@ -1,0 +1,29 @@
+{
+  "schema": "dsn",
+  "version": 1,
+  "mock": true,
+  "note": "MOCK DATA \u2014 synthetic values, not for science or demo claims",
+  "epoch_utc": "2023-01-01T00:00:00Z",
+  "epoch_unix_s": 1672531200,
+  "step_s": 1800,
+  "count": 140257,
+  "quantum_deg": 0.5,
+  "offset_deg": -30.0,
+  "dtype": "uint8",
+  "nodata": 255,
+  "layout": "station-major: stations[k] occupies bytes [k*count, (k+1)*count)",
+  "stations": [
+    {
+      "id": "DSS-14",
+      "complex": "Goldstone"
+    },
+    {
+      "id": "DSS-43",
+      "complex": "Canberra"
+    },
+    {
+      "id": "DSS-63",
+      "complex": "Madrid"
+    }
+  ]
+}

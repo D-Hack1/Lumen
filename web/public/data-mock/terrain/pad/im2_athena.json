@@ -1,0 +1,24 @@
+{
+  "schema": "pad",
+  "version": 1,
+  "mock": true,
+  "note": "MOCK DATA \u2014 synthetic values, not for science or demo claims",
+  "site_id": "im2_athena",
+  "fit": {
+    "k": 3,
+    "window_px": 7,
+    "window_m": 35,
+    "baseline_m": 30
+  },
+  "slope_deg": 7.0,
+  "downhill_aspect_deg": 200.0,
+  "uphill_az_deg": 20.0,
+  "z0_m": 0.0,
+  "baseline_badge": "slope at 30 m baseline",
+  "slope_under_resolved": false,
+  "dispersion_slope_stats": {
+    "p50_deg": 5.6000000000000005,
+    "p95_deg": 11.200000000000001,
+    "max_deg": 14.0
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "schema": "site_summary",
+  "version": 1,
+  "mock": true,
+  "note": "MOCK DATA \u2014 synthetic values, not for science or demo claims",
+  "site_id": "blue_ghost_m1",
+  "tier": "C",
+  "near_field_res_m": null,
+  "dem_source": null,
+  "files": {
+    "mask": null,
+    "sigma": null,
+    "pad": null,
+    "dispersion": null
+  },
+  "psr": null,
+  "run_utc": "2026-01-01T00:00:00Z"
+}
