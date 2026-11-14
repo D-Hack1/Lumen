@@ -1,0 +1,24 @@
+{
+  "schema": "pad",
+  "version": 1,
+  "mock": true,
+  "note": "MOCK DATA \u2014 synthetic values, not for science or demo claims",
+  "site_id": "cy3_shiv_shakti",
+  "fit": {
+    "k": 3,
+    "window_px": 7,
+    "window_m": 140,
+    "baseline_m": 120
+  },
+  "slope_deg": 4.0,
+  "downhill_aspect_deg": 120.0,
+  "uphill_az_deg": 300.0,
+  "z0_m": 0.0,
+  "baseline_badge": "slope at 120 m baseline",
+  "slope_under_resolved": true,
+  "dispersion_slope_stats": {
+    "p50_deg": 3.2,
+    "p95_deg": 6.4,
+    "max_deg": 8.0
+  }
+}

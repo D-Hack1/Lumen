@@ -1,0 +1,253 @@
+{
+  "schema": "layers",
+  "version": 1,
+  "mock": true,
+  "note": "MOCK DATA \u2014 synthetic values, not for science or demo claims",
+  "size_px": [
+    256,
+    256
+  ],
+  "projection": {
+    "type": "polar_stereographic_south",
+    "radius_m": 1737400.0,
+    "r": "2R*tan(colat/2)",
+    "x": "r*sin(lon_east)",
+    "y": "r*cos(lon_east)",
+    "px": "cx + x/mpp",
+    "py": "cy - y/mpp"
+  },
+  "extents": {
+    "80S": {
+      "lat_limit_deg": -80,
+      "half_extent_km": 304.0056080198807,
+      "centre_px": [
+        128.0,
+        128.0
+      ],
+      "metres_per_px": 2375.043812655318
+    },
+    "85S": {
+      "lat_limit_deg": -85,
+      "half_extent_km": 151.7130444184977,
+      "centre_px": [
+        128.0,
+        128.0
+      ],
+      "metres_per_px": 1185.2581595195134
+    }
+  },
+  "layers": [
+    {
+      "id": "illumination",
+      "label": "Average Illumination",
+      "extent": "80S",
+      "file": "illumination_80S.png",
+      "legend_stops": [
+        [
+          0,
+          "0 %"
+        ],
+        [
+          0.5,
+          "50 %"
+        ],
+        [
+          1,
+          "100 %"
+        ]
+      ],
+      "source": "MOCK (synthetic raster)",
+      "derived": false
+    },
+    {
+      "id": "earth_visibility",
+      "label": "Earth Visibility",
+      "extent": "80S",
+      "file": "earth_visibility_80S.png",
+      "legend_stops": [
+        [
+          0,
+          "0 %"
+        ],
+        [
+          0.5,
+          "50 %"
+        ],
+        [
+          1,
+          "100 %"
+        ]
+      ],
+      "source": "MOCK (synthetic raster)",
+      "derived": false
+    },
+    {
+      "id": "slope_hazard",
+      "label": "Slope Hazard",
+      "extent": "80S",
+      "file": "slope_hazard_80S.png",
+      "legend_stops": [
+        [
+          0,
+          "<5\u00b0"
+        ],
+        [
+          0.33,
+          "5\u201310\u00b0"
+        ],
+        [
+          0.66,
+          "10\u201315\u00b0"
+        ],
+        [
+          1,
+          ">15\u00b0"
+        ]
+      ],
+      "source": "MOCK (synthetic raster)",
+      "derived": false
+    },
+    {
+      "id": "psr",
+      "label": "PSR (derived)",
+      "extent": "80S",
+      "file": "psr_80S.png",
+      "legend_stops": [
+        [
+          0,
+          "no"
+        ],
+        [
+          1,
+          "permanently shadowed"
+        ]
+      ],
+      "source": "MOCK (synthetic raster)",
+      "derived": true
+    },
+    {
+      "id": "psr_distance",
+      "label": "Distance to PSR",
+      "extent": "80S",
+      "file": "psr_distance_80S.png",
+      "legend_stops": [
+        [
+          0,
+          "0 km"
+        ],
+        [
+          1,
+          "200 km"
+        ]
+      ],
+      "source": "MOCK (synthetic raster)",
+      "derived": true
+    },
+    {
+      "id": "illumination",
+      "label": "Average Illumination",
+      "extent": "85S",
+      "file": "illumination_85S.png",
+      "legend_stops": [
+        [
+          0,
+          "0 %"
+        ],
+        [
+          0.5,
+          "50 %"
+        ],
+        [
+          1,
+          "100 %"
+        ]
+      ],
+      "source": "MOCK (synthetic raster)",
+      "derived": false
+    },
+    {
+      "id": "earth_visibility",
+      "label": "Earth Visibility",
+      "extent": "85S",
+      "file": "earth_visibility_85S.png",
+      "legend_stops": [
+        [
+          0,
+          "0 %"
+        ],
+        [
+          0.5,
+          "50 %"
+        ],
+        [
+          1,
+          "100 %"
+        ]
+      ],
+      "source": "MOCK (synthetic raster)",
+      "derived": false
+    },
+    {
+      "id": "slope_hazard",
+      "label": "Slope Hazard",
+      "extent": "85S",
+      "file": "slope_hazard_85S.png",
+      "legend_stops": [
+        [
+          0,
+          "<5\u00b0"
+        ],
+        [
+          0.33,
+          "5\u201310\u00b0"
+        ],
+        [
+          0.66,
+          "10\u201315\u00b0"
+        ],
+        [
+          1,
+          ">15\u00b0"
+        ]
+      ],
+      "source": "MOCK (synthetic raster)",
+      "derived": false
+    },
+    {
+      "id": "psr",
+      "label": "PSR (derived)",
+      "extent": "85S",
+      "file": "psr_85S.png",
+      "legend_stops": [
+        [
+          0,
+          "no"
+        ],
+        [
+          1,
+          "permanently shadowed"
+        ]
+      ],
+      "source": "MOCK (synthetic raster)",
+      "derived": true
+    },
+    {
+      "id": "psr_distance",
+      "label": "Distance to PSR",
+      "extent": "85S",
+      "file": "psr_distance_85S.png",
+      "legend_stops": [
+        [
+          0,
+          "0 km"
+        ],
+        [
+          1,
+          "200 km"
+        ]
+      ],
+      "source": "MOCK (synthetic raster)",
+      "derived": true
+    }
+  ]
+}

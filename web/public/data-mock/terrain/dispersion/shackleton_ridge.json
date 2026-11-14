@@ -1,0 +1,15 @@
+{
+  "schema": "dispersion",
+  "version": 1,
+  "mock": true,
+  "note": "MOCK DATA \u2014 synthetic values, not for science or demo claims",
+  "site_id": "shackleton_ridge",
+  "nodes": [
+    11,
+    11
+  ],
+  "spacing_m": 50,
+  "dtype": "uint8",
+  "unit_deg": 0.1,
+  "layout": "row-major [row j][col i], j north"
+}
