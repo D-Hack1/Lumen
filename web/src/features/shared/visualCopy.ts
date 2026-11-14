@@ -23,7 +23,7 @@ const planner: Table = {
   'barcode.blocked': 'Blocked',
   'barcode.day': 'd{n}',
   'barcode.aria': 'Survival barcode: Sun and Earth availability by day since landing',
-  'disp.within': '{pct}% of spots ≤ {tol}°',
+  'disp.within': '{pct}% of spots < {tol}°',
   'disp.axis': 'slope at candidate spots',
   'twin.label': 'Earth twin: Sun path at this latitude today (educational approximation)',
   'twin.toggle': 'Earth twin',

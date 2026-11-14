@@ -21,6 +21,7 @@ import { SlopeCompass } from './SlopeCompass';
 import { usePad } from './usePad';
 import { useDispersion } from './useDispersion';
 import { DispersionHistogram } from './DispersionHistogram';
+import { summariseDispersion } from '../../engine/data/dispersion';
 import { PanelPowerBars } from './PanelPowerBars';
 
 const HEIGHTS: MastHeightM[] = [1, 2, 5, 10];
@@ -54,6 +55,9 @@ export function TouchdownPad() {
   const slope = pad?.slopeDeg ?? result.metrics?.padSlopeDeg?.value ?? null;
   const downhill = pad?.downhillAspectDeg ?? null;
   const series = result.series;
+  // One source of truth: when the grid is loaded, quote p95 from IT (same numbers as the histogram); pad.json's
+  // precomputed stats are only the fallback while it loads or when no grid exists.
+  const p95 = dispersion ? summariseDispersion(dispersion, maxSlope).p95 : (pad?.dispersionSlopeStats.p95 ?? null);
 
   // Pad risk flag: nominal slope vs the profile limit; p95 over dispersion catches "fine at the aim point, not
   // after a realistic miss" (PLAN_FINAL §5.6). Never colour alone — Badge carries a glyph.
@@ -62,8 +66,8 @@ export function TouchdownPad() {
       ? { tone: 'pending', text: 'pad slope n/a' }
       : slope > maxSlope
         ? { tone: 'nogo', text: `pad slope ${slope.toFixed(1)}° > ${maxSlope}°` }
-        : pad && pad.dispersionSlopeStats.p95 > maxSlope
-          ? { tone: 'marginal', text: `p95 ${pad.dispersionSlopeStats.p95.toFixed(1)}° > ${maxSlope}° after dispersion` }
+        : p95 != null && p95 > maxSlope
+          ? { tone: 'marginal', text: `p95 ${p95.toFixed(1)}° > ${maxSlope}° after dispersion` }
           : { tone: 'go', text: `pad slope ${slope.toFixed(1)}° ≤ ${maxSlope}°` };
 
   return (
@@ -126,7 +130,7 @@ export function TouchdownPad() {
 
       {dispersion && (
         <div style={{ height: 52, flexShrink: 0 }}>
-          <DispersionHistogram slopesDeg={dispersion.slopeDeg} toleranceDeg={maxSlope} />
+          <DispersionHistogram dispersion={dispersion} toleranceDeg={maxSlope} />
         </div>
       )}
 
