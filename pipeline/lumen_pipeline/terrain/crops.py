@@ -1,4 +1,3 @@
-
 """Deterministic multi-resolution terrain crop selection and reads."""
 
 from __future__ import annotations
@@ -88,9 +87,7 @@ class TerrainCrops:
     def for_distance_km(self, distance_km: float) -> TerrainCrop:
         """Select the crop owning a distance, rejecting unavailable coverage."""
 
-        crops = tuple(
-            crop for crop in (self.near, self.mid, self.far) if crop is not None
-        )
+        crops = tuple(crop for crop in (self.near, self.mid, self.far) if crop is not None)
         for index, crop in enumerate(crops):
             upper_inclusive = index == len(crops) - 1
             in_range = crop.spec.min_distance_km <= distance_km and (
@@ -180,9 +177,7 @@ def _select_product(
 ) -> DemProduct:
     for key in spec.source_keys:
         product = products.get(key)
-        if product is not None and product.is_verified and _covers(
-            product, latitude_deg
-        ):
+        if product is not None and product.is_verified and _covers(product, latitude_deg):
             return product
     raise CropCoverageError(
         f"{spec.name} crop has no verified source covering latitude {latitude_deg}"
@@ -211,11 +206,7 @@ def _radial_coverage(
 
     # Rasterio CRS does not expose axis_info. Convert it to a PyProj CRS first.
     pyproj_crs = CRS.from_wkt(dem.crs.to_wkt())
-    units = {
-        axis.unit_name.lower()
-        for axis in pyproj_crs.axis_info
-        if axis.unit_name
-    }
+    units = {axis.unit_name.lower() for axis in pyproj_crs.axis_info if axis.unit_name}
     if not units or not units <= {"metre", "meter", "metres", "meters"}:
         return False, f"source CRS units are not metres: {sorted(units)}"
 
@@ -231,12 +222,9 @@ def _radial_coverage(
 
     def boundary_point(radius_km: float, bearing: float) -> tuple[float, float]:
         angular_distance = radius_km * 1000.0 / SPHERE_RADIUS_M
-        sin_lat = (
-            math.sin(lat0) * math.cos(angular_distance)
-            + math.cos(lat0)
-            * math.sin(angular_distance)
-            * math.cos(bearing)
-        )
+        sin_lat = math.sin(lat0) * math.cos(angular_distance) + math.cos(lat0) * math.sin(
+            angular_distance
+        ) * math.cos(bearing)
         lat = math.asin(max(-1.0, min(1.0, sin_lat)))
         lon = lon0 + math.atan2(
             math.sin(bearing) * math.sin(angular_distance) * math.cos(lat0),
@@ -257,14 +245,7 @@ def _radial_coverage(
             points = list(zip(bearings, xs, ys))
 
             mid_bearings = [
-                bearing
-                + (
-                    (
-                        points[(index + 1) % len(points)][0] - bearing
-                    )
-                    % (2.0 * math.pi)
-                )
-                / 2.0
+                bearing + ((points[(index + 1) % len(points)][0] - bearing) % (2.0 * math.pi)) / 2.0
                 for index, (bearing, _, _) in enumerate(points)
             ]
             mid_lons, mid_lats = zip(
@@ -288,8 +269,7 @@ def _radial_coverage(
                         0.0,
                         min(
                             1.0,
-                            ((xm - x1) * dx + (ym - y1) * dy)
-                            / (dx * dx + dy * dy),
+                            ((xm - x1) * dx + (ym - y1) * dy) / (dx * dx + dy * dy),
                         ),
                     )
                     deviation = math.hypot(
@@ -297,16 +277,11 @@ def _radial_coverage(
                         ym - (y1 + projection * dy),
                     )
 
-                if (
-                    segment_length > _BOUNDARY_MAX_SEGMENT_M
-                    or deviation > _BOUNDARY_TOLERANCE_M
-                ):
+                if segment_length > _BOUNDARY_MAX_SEGMENT_M or deviation > _BOUNDARY_TOLERANCE_M:
                     converged = False
 
             if converged:
-                return [(x, y) for _, x, y in points] + [
-                    (x, y) for _, x, y in mids
-                ]
+                return [(x, y) for _, x, y in points] + [(x, y) for _, x, y in mids]
 
             if len(bearings) * 2 > _BOUNDARY_MAX_SAMPLES:
                 return None
@@ -318,9 +293,7 @@ def _radial_coverage(
             ]
 
     rings = [outer_km] + ([inner_km] if inner_km > 0.0 else [])
-    transformed_rings = [
-        transformed_boundary(radius_km) for radius_km in rings
-    ]
+    transformed_rings = [transformed_boundary(radius_km) for radius_km in rings]
 
     if any(ring is None for ring in transformed_rings):
         return False, "spherical boundary sampling did not converge conservatively"
@@ -331,10 +304,7 @@ def _radial_coverage(
         (x, y)
         for ring in valid_rings
         for x, y in ring
-        if not (
-            left + margin <= x <= right - margin
-            and bottom + margin <= y <= top - margin
-        )
+        if not (left + margin <= x <= right - margin and bottom + margin <= y <= top - margin)
     ]
 
     if not outside:
