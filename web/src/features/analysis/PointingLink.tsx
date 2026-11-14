@@ -47,18 +47,36 @@ export function PointingLink() {
   if (!series) return <div className="pointing-link">loading…</div>;
 
   return (
-    <div className="pointing-link" style={{ display: 'flex', gap: 'var(--sp-7)', height: '100%' }}>
-      <dl className="num" style={{ flex: 1 }}>
-        <dt>Sun az / el</dt>
-        <dd ref={sunRef} />
-        <dt>Earth az / el</dt>
-        <dd ref={earthRef} />
-        <dt>Earth disk</dt>
-        <dd ref={diskRef} />
-        <dt>Link</dt>
-        <dd ref={linkRef} />
+    <div className="pointing-link" style={{ display: 'flex', gap: 'var(--sp-7)', height: '100%', minHeight: 0, overflow: 'hidden' }}>
+      {/* 2×2 grid (label above value) instead of 8 stacked lines: the stacked <dl> overflowed the Analysis slot
+          (e2e "every tab fits"). Each label/value pair is wrapped in a <div>, which is valid inside <dl>. */}
+      <dl
+        className="num"
+        style={{
+          flex: 1,
+          minWidth: 0,
+          margin: 0,
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+          alignContent: 'start',
+          gap: 'var(--sp-2) var(--sp-5)',
+        }}
+      >
+        {(
+          [
+            ['Sun az / el', sunRef],
+            ['Earth az / el', earthRef],
+            ['Earth disk', diskRef],
+            ['Link', linkRef],
+          ] as const
+        ).map(([label, ref]) => (
+          <div key={label} style={{ minWidth: 0 }}>
+            <dt style={{ color: color.textFaint, fontSize: 'var(--fs-2xs)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</dt>
+            <dd ref={ref} style={{ margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} />
+          </div>
+        ))}
       </dl>
-      <div style={{ flex: 1, color: color.textFaint, fontSize: 'var(--fs-sm)' }}>
+      <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', color: color.textFaint, fontSize: 'var(--fs-sm)' }}>
         DSN lanes (Goldstone / Canberra / Madrid) land in Phase 3 once `dsn.bin` is wired through the engine.
       </div>
     </div>
