@@ -19,6 +19,7 @@ const base: ScenarioRequest = {
   siteId: 'im2_athena', tier: 'pending', nearFieldResM: null, latDeg: -84.7906, lonDegEast: 29.1957, heightM: 2, rotation: null,
   touchdownMs: TOUCHDOWN, padSlopeDeg: null, psr: null, startMs: TOUCHDOWN, durationDays: 30, tScrubMs: TOUCHDOWN,
   definitions: DEFAULT_DEFINITIONS, dataVersions: { catalog: 1 },
+  profile: { minSunlitPct: 0, minLinkHours: 0, maxLongestNightH: 1e9, maxPadSlopeDeg: 90 }, weights: { sunlit: 1, link: 1, night: 1, slope: 1 },
 };
 
 describe.skipIf(!run)('buildScenarioResult (real IM-2 ephemeris)', () => {
@@ -45,7 +46,7 @@ describe.skipIf(!run)('buildScenarioResult (real IM-2 ephemeris)', () => {
   it('never invents values it does not have: no sigma bounds, no power, verdict pending, honest labels', () => {
     const r = buildScenarioResult(eph, base);
     expect(r.verdict).toBe('PENDING');
-    expect(r.verdictReasons[0]).toMatch(/not available yet/);
+    expect(r.verdictReasons.join(' ')).toMatch(/smooth-Moon bound; terrain data is needed to confirm/);
     expect(r.metrics!.energyPerDayWh.value).toBeNull();
     expect(r.metrics!.sunlitPct.lo).toBeNull(); // no +/- until the uncertainty passes exist
     expect(r.meta!.sigmaSource).toBe('smooth-Moon bound');
@@ -89,6 +90,41 @@ describe.skipIf(!run)('buildScenarioResult (real IM-2 ephemeris)', () => {
     const r = await evaluateScenario(base);
     expect(r.status).toBe('ready');
     expect(r.meta!.dataVersions.ephem).toBe('real');
+  });
+});
+
+describe.skipIf(!run)('verdict wired into the real result (oracle: golden set 1, computed by the Python reference)', () => {
+  let eph: Ephemeris;
+  beforeAll(async () => {
+    setDataMode('real');
+    stubFetch();
+    eph = await loadEphem();
+  });
+  afterAll(() => setDataMode(null));
+  const weights = { sunlit: 1, link: 1, night: 1, slope: 1 };
+  // golden (Python): sunlit 49.296%, Earth visible 67.208% of 720 h = 483.9 h, over the 30-day window.
+  const req = (profile: ScenarioRequest['profile']): ScenarioRequest => ({ ...base, profile, weights });
+
+  it('NO-GO when even the optimistic best case misses the profile: min sunlit 60 > 49.3', () => {
+    const r = buildScenarioResult(eph, req({ minSunlitPct: 60, minLinkHours: 100, maxLongestNightH: 500, maxPadSlopeDeg: 10 }));
+    expect(r.verdict).toBe('NO-GO');
+    expect(r.verdictReasons.join(' ')).toMatch(/Sunlit time 49\.3% is below the minimum \(60%\)/);
+  });
+  it('NO-GO on link hours: 483.9 h < 500 h', () => {
+    const r = buildScenarioResult(eph, req({ minSunlitPct: 10, minLinkHours: 500, maxLongestNightH: 500, maxPadSlopeDeg: 10 }));
+    expect(r.verdict).toBe('NO-GO');
+    expect(r.verdictReasons.join(' ')).toMatch(/Link time 483\.9 h is below the minimum \(500 h\)/);
+  });
+  it('PENDING (never GO) when the smooth-Moon best case passes: terrain is needed to confirm', () => {
+    const r = buildScenarioResult(eph, req({ minSunlitPct: 40, minLinkHours: 100, maxLongestNightH: 500, maxPadSlopeDeg: 10 }));
+    expect(r.verdict).toBe('PENDING');
+    expect(r.verdictReasons.join(' ')).toMatch(/smooth-Moon bound/);
+  });
+  it('exposes the Viability Index components, scored from the same metrics', () => {
+    const r = buildScenarioResult(eph, req({ minSunlitPct: 60, minLinkHours: 100, maxLongestNightH: 500, maxPadSlopeDeg: 10 }));
+    const sunlit = r.viability!.components.find((c) => c.id === 'sunlit')!;
+    expect(sunlit.score).toBeCloseTo(49.2963 / 60, 3); // value / limit, hand-worked from the golden 49.2963 %
+    expect(r.viability!.components.find((c) => c.id === 'slope')!.score).toBeNull(); // no pad data for this site
   });
 });
 

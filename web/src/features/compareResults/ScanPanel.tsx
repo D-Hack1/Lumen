@@ -64,9 +64,9 @@ export function ScanPanel() {
               <th className="rt__rank">{t('scan.col.rank')}</th>
               <th className="rt__site">{t('scan.col.site')}</th>
               <th className="rt__verdict">{t('scan.col.verdict')}</th>
-              <th>{t('scan.col.sunlit')}</th>
-              <th>{t('scan.col.link')}</th>
-              <th>{t('scan.col.night')}</th>
+              <th className="rt__num">{t('scan.col.sunlit')}</th>
+              <th className="rt__num">{t('scan.col.link')}</th>
+              <th className="rt__num">{t('scan.col.night')}</th>
               <th className="rt__act" />
             </tr>
           </thead>
@@ -74,15 +74,15 @@ export function ScanPanel() {
             {rows.map((c, i) => (
               <tr key={`${c.siteId}-${c.landingUtc}`} data-provisional={c.provisional} data-bounds={c.boundsStatus}>
                 <td className="rt__rank">{i + 1}</td>
-                <td className="rt__site" title={`${nameOf(c.siteId)} · ${day(c.landingUtc)}`}>
-                  {nameOf(c.siteId)} {'·'} {day(c.landingUtc)}
+                <td className="rt__site" title={`${day(c.landingUtc)} · ${nameOf(c.siteId)}`}>
+                  {day(c.landingUtc)} {'·'} {nameOf(c.siteId)}
                 </td>
-                <td className="rt__verdict">
-                  <Badge tone={c.provisional ? 'provisional' : TONE[c.verdict]}>{`${t('verdict.' + c.verdict)}${c.provisional ? ` (${t('scan.provisional')})` : ''}`}</Badge>
+                <td className="rt__verdict" title={c.provisional ? t('scan.provisional') : t('scan.stage2')}>
+                  <Badge tone={c.provisional ? 'provisional' : TONE[c.verdict]}>{t('verdict.' + c.verdict)}</Badge>
                 </td>
-                <td>{fmtBounded(c.sunlitPct, 0, '%')}</td>
-                <td>{fmtBounded(c.linkPct, 0, '%')}</td>
-                <td>{fmtBounded(c.longestNightH, 0, ' h')}</td>
+                <td className="rt__num">{fmtBounded(c.sunlitPct, 0, '%')}</td>
+                <td className="rt__num">{fmtBounded(c.linkPct, 0, '%')}</td>
+                <td className="rt__num">{fmtBounded(c.longestNightH, 0, ' h')}</td>
                 <td className="rt__act">
                   <button
                     type="button"
