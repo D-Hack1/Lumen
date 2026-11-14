@@ -10,7 +10,7 @@
         },
         "mask_json": {
           "path": "terrain/masks/shackleton_ridge.json",
-          "sha256": "a1c032ec91b0422ebec8911cfaa8eae4625b5fcfb3799beacec7e0cabd68d69b",
+          "sha256": "01a117f3fe0eabaf8d2b0d9a8bba0bfe7c6776b70e14874bc38ca38eed027df9",
           "version": "1.0.0"
         }
       },
