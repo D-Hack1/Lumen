@@ -10,7 +10,7 @@ export interface Fixture {
   name: string;
   scenario?: Partial<Scenario>;
   slots: Partial<Record<SlotId, ReactNode>>;
-  missionBar?: { siteLabel?: string; tierLabel?: string; verdict?: Verdict };
+  missionBar?: { siteLabel?: string; tierLabel?: string; verdict?: Verdict; provisional?: boolean };
 }
 
 export const FixtureContext = createContext<Fixture | null>(null);

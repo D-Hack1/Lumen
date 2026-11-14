@@ -1,40 +1,32 @@
 // Owner: Abhinav
-// Persistent Top Mission Bar (PLAN §8.2) — Phase 1 skeleton.
-// Built: brand + site + tier, view tabs, landing UTC + duration + MET readout, jump buttons S/E/X/T (instant
-// scrub, no tween), verdict chip, persona switch, Share URL + toast.
-// Phase 2: dynamic E label (Next Earthrise/Earthset from answer.earth.visible), jump tooltips with target time ±.
-// Phase 5: Quick Answer, Quick-Start, Help buttons; full keyboard map (1/2/3, S/E/X/T, Q).
+// Persistent Top Mission Bar (PLAN §8.2).
+// Phase 1: brand + site + tier, view tabs, landing UTC + duration + MET readout, persona switch, Share URL + toast.
+// Phase 2: jump buttons S/E/X/T calling the engine's jumpTo (instant scrub, no tween) with a dynamic E label
+//   (Next Earthrise when Earth is down, Next Earthset when up, from the engine answer state, R3 D-14), tooltips
+//   with target time ±, disabled state when there is no event before the window ends, keyboard S/E/X/T;
+//   verdict chip with 120 ms crossfade + Mission Profile popover.
+// Phase 5: Quick Answer, Quick-Start, Help buttons; full keyboard map (1/2/3, Q, arrows, Space).
 import { useEffect, useRef, useState } from 'react';
 import { jumpTo, useCatalog, useResult } from '../engine/hooks';
-import type { EventType, Verdict } from '../engine/types';
+import type { AnswerState, EventRecord, Verdict } from '../engine/types';
+import { forcedAnswerFromUrl, WORST_CASE_ANSWER } from '../mocks/forced';
 import { crosshairBus } from '../state/buses';
 import { useCopyFn } from '../state/copy';
 import { crosshair } from '../state/crosshairStore';
 import { getScenario, useScenario, type DurationDays, type Persona, type ViewId } from '../state/scenarioStore';
 import { scenarioUrl } from '../state/urlSync';
-import { Badge, type BadgeTone } from '../ui/Badge';
+import { Badge } from '../ui/Badge';
 import { Segmented } from '../ui/Segmented';
 import { toast } from '../ui/Toast';
+import { Tooltip } from '../ui/Tooltip';
+import { JUMP_SLOTS, jumpSlotForKey, jumpTooltip, resolveJump, type JumpTarget } from './jumps';
 import { useFixture } from './layout/fixture';
 import { formatMet, formatUtc, parseUtc } from './time';
+import { chipFromResult, forcedChipFromUrl, type ChipState } from './verdict';
+import { VerdictChip } from './VerdictChip';
 
 const VIEWS: ViewId[] = ['cockpit', 'compare', 'methodology'];
 const DURATIONS: DurationDays[] = [7, 14, 30, 60];
-const VERDICT_TONE: Record<Verdict, BadgeTone> = {
-  GO: 'go',
-  MARGINAL: 'marginal',
-  'NO-GO': 'nogo',
-  PENDING: 'pending',
-};
-
-type JumpId = Extract<EventType, 'sunset' | 'earthset' | 'shadowExit'> | 'touchdown';
-const JUMPS: { id: JumpId; key: string }[] = [
-  { id: 'sunset', key: 'S' },
-  { id: 'earthset', key: 'E' }, // Phase 2: 'earthrise' when Earth is down (D-14)
-  { id: 'shadowExit', key: 'X' },
-  { id: 'touchdown', key: 'T' },
-];
-
 // ---------- pieces ----------
 
 function LandingInput() {
@@ -104,43 +96,82 @@ function MetReadout() {
   );
 }
 
-function JumpButtons() {
+export interface JumpButtonsProps {
+  answer: AnswerState | null;
+  events: EventRecord[];
+  /** Listen for S/E/X/T on the window (off for secondary renders and tests). */
+  keyboard?: boolean;
+}
+
+/** Jump buttons S / E / X / T. Targets come from the engine; the scrub is committed instantly (no tween, §1.4). */
+export function JumpButtons({ answer, events, keyboard = true }: JumpButtonsProps) {
   const t = useCopyFn();
-  const onJump = (id: JumpId) => {
-    const target = id === 'touchdown' ? getScenario().landingUtc : jumpTo(id);
-    if (target == null) return toast(t('mb.jump.none'));
-    crosshair.commitScrub(target); // instant — no tween of t_scrub (§1.4)
+  const scrubUtc = useScenario((s) => s.scrubUtc); // committed scrub (human rate) so targets stay "next"
+  const landingUtc = useScenario((s) => s.landingUtc);
+  const targets = JUMP_SLOTS.map((slot) => resolveJump(slot, { answer, events, scrubUtc, landingUtc, jumpTo }));
+
+  const go = (j: JumpTarget) => {
+    if (j.t == null) return toast(t('mb.jump.none'));
+    crosshair.commitScrub(j.t); // instant: t_scrub is never tweened
   };
+  const latest = useRef({ answer, events, go });
+  latest.current = { answer, events, go };
+
+  useEffect(() => {
+    if (!keyboard) return;
+    const onKey = (e: KeyboardEvent) => {
+      const slot = jumpSlotForKey(e);
+      if (!slot) return;
+      e.preventDefault();
+      const s = getScenario(); // read at key time, not at the last render
+      const { answer: a, events: ev, go: g } = latest.current;
+      g(resolveJump(slot, { answer: a, events: ev, scrubUtc: s.scrubUtc, landingUtc: s.landingUtc, jumpTo }));
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [keyboard]);
+
   return (
-    <div className="mb-jumps" role="group" aria-label="Jump to event">
-      {JUMPS.map((j) => (
-        <button
-          key={j.id}
-          type="button"
-          className="mb-btn mb-jump"
-          title={`${t(`mb.jump.${j.id}.long`)} (${j.key})`}
-          aria-label={t(`mb.jump.${j.id}.long`)}
-          aria-keyshortcuts={j.key}
-          onClick={() => onJump(j.id)}
-        >
-          <kbd className="mb-kbd">{j.key}</kbd>
-          <span className="mb-jump__label mb-mid">{t(`mb.jump.${j.id}`)}</span>
-        </button>
+    <div className="mb-jumps" role="group" aria-label={t('mb.jump.group')}>
+      {targets.map((j) => (
+        <Tooltip key={j.slot} content={jumpTooltip(j, t)}>
+          <button
+            type="button"
+            className="mb-btn mb-jump"
+            data-jump={j.slot}
+            data-event={j.id}
+            aria-label={t(`mb.jump.${j.id}.long`)}
+            aria-keyshortcuts={j.slot}
+            aria-disabled={j.t == null || undefined}
+            onClick={() => go(j)}
+          >
+            <kbd className="mb-kbd">{j.slot}</kbd>
+            <span className="mb-jump__label mb-mid">{t(`mb.jump.${j.id}`)}</span>
+          </button>
+        </Tooltip>
       ))}
     </div>
   );
 }
 
-function VerdictChip({ verdict }: { verdict: Verdict }) {
-  const t = useCopyFn();
-  return (
-    <span className="mb-verdict" title={t('mb.verdict')}>
-      {/* key → remount → 120 ms opacity crossfade on change */}
-      <Badge key={verdict} tone={VERDICT_TONE[verdict]} size="md" className="mb-verdict__chip">
-        {t(`verdict.${verdict}`)}
-      </Badge>
-    </span>
-  );
+/** Same answer source as the Answer Strip: worst-case fixture, then `?answerState=`, then the live engine result. */
+function useBarAnswer(live: AnswerState | null): AnswerState | null {
+  const worst = useFixture()?.name === 'worst-case';
+  return worst ? WORST_CASE_ANSWER : (forcedAnswerFromUrl() ?? live);
+}
+
+/** Remember the last settled verdict so a recompute shows it as provisional instead of flashing PENDING. */
+function useChipState(
+  status: 'idle' | 'loading' | 'ready' | 'error',
+  verdict: Verdict,
+  forced: ChipState | null,
+): ChipState {
+  const settled = useRef<Verdict | null>(null);
+  const chip = chipFromResult({ status, verdict }, settled.current);
+  useEffect(() => {
+    if (status === 'ready') settled.current = verdict;
+  }, [status, verdict]);
+  return forced ?? chip;
 }
 
 // ---------- bar ----------
@@ -163,7 +194,9 @@ export function MissionBar() {
     fx?.siteLabel ??
     (site.kind === 'point' ? `${site.lat.toFixed(3)}°, ${site.lon.toFixed(3)}°` : (rec?.name ?? site.id));
   const tier = fx?.tierLabel ?? (rec ? `Tier ${rec.tier}` : site.kind === 'point' ? 'Tier B/C' : 'Tier –');
-  const verdict = fx?.verdict ?? result.verdict;
+  const answer = useBarAnswer(result.answer);
+  const fxChip: ChipState | null = fx?.verdict ? { verdict: fx.verdict, provisional: !!fx.provisional } : null;
+  const chip = useChipState(result.status, result.verdict, fxChip ?? forcedChipFromUrl());
 
   const share = async () => {
     const url = scenarioUrl();
@@ -210,10 +243,10 @@ export function MissionBar() {
         <MetReadout />
       </div>
 
-      <JumpButtons />
+      <JumpButtons answer={answer} events={result.events} />
 
       <div className="mb-end">
-        <VerdictChip verdict={verdict} />
+        <VerdictChip state={chip} reasons={result.verdictReasons} />
         <Segmented<Persona>
           size="sm"
           ariaLabel={t('mb.persona')}
