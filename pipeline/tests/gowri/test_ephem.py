@@ -40,7 +40,9 @@ def test_ephemeris_writer_preserves_contract_layout(tmp_path):
     nodes, sidecar = read_array(output)
     assert nodes.shape == (3, 12)
     assert nodes.dtype == np.dtype("<f4")
-    assert sidecar["frame"] == "MOON_ME_DE421"
+    assert sidecar["frame"] == "MOON_ME"
+    assert sidecar["spice_frame"] == "MOON_ME_DE421"
+    assert sidecar["cadence_s"] == 3600
     assert sidecar["aberration_correction"] == "LT+S"
     assert sidecar["body_order"] == ["sun", "earth"]
     assert len(sidecar["kernel_provenance"]) == 5
