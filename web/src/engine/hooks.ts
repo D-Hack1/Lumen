@@ -28,7 +28,7 @@ const EMPTY_QUICK: QuickAnswerResult = {
   sunlitPct: { value: null, lo: null, hi: null }, linkPct: { value: null, lo: null, hi: null }, psrDistanceKm: null, text: '',
 };
 const EMPTY_LAYERS: LayersResult = {
-  layers: [], extents: null, sizePx: null, regions: [], regionsSvgUrl: null, loading: true, error: null,
+  layers: [], extents: null, sizePx: null, regions: [], loading: true, error: null,
 };
 
 /** Run an async loader once on mount; `fallback` is returned until it resolves. */

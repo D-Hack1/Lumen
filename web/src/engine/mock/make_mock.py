@@ -12,6 +12,7 @@ All binary data is little-endian.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import random
@@ -38,6 +39,15 @@ def w_bin(rel: str, data: bytes) -> None:
     p = OUT / rel
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_bytes(data)
+
+
+def w_array(rel: str, data: bytes, *, shape, dtype, fields, units, scale=None, offset=None, **extra) -> None:
+    """Gowri's shared binary-sidecar contract (pipeline/common/binio.py): raw little-endian array + JSON sidecar."""
+    w_bin(rel, data)
+    meta = {"version": "1", "shape": list(shape), "dtype": dtype, "fields": fields, "units": units, "scale": scale, "offset": offset,
+            "producer": "web/src/engine/mock/make_mock.py", "created_utc": "2026-01-01T00:00:00Z",
+            "sha256": hashlib.sha256(data).hexdigest(), "mock": True, "note": MOCK_NOTE, **extra}
+    w_json(rel[:-4] + ".json", meta)
 
 
 def hdr(schema: str, **kw: object) -> dict:
@@ -151,6 +161,9 @@ def vel(fn, t, eps=60.0):
     return [(b[i] - a[i]) / (2 * eps) for i in range(3)]
 
 
+EPH_FIELDS = [f"{b}_{q}_{a}" for b, q in (("sun", "position_km"), ("sun", "velocity_km_s"), ("earth", "position_km"), ("earth", "velocity_km_s")) for a in "xyz"]
+
+
 def make_ephem():
     n = (T1 - T0) // EPH_STEP + 1
     buf = bytearray()
@@ -158,11 +171,11 @@ def make_ephem():
         t = T0 + i * EPH_STEP
         rec = sun_pos(t) + vel(sun_pos, t) + earth_pos(t) + vel(earth_pos, t)
         buf += struct.pack("<12f", *rec)
-    w_bin("ephem/ephem.bin", bytes(buf))
-    w_json("ephem/ephem.json", hdr(
-        "ephem", epoch_utc=iso(T0), epoch_unix_s=T0, step_s=EPH_STEP, count=n, frame="MOON_ME", units={"pos": "km", "vel": "km/s"},
-        aberration="LT+S (mock: none, synthetic circular Sun path)", record_layout=["sun_pos[3]", "sun_vel[3]", "earth_pos[3]", "earth_vel[3]"],
-        dtype="float32", byte_length=len(buf), kernels=[{"name": "MOCK", "sha256": "0" * 64}]))
+    w_array("ephem/ephem.bin", bytes(buf), shape=(n, 12), dtype="float32", fields=EPH_FIELDS,
+            units=["km"] * 3 + ["km/s"] * 3 + ["km"] * 3 + ["km/s"] * 3,
+            start_utc=iso(T0), cadence_s=EPH_STEP, frame="MOON_ME", body_order=["sun", "earth"],
+            aberration="LT+S (mock: none, synthetic circular Sun path)", kernels=[{"name": "MOCK", "sha256": "0" * 64}],
+            mock_cadence_note="mock is 6 h; real is 3600 s. Loaders must read cadence_s.")
 
 
 DSN = [("DSS-14", "Goldstone", 0.0), ("DSS-43", "Canberra", 2 * math.pi / 3), ("DSS-63", "Madrid", 4 * math.pi / 3)]
@@ -170,19 +183,17 @@ DSN_STEP = 1800
 
 
 def make_dsn():
+    """data_dsn.md: little-endian int16 = round(elevation_deg * 2), valid [-180, 180]. Layout here: time-major [count, 3]."""
     n = (T1 - T0) // DSN_STEP + 1
-    cols = [bytearray() for _ in DSN]
+    buf = bytearray()
     for i in range(n):
         t = T0 + i * DSN_STEP
-        for k, (_, _, ph) in enumerate(DSN):
+        for _, _, ph in DSN:
             el = 55 * math.sin(2 * math.pi * (t - T0) / 86164.1 + ph) + 20 * math.sin(2 * math.pi * (t - T0) / (27.32 * 86400))
-            q = round(max(-90.0, min(90.0, el)) * 2)
-            cols[k] += struct.pack("<h", q)
-    w_bin("dsn/dsn.bin", b"".join(bytes(c) for c in cols))
-    w_json("dsn/dsn.json", hdr(
-        "dsn", epoch_utc=iso(T0), epoch_unix_s=T0, step_s=DSN_STEP, count=n, quantum_deg=0.5,
-        dtype="int16", valid_range=[-180, 180], decode="stored_value / 2", layout="station-major: stations[k] occupies int16 values [k*count, (k+1)*count)",
-        stations=[{"id": s, "complex": c} for s, c, _ in DSN]))
+            buf += struct.pack("<h", max(-180, min(180, round(max(-90.0, min(90.0, el)) * 2))))
+    w_array("dsn/dsn.bin", bytes(buf), shape=(n, 3), dtype="int16", fields=[d[0] for d in DSN], units="deg", scale=0.5, offset=0.0,
+            start_utc=iso(T0), cadence_s=DSN_STEP, mode="geometric_only", frame="MOON_ME",
+            station_complexes={d[0]: d[1] for d in DSN}, mock_cadence_note="mock is 1800 s; real is 600 s. Read cadence_s.")
 
 
 # ---------------------------------------------------------------- terrain: masks, sigma, pad, dispersion, summaries
@@ -258,36 +269,49 @@ def make_masks():
 
 
 def make_pad_disp_summaries():
-    pools = {}
     for s in SITES:
         if s["tier"] == "C":
             w_json(f"terrain/summaries/{s['id']}.json", hdr(
-                "site_summary", site_id=s["id"], tier="C", near_field_res_m=None, dem_source=None,
-                files={"mask": None, "sigma": None, "pad": None, "dispersion": None}, psr=None, run_utc="2026-01-01T00:00:00Z"))
+                "site_summary", version="0.1.0", site_id=s["id"], run_timestamp_utc="2026-01-01T00:00:00Z", tier="pending",
+                near_field_res_m=None, dem_source=None,
+                files_present={k: None for k in ("mask_bin", "mask_json", "sigma_bin", "sigma_json", "pad_json", "dispersion_bin", "dispersion_json")},
+                pad_headline=None, psr=None))
             continue
         th = s["slope"]
+        nf = s["nf"]
+        up = (s["aspect"] + 180) % 360
+        # ground normal in the site frame, rotated to MOON_ME (rows of the rotation matrix are n_ref, e, u)
+        mat, _ = site_frame(s["lat"], s["lon"])
+        la, aa = math.radians(th), math.radians(up)  # horizontal projection of g points uphill
+        n_c, e_c, u_c = math.sin(la) * math.cos(aa), math.sin(la) * math.sin(aa), math.cos(la)
+        g_me = [n_c * mat[0][i] + e_c * mat[1][i] + u_c * mat[2][i] for i in range(3)]
         w_json(f"terrain/pad/{s['id']}.json", hdr(
-            "pad", site_id=s["id"], fit={"k": 3, "window_px": 7, "window_m": 7 * s["nf"], "baseline_m": 6 * s["nf"]},
-            slope_deg=th, downhill_aspect_deg=s["aspect"], uphill_az_deg=(s["aspect"] + 180) % 360, z0_m=0.0,
-            baseline_badge=f"slope at {6 * s['nf']} m baseline", slope_under_resolved=s["nf"] > 5,
-            dispersion_slope_stats={"p50_deg": th * 0.8, "p95_deg": th * 1.6, "max_deg": th * 2.0}))
-        # 11x11 dispersion micro-grid, 50 m spacing, slope uint8 unit 0.1°
+            "pad", version="0.1.0", producer="lumen_pipeline.terrain.pad (mock)", created_utc="2026-01-01T00:00:00Z", site_id=s["id"],
+            ground_normal_me=[round(x, 9) for x in g_me], slope_deg=th, downhill_aspect_deg=s["aspect"], uphill_az_deg=up,
+            z0_m=0.0, d_min_m=3 * nf, near_field_resolution_m=nf, under_resolved=nf > 6,
+            plane_fit={"k": 3, "window_px": [7, 7], "window_dim_m": [7 * nf, 7 * nf], "baseline_m": 6 * nf, "dem_source": "MOCK-DEM"},
+            dispersion_slope_stats={"p50": th * 0.8, "p95": th * 1.6, "max": th * 2.0, "pct_below_tolerance": 92.5}))
+        # 11x11 dispersion micro-grid, 50 m spacing. DRAFT layout (contract leaves it unresolved): slope uint8 (0.1 deg)
         grid = bytearray()
         for j in range(11):
             for i in range(11):
                 v = th + 2.0 * math.sin(i * 0.7 + s["seed"]) * math.cos(j * 0.5)
                 grid.append(max(0, min(255, round(max(0.0, v) * 10))))
-        w_bin(f"terrain/dispersion/{s['id']}.bin", bytes(grid))
         w_json(f"terrain/dispersion/{s['id']}.json", hdr(
-            "dispersion", site_id=s["id"], nodes=[11, 11], spacing_m=50, dtype="uint8", unit_deg=0.1, layout="row-major [row j][col i], j north"))
+            "dispersion", version="0.1.0", producer="mock", created_utc="2026-01-01T00:00:00Z", git_commit="0" * 40, site_id=s["id"],
+            bin_width_deg=0.5, observer_height_m=1.0, nodes=[11, 11], spacing_m=50, dtype="uint8", unit_deg=0.1,
+            layout="DRAFT: slope only, row-major [row j][col i], j north; horizon bins/aspect not mocked"))
+        w_bin(f"terrain/dispersion/{s['id']}.bin", bytes(grid))
         psr = None
         if s["psr"]:
-            psr = {"distance_km": s["psr"][0], "bearing_deg": s["psr"][1], "nearest_psr_area_km2": s["psr"][2], "source": "derived"}
+            psr = {"distance_km": s["psr"][0], "bearing_deg": s["psr"][1], "nearest_psr_area_km2": s["psr"][2], "source_classification": "derived"}
         w_json(f"terrain/summaries/{s['id']}.json", hdr(
-            "site_summary", site_id=s["id"], tier="A", near_field_res_m=s["nf"], dem_source="MOCK-DEM",
-            files={"mask": f"masks/{s['id']}.json", "sigma": f"sigma/{s['id']}.json", "pad": f"pad/{s['id']}.json",
-                   "dispersion": f"dispersion/{s['id']}.json"}, psr=psr, run_utc="2026-01-01T00:00:00Z"))
-        pools[s["id"]] = psr
+            "site_summary", version="0.1.0", site_id=s["id"], run_timestamp_utc="2026-01-01T00:00:00Z", tier="Tier A",
+            near_field_res_m=nf, dem_source="MOCK-DEM",
+            files_present={"mask_bin": f"masks/{s['id']}.bin", "mask_json": f"masks/{s['id']}.json", "sigma_bin": f"sigma/{s['id']}.bin",
+                           "sigma_json": f"sigma/{s['id']}.json", "pad_json": f"pad/{s['id']}.json",
+                           "dispersion_bin": f"dispersion/{s['id']}.bin", "dispersion_json": f"dispersion/{s['id']}.json"},
+            pad_headline={"slope_deg": th, "downhill_aspect_deg": s["aspect"], "uphill_az_deg": up, "under_resolved": nf > 6}, psr=psr))
 
 
 # ---------------------------------------------------------------- Tier-B tile + sigma calibration
@@ -393,11 +417,11 @@ def png(path: Path, w: int, h: int, rgba) -> None:
 
 
 LAYERS = [
-    ("illumination", "Average Illumination", [[0, "0 %"], [0.5, "50 %"], [1, "100 %"]]),
-    ("earth_visibility", "Earth Visibility", [[0, "0 %"], [0.5, "50 %"], [1, "100 %"]]),
-    ("slope_hazard", "Slope Hazard", [[0, "<5°"], [0.33, "5–10°"], [0.66, "10–15°"], [1, ">15°"]]),
-    ("psr", "PSR (derived)", [[0, "no"], [1, "permanently shadowed"]]),
-    ("psr_distance", "Distance to PSR", [[0, "0 km"], [1, "200 km"]]),
+    ("illumination", "Average Illumination", [[0, "0 %", "#1b1b2f"], [0.5, "50 %", "#8a8a5c"], [1, "100 %", "#fff3b0"]]),
+    ("earth_visibility", "Earth Visibility", [[0, "0 %", "#1e2a4a"], [0.5, "50 %", "#3d7ea6"], [1, "100 %", "#9fe0f6"]]),
+    ("slope_hazard", "Slope Hazard", [[0, "<5°", "#44aa99"], [0.33, "5–10°", "#ddcc77"], [0.66, "10–15°", "#cc6677"], [1, ">15°", "#882255"]]),
+    ("psr", "PSR (derived)", [[0, "no", "#000000"], [1, "permanently shadowed region (a cold trap that may host ice)", "#1e3cc8"]]),
+    ("psr_distance", "Distance to PSR", [[0, "0 km", "#ff0000"], [1, "200 km", "#00b4ff"]]),
 ]
 PNG_SIZE = 256
 
@@ -431,15 +455,16 @@ def make_layers():
 
             fn = f"{lid}_{ext_id}.png"
             png(OUT / "terrain" / "layers" / fn, PNG_SIZE, PNG_SIZE, px_fn)
-            entries.append({"id": lid, "label": label, "extent": ext_id, "file": fn, "legend_stops": stops,
-                            "source": "MOCK (synthetic raster)", "derived": lid in ("psr", "psr_distance")})
-    w_json("terrain/layers/layers.json", hdr(
-        "layers", size_px=[PNG_SIZE, PNG_SIZE],
-        projection={"type": "polar_stereographic_south", "radius_m": R_MOON_M, "r": "2R*tan(colat/2)", "x": "r*sin(lon_east)", "y": "r*cos(lon_east)",
-                    "px": "cx + x/mpp", "py": "cy - y/mpp"},
-        extents={k: {"lat_limit_deg": -v, "half_extent_km": ext_radius_km(v), "centre_px": [PNG_SIZE / 2, PNG_SIZE / 2],
-                     "metres_per_px": ext_radius_km(v) * 1000 / (PNG_SIZE / 2)} for k, v in EXTENTS.items()},
-        layers=entries))
+            entries.append({
+                "layer_id": lid, "name": label, "extent": {"80S": "80_90S", "85S": "85_90S"}[ext_id], "filename": fn,
+                "projection": {"type": "polar_stereographic_south", "radius_m": R_MOON_M, "central_meridian_deg": 0.0, "standard_parallel_deg": -90.0,
+                               "r": "2R*tan(colat/2)", "x": "r*sin(lon_east)", "y": "r*cos(lon_east)", "px": "cx + x/mpp", "py": "cy - y/mpp",
+                               "size_px": [PNG_SIZE, PNG_SIZE], "centre_px": [PNG_SIZE / 2, PNG_SIZE / 2], "lat_limit_deg": -lat_limit,
+                               "half_extent_km": half, "metres_per_px": half * 1000 / (PNG_SIZE / 2),
+                               "status": "DRAFT: projection parameters not frozen (data_terrain_misc.md 5.4)"},
+                "legend_stops": [{"value": v, "label": lb, "hex": hx} for v, lb, hx in stops],
+                "source_citation": "MOCK (synthetic raster)", "derived": lid in ("psr", "psr_distance")})
+    w_json("terrain/layers.json", hdr("layers", version="0.1.0", layers=entries))
 
 
 REGIONS = [("mock_region_1", "MOCK region 1", -89.3, 60.0, 20.0), ("mock_region_2", "MOCK region 2", -86.9, 200.0, 25.0),
@@ -448,16 +473,15 @@ REGIONS = [("mock_region_1", "MOCK region 1", -89.3, 60.0, 20.0), ("mock_region_
 
 def make_regions():
     half = ext_radius_km(80)
-    shapes, meta = [], []
+    out = []
     for rid, name, lat, lon, rad in REGIONS:
         x, y = polar_xy_km(lat, lon)
-        shapes.append(f'<circle id="{rid}" cx="{x:.2f}" cy="{-y:.2f}" r="{rad}" fill="none" stroke="#ffffff" stroke-width="1.5"/>')
-        meta.append({"id": rid, "name": name, "centroid": {"lat": lat, "lon": lon}, "approximate_centre": True, "svg_element": rid})
-    svg = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{-half:.2f} {-half:.2f} {2 * half:.2f} {2 * half:.2f}">'
-           + "".join(shapes) + "</svg>\n")
-    (OUT / "terrain" / "regions").mkdir(parents=True, exist_ok=True)
-    (OUT / "terrain" / "regions" / "artemis_regions.svg").write_text(svg)
-    w_json("terrain/regions/regions.json", hdr("regions", file="artemis_regions.svg", units="km, same frame as layers (y flipped: svg_y = -y)", regions=meta))
+        cy = -y  # svg y is flipped
+        d = f"M {x - rad:.2f} {cy:.2f} a {rad} {rad} 0 1 0 {2 * rad} 0 a {rad} {rad} 0 1 0 {-2 * rad} 0 Z"
+        out.append({"region_id": rid, "name": name, "centroid_lat_deg": lat, "centroid_lon_deg": lon, "svg_path": d,
+                    "projection": {"type": "polar_stereographic_south", "units": "km", "y_flipped": True, "half_extent_km": half,
+                                   "status": "DRAFT: shared with layers"}})
+    w_json("terrain/regions.json", hdr("regions", version="0.1.0", regions=out))
 
 
 # ---------------------------------------------------------------- catalog + sparklines
@@ -475,13 +499,11 @@ def make_sparklines():
                     v = 48 + 5 * math.sin(2 * math.pi * d / 29.53)
                 else:
                     v = 50 + 40 * math.sin(2 * math.pi * d / (29.53 * (1.0 if series == 0 else 0.93)) + s["seed"] * 0.9 + series * 1.2)
-                v = max(0, min(100, round(v)))
-                buf.append(v)
-    w_bin("catalog/sparklines.bin", bytes(buf))
-    w_json("catalog/sparklines.json", hdr(
-        "sparklines", start_utc=iso(SPARK_START), start_unix_s=SPARK_START, days=SPARK_DAYS, dtype="uint8", unit_pct=1,
-        definitions="mock defaults (2 m, 50% disk, Earth ≥1° + DSN ≥10°)", series=["sunlit_pct", "link_pct"],
-        layout="[site][series][day], sites in `sites` order", sites=[s["id"] for s in SITES]))
+                buf.append(max(0, min(100, round(v))))
+    w_array("catalog/sparklines.bin", bytes(buf), shape=(len(SITES), 2, SPARK_DAYS), dtype="uint8", fields=["sunlit_pct", "link_pct"], units="percent",
+            start_utc=iso(SPARK_START), days=SPARK_DAYS, sites=[s["id"] for s in SITES],
+            definitions="mock defaults (2 m, 50% disk, Earth >=1 deg + DSN >=10 deg)",
+            note="DRAFT extras: sites/start_utc/days are not yet in data_catalog.md; layout [site][series][day]")
 
 
 def make_catalog():
@@ -539,8 +561,16 @@ def make_manifest():
     w_json("terrain/manifest.json", hdr("terrain_manifest", files=files))
 
 
+def clean() -> None:
+    """Remove previously generated files (keeps README.md and .gitkeep) so stale outputs can never linger."""
+    for f in OUT.rglob("*"):
+        if f.is_file() and f.name not in (".gitkeep", "README.md"):
+            f.unlink()
+
+
 def main() -> None:
     random.seed(0)
+    clean()
     make_ephem()
     make_dsn()
     make_masks()

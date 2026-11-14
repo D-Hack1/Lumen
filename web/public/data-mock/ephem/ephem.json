@@ -1,30 +1,58 @@
 {
-  "schema": "ephem",
-  "version": 1,
-  "mock": true,
-  "note": "MOCK DATA \u2014 synthetic values, not for science or demo claims",
-  "epoch_utc": "2023-01-01T00:00:00Z",
-  "epoch_unix_s": 1672531200,
-  "step_s": 21600,
-  "count": 11689,
-  "frame": "MOON_ME",
-  "units": {
-    "pos": "km",
-    "vel": "km/s"
-  },
-  "aberration": "LT+S (mock: none, synthetic circular Sun path)",
-  "record_layout": [
-    "sun_pos[3]",
-    "sun_vel[3]",
-    "earth_pos[3]",
-    "earth_vel[3]"
+  "version": "1",
+  "shape": [
+    11689,
+    12
   ],
   "dtype": "float32",
-  "byte_length": 561072,
+  "fields": [
+    "sun_position_km_x",
+    "sun_position_km_y",
+    "sun_position_km_z",
+    "sun_velocity_km_s_x",
+    "sun_velocity_km_s_y",
+    "sun_velocity_km_s_z",
+    "earth_position_km_x",
+    "earth_position_km_y",
+    "earth_position_km_z",
+    "earth_velocity_km_s_x",
+    "earth_velocity_km_s_y",
+    "earth_velocity_km_s_z"
+  ],
+  "units": [
+    "km",
+    "km",
+    "km",
+    "km/s",
+    "km/s",
+    "km/s",
+    "km",
+    "km",
+    "km",
+    "km/s",
+    "km/s",
+    "km/s"
+  ],
+  "scale": null,
+  "offset": null,
+  "producer": "web/src/engine/mock/make_mock.py",
+  "created_utc": "2026-01-01T00:00:00Z",
+  "sha256": "57f1f4f4330317f5d2bb876ed05ad5674f9b1853cd992298f92553e56e1ac05e",
+  "mock": true,
+  "note": "MOCK DATA \u2014 synthetic values, not for science or demo claims",
+  "start_utc": "2023-01-01T00:00:00Z",
+  "cadence_s": 21600,
+  "frame": "MOON_ME",
+  "body_order": [
+    "sun",
+    "earth"
+  ],
+  "aberration": "LT+S (mock: none, synthetic circular Sun path)",
   "kernels": [
     {
       "name": "MOCK",
       "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
     }
-  ]
+  ],
+  "mock_cadence_note": "mock is 6 h; real is 3600 s. Loaders must read cadence_s."
 }
