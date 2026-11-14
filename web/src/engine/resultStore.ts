@@ -9,7 +9,7 @@ import { loadCatalog } from './data/catalog';
 import { dataMode } from './data/source';
 import { mockScenarioResult } from '../mocks/mockResult';
 import { getScenario, useScenario } from '../state/scenarioStore';
-import { makeRequest } from './requests';
+import { makeRequest, padNormalFor } from './requests';
 import { perf } from './perf';
 import type { EventType, ScenarioResult } from './types';
 
@@ -40,7 +40,7 @@ function publish(r: ScenarioResult): void {
 /** The request depends only on these scenario fields; anything else changing (view, persona, layers...) must not re-run the engine. */
 function relevantKey(): string {
   const s = getScenario();
-  return JSON.stringify([s.site, s.landingUtc, s.slipDays, s.durationDays, s.scrubUtc, s.heightM, s.definitions, s.profile, s.weights, dataMode()]);
+  return JSON.stringify([s.site, s.landingUtc, s.slipDays, s.durationDays, s.scrubUtc, s.heightM, s.definitions, s.profile, s.weights, s.panelPreset, s.yawDeg, s.tilt, dataMode()]);
 }
 
 async function run(): Promise<void> {
@@ -52,7 +52,7 @@ async function run(): Promise<void> {
       const site = (s.site.kind === 'site' ? sites.find((x) => x.id === (s.site as { id: string }).id) : null) ?? sites[0] ?? null;
       return publish(mockScenarioResult(site, s.landingUtc, s.durationDays, s.scrubUtc, 0, s.definitions.minSunElevationOps));
     }
-    const req = makeRequest(s, sites, { siteRef: s.site, landingUtc: s.landingUtc, heightM: s.heightM, scrubUtc: s.scrubUtc });
+    const req = makeRequest(s, sites, { siteRef: s.site, landingUtc: s.landingUtc, heightM: s.heightM, scrubUtc: s.scrubUtc, groundNormal: await padNormalFor(s.site) });
     const r = await evaluateLatest(req);
     if (r) publish(r); // null = superseded by a newer scenario: drop it
   } catch (e) {
