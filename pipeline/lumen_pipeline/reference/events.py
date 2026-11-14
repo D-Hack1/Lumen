@@ -14,7 +14,10 @@ class Event:
     type: str
     et: float
     dt_method: str = "fast"
-    grazing_reason: None = None
+    grazing_reason: str | None = None
+    bracket_start_et: float | None = None
+    bracket_end_et: float | None = None
+    dt_seconds: float | None = None
 
 
 def sample_times(start_et: float, end_et: float) -> list[float]:
@@ -28,7 +31,7 @@ def sample_times(start_et: float, end_et: float) -> list[float]:
     return times
 
 
-def _refine_transition(predicate: Callable[[float], bool], left: float, right: float) -> float:
+def _refine_transition(predicate: Callable[[float], bool], left: float, right: float) -> tuple[float, float, float]:
     left_value = predicate(left)
     if left_value == predicate(right):
         raise ValueError("bisection bracket does not contain a transition")
@@ -38,7 +41,7 @@ def _refine_transition(predicate: Callable[[float], bool], left: float, right: f
             left = middle
         else:
             right = middle
-    return (left + right) / 2.0
+    return (left + right) / 2.0, left, right
 
 
 def detect_events(start_et: float, end_et: float, predicate: Callable[[float], bool], *, down: str, up: str) -> list[Event]:
@@ -48,5 +51,13 @@ def detect_events(start_et: float, end_et: float, predicate: Callable[[float], b
     events: list[Event] = []
     for left, right, was_visible, is_visible in zip(times[:-1], times[1:], values[:-1], values[1:], strict=True):
         if was_visible != is_visible:
-            events.append(Event(up if is_visible else down, _refine_transition(predicate, left, right)))
+            event_et, bracket_start_et, bracket_end_et = _refine_transition(predicate, left, right)
+            events.append(
+                Event(
+                    up if is_visible else down,
+                    event_et,
+                    bracket_start_et=bracket_start_et,
+                    bracket_end_et=bracket_end_et,
+                )
+            )
     return events
