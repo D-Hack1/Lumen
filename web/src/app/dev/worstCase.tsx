@@ -57,7 +57,7 @@ export const worstCaseFixture: Fixture = {
     compareRows: rowsAD,
     slipDays: 30,
   },
-  missionBar: { siteLabel: LONG_SITE, tierLabel: 'Tier B · snap 1.8 km', verdict: 'MARGINAL' },
+  missionBar: { siteLabel: LONG_SITE, tierLabel: 'Tier B · snap 1.8 km', verdict: 'MARGINAL', provisional: true },
   slots: {
     search: (
       <div className="fx-search-block">
