@@ -10,7 +10,7 @@ from typing import Any
 
 import numpy as np
 
-_DTYPES = {"float32": np.dtype("<f4"), "uint8": np.dtype("u1")}
+_DTYPES = {"float32": np.dtype("<f4"), "int16": np.dtype("<i2"), "uint8": np.dtype("u1")}
 
 
 def sidecar_path(binary_path: str | Path) -> Path:
@@ -29,14 +29,16 @@ def write_array(
     offset: float | None = None,
     created_utc: str | None = None,
 ) -> dict[str, Any]:
-    """Write a float32 or uint8 array and its required JSON sidecar metadata."""
+    """Write a float32, int16, or uint8 array and its required JSON sidecar metadata."""
     source = np.asarray(array)
     if source.dtype.kind == "f":
         dtype_name = "float32"
+    elif source.dtype.kind == "i" and source.dtype.itemsize == 2:
+        dtype_name = "int16"
     elif source.dtype.kind == "u" and source.dtype.itemsize == 1:
         dtype_name = "uint8"
     else:
-        raise ValueError("only float32 and uint8 arrays are supported")
+        raise ValueError("only float32, int16, and uint8 arrays are supported")
     encoded = np.ascontiguousarray(source, dtype=_DTYPES[dtype_name])
     path = Path(binary_path)
     path.parent.mkdir(parents=True, exist_ok=True)

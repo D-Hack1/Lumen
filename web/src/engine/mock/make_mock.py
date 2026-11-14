@@ -167,7 +167,6 @@ def make_ephem():
 
 DSN = [("DSS-14", "Goldstone", 0.0), ("DSS-43", "Canberra", 2 * math.pi / 3), ("DSS-63", "Madrid", 4 * math.pi / 3)]
 DSN_STEP = 1800
-DSN_OFFSET_DEG = -30.0  # stored = round((el - OFFSET) / 0.5), clamped 0..254; 255 = no data
 
 
 def make_dsn():
@@ -177,47 +176,85 @@ def make_dsn():
         t = T0 + i * DSN_STEP
         for k, (_, _, ph) in enumerate(DSN):
             el = 55 * math.sin(2 * math.pi * (t - T0) / 86164.1 + ph) + 20 * math.sin(2 * math.pi * (t - T0) / (27.32 * 86400))
-            q = round((max(-30.0, min(96.5, el)) - DSN_OFFSET_DEG) / 0.5)
-            cols[k].append(max(0, min(254, q)))
+            q = round(max(-90.0, min(90.0, el)) * 2)
+            cols[k] += struct.pack("<h", q)
     w_bin("dsn/dsn.bin", b"".join(bytes(c) for c in cols))
     w_json("dsn/dsn.json", hdr(
-        "dsn", epoch_utc=iso(T0), epoch_unix_s=T0, step_s=DSN_STEP, count=n, quantum_deg=0.5, offset_deg=DSN_OFFSET_DEG,
-        dtype="uint8", nodata=255, layout="station-major: stations[k] occupies bytes [k*count, (k+1)*count)",
+        "dsn", epoch_utc=iso(T0), epoch_unix_s=T0, step_s=DSN_STEP, count=n, quantum_deg=0.5,
+        dtype="int16", valid_range=[-180, 180], decode="stored_value / 2", layout="station-major: stations[k] occupies int16 values [k*count, (k+1)*count)",
         stations=[{"id": s, "complex": c} for s, c, _ in DSN]))
 
 
 # ---------------------------------------------------------------- terrain: masks, sigma, pad, dispersion, summaries
 
 
+MASK_HEADER_BYTES = 64
+MASK_ELEV_OFF = 64
+MASK_PAYLOAD = 4 * NBIN * 4  # (4, 3600) float32
+MASK_DIST_OFF = MASK_ELEV_OFF + MASK_PAYLOAD
+NAN = float("nan")
+# bins deliberately unavailable (NaN) in this site's mask, to exercise NaN preservation and the circular
+# range query across azimuth zero (contract §3.2, §5.3)
+NAN_BINS = {"cy3_shiv_shakti": [3598, 3599, 0, 1]}
+PROVENANCE = {"producer": "web/src/engine/mock/make_mock.py", "created_utc": "2026-01-01T00:00:00Z", "git_commit": "0" * 40}
+
+
+def lumen_header(magic: bytes, elev_off: int, dist_off: int, elev_len: int, dist_len: int) -> bytes:
+    """data_masks.md 3.1 / 4: 64-byte little-endian header shared by LUMENMSK and LUMENSGM."""
+    h = struct.pack("<8sHHIIfffIIIIIIQ", magic, 1, MASK_HEADER_BYTES, 4, NBIN, BIN_DEG, 250.0, 1.0,
+                    elev_off, dist_off, elev_len, dist_len, 0, 0, 0)
+    assert len(h) == MASK_HEADER_BYTES
+    return h
+
+
+def binary_descriptor(magic: str) -> dict:
+    return {"magic": magic, "format_version": 1, "byte_order": "little", "float_encoding": "ieee754-binary32",
+            "layout": "header_then_elevation_then_distance" if magic == "LUMENMSK" else "header_then_sigma",
+            "array_order": "c_contiguous_height_major"}
+
+
 def make_masks():
     for s in SITES:
         if s["tier"] == "C":
             continue
-        elev = bytearray()
-        dist = bytearray()
-        per_h = []
-        for h in HEIGHTS_M:
-            vals = []
+        gaps = set(NAN_BINS.get(s["id"], []))
+        elev, dist, sig = [], [], []
+        gmax, gmin = [], []
+        for hi, h in enumerate(HEIGHTS_M):
+            finite = []
             for b in range(NBIN):
                 az = (b + 0.5) * BIN_DEG
+                if b in gaps:
+                    elev.append(NAN)
+                    dist.append(NAN)
+                    sig.append(NAN)
+                    continue
                 v = mask_deg(s, az, h)
-                vals.append(v)
-                elev += struct.pack("<h", round(v * 100))
-                d_km = 5 + 120 * (0.5 + 0.5 * math.sin(math.radians(az) * 3 + s["seed"]))
-                dist += struct.pack("<H", round(d_km * 10))  # units 100 m
-            per_h.append({"height_m": h, "min_deg": round(min(vals), 3), "max_deg": round(max(vals), 3)})
-        w_bin(f"terrain/masks/{s['id']}.bin", bytes(elev) + bytes(dist))
+                finite.append(v)
+                elev.append(v)
+                dist.append(5 + 120 * (0.5 + 0.5 * math.sin(math.radians(az) * 3 + s["seed"] + hi * 0.1)))
+                sig.append(0.10 + 0.01 * ((b // 300) % 6) + 0.002 * hi)
+            gmax.append(round(max(finite), 6))
+            gmin.append(round(min(finite), 6))
+        pack = lambda xs: struct.pack(f"<{len(xs)}f", *xs)  # noqa: E731
+        w_bin(f"terrain/masks/{s['id']}.bin",
+              lumen_header(b"LUMENMSK", MASK_ELEV_OFF, MASK_DIST_OFF, MASK_PAYLOAD, MASK_PAYLOAD) + pack(elev) + pack(dist))
+        w_bin(f"terrain/sigma/{s['id']}.bin", lumen_header(b"LUMENSGM", 64, 0, MASK_PAYLOAD, 0) + pack(sig))
         w_json(f"terrain/masks/{s['id']}.json", hdr(
-            "mask", site_id=s["id"], bin_deg=BIN_DEG, n_bins=NBIN, heights_m=HEIGHTS_M, range_km=250,
-            elev={"dtype": "int16", "unit_deg": 0.01, "offset_bytes": 0, "shape": [len(HEIGHTS_M), NBIN]},
-            distance={"dtype": "uint16", "unit_m": 100, "offset_bytes": len(elev), "shape": [len(HEIGHTS_M), NBIN]},
-            global_extremes=per_h, d_min_m=3 * s["nf"], z0_m=0.0, median_filter_radius_m=100,
-            near_field_res_m=s["nf"], range_lookup="rebuild_on_load", sigma_file=f"sigma/{s['id']}.bin",
-            sigma_default_deg=0.1, sigma_source="default"))
-        sig = bytearray()
-        for b in range(NBIN):
-            sig.append(10 + (b // 300) % 6)  # unit 0.01°: 0.10–0.15°
-        w_bin(f"terrain/sigma/{s['id']}.bin", bytes(sig))
+            "mask", version="1.0.0", **PROVENANCE, site_id=s["id"], bin_width_deg=BIN_DEG, azimuth_count=NBIN,
+            azimuth_zero="projected_site_frame_reference", azimuth_direction="toward_site_frame_e",
+            azimuth_center="i_plus_0.5_times_bin_width", heights_m=HEIGHTS_M, ray_range_km=250.0,
+            near_field_resolution_m=s["nf"], d_min_m=3 * s["nf"], z0_m=0.0,
+            median_filter_region_radius_m=100.0, median_filter_kernel_px=3, median_filter_status="applied",
+            plane_fit_kernel_px=7, plane_fit_half_width_px=3, slope_deg=s["slope"], downhill_aspect_deg=s["aspect"],
+            uphill_azimuth_deg=(s["aspect"] + 180) % 360, global_max_deg=gmax, global_min_deg=gmin,
+            range_extrema={"strategy": "finite_segment_tree", "supports_circular_azimuth_ranges": True},
+            near_zone_model="fitted_local_plane", dem_source="MOCK-DEM", binary=binary_descriptor("LUMENMSK"),
+            mock_nan_bins=sorted(gaps)))
+        w_json(f"terrain/sigma/{s['id']}.json", hdr(
+            "sigma", version="1.0.0", **PROVENANCE, site_id=s["id"], bin_width_deg=BIN_DEG, azimuth_count=NBIN,
+            shape=[4, NBIN], height_order_m=HEIGHTS_M, source="default", unit="deg",
+            notes="mock default sigma ~0.1 deg", binary=binary_descriptor("LUMENSGM")))
 
 
 def make_pad_disp_summaries():
@@ -248,7 +285,7 @@ def make_pad_disp_summaries():
             psr = {"distance_km": s["psr"][0], "bearing_deg": s["psr"][1], "nearest_psr_area_km2": s["psr"][2], "source": "derived"}
         w_json(f"terrain/summaries/{s['id']}.json", hdr(
             "site_summary", site_id=s["id"], tier="A", near_field_res_m=s["nf"], dem_source="MOCK-DEM",
-            files={"mask": f"masks/{s['id']}.json", "sigma": f"sigma/{s['id']}.bin", "pad": f"pad/{s['id']}.json",
+            files={"mask": f"masks/{s['id']}.json", "sigma": f"sigma/{s['id']}.json", "pad": f"pad/{s['id']}.json",
                    "dispersion": f"dispersion/{s['id']}.json"}, psr=psr, run_utc="2026-01-01T00:00:00Z"))
         pools[s["id"]] = psr
 
@@ -458,16 +495,16 @@ def make_catalog():
             "id": s["id"], "name": s["name"], "category": s["cat"], "agency": s["agency"],
             "date": s["touchdown"][:10] if s["touchdown"] else None,
             "as_published_date": "2026-01-01" if s["cat"] == "published_target" else None,
-            "lat": s["lat"], "lon": s["lon"], "elevation_m": 0.0,
-            "landing_coords": {"lat": s["lat"], "lon": s["lon"], "source": "mock"},
-            "target_coords": ({"lat": -69.367621, "lon": 32.348126, "source": "mock"} if is_cy3 else None),
+            "latitude_deg": s["lat"], "longitude_deg_east": s["lon"], "coordinate_frame": "MOON_ME", "elevation_m": 0.0,
+            "landing_coords": {"latitude_deg": s["lat"], "longitude_deg_east": s["lon"], "source": "mock"},
+            "target_coords": ({"latitude_deg": -69.367621, "longitude_deg_east": 32.348126, "source": "mock"} if is_cy3 else None),
             "coord_note": "mock coordinate" if not is_cy3 else "mock; landing and target ~350 m apart",
             "touchdown_utc": s["touchdown"], "touchdown_precision": s["prec"], "last_contact_utc": None,
             "reference_axis": ref, "rotation_matrix": mat, "tier": s["tier"],
             "near_field_res_m": s["nf"],
             "mask": None if tier_c else {"file": f"masks/{s['id']}.json", "heights_m": HEIGHTS_M},
             "sigma": {"source": "n/a (smooth-Moon bound)" if tier_c else "default", "default_deg": None if tier_c else 0.1,
-                      "file": None if tier_c else f"sigma/{s['id']}.bin"},
+                      "file": None if tier_c else f"sigma/{s['id']}.json"},
             "pad": None if tier_c else {"file": f"pad/{s['id']}.json", "slope_deg": s["slope"], "downhill_aspect_deg": s["aspect"]},
             "dispersion_file": None if tier_c else f"dispersion/{s['id']}.json",
             "sparkline_index": idx,

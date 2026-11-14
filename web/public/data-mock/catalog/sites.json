@@ -11,12 +11,13 @@
       "agency": "NASA CLPS / Intuitive Machines",
       "date": "2025-03-06",
       "as_published_date": null,
-      "lat": -84.7906,
-      "lon": 29.1957,
+      "latitude_deg": -84.7906,
+      "longitude_deg_east": 29.1957,
+      "coordinate_frame": "MOON_ME",
       "elevation_m": 0.0,
       "landing_coords": {
-        "lat": -84.7906,
-        "lon": 29.1957,
+        "latitude_deg": -84.7906,
+        "longitude_deg_east": 29.1957,
         "source": "mock"
       },
       "target_coords": null,
@@ -56,7 +57,7 @@
       "sigma": {
         "source": "default",
         "default_deg": 0.1,
-        "file": "sigma/im2_athena.bin"
+        "file": "sigma/im2_athena.json"
       },
       "pad": {
         "file": "pad/im2_athena.json",
@@ -84,17 +85,18 @@
       "agency": "ISRO",
       "date": "2023-08-23",
       "as_published_date": null,
-      "lat": -69.373,
-      "lon": 32.319,
+      "latitude_deg": -69.373,
+      "longitude_deg_east": 32.319,
+      "coordinate_frame": "MOON_ME",
       "elevation_m": 0.0,
       "landing_coords": {
-        "lat": -69.373,
-        "lon": 32.319,
+        "latitude_deg": -69.373,
+        "longitude_deg_east": 32.319,
         "source": "mock"
       },
       "target_coords": {
-        "lat": -69.367621,
-        "lon": 32.348126,
+        "latitude_deg": -69.367621,
+        "longitude_deg_east": 32.348126,
         "source": "mock"
       },
       "coord_note": "mock; landing and target ~350 m apart",
@@ -133,7 +135,7 @@
       "sigma": {
         "source": "default",
         "default_deg": 0.1,
-        "file": "sigma/cy3_shiv_shakti.bin"
+        "file": "sigma/cy3_shiv_shakti.json"
       },
       "pad": {
         "file": "pad/cy3_shiv_shakti.json",
@@ -156,12 +158,13 @@
       "agency": "NASA CLPS",
       "date": null,
       "as_published_date": "2026-01-01",
-      "lat": -89.54,
-      "lon": 129.0,
+      "latitude_deg": -89.54,
+      "longitude_deg_east": 129.0,
+      "coordinate_frame": "MOON_ME",
       "elevation_m": 0.0,
       "landing_coords": {
-        "lat": -89.54,
-        "lon": 129.0,
+        "latitude_deg": -89.54,
+        "longitude_deg_east": 129.0,
         "source": "mock"
       },
       "target_coords": null,
@@ -201,7 +204,7 @@
       "sigma": {
         "source": "default",
         "default_deg": 0.1,
-        "file": "sigma/shackleton_ridge.bin"
+        "file": "sigma/shackleton_ridge.json"
       },
       "pad": {
         "file": "pad/shackleton_ridge.json",
@@ -229,12 +232,13 @@
       "agency": "NASA CLPS / Firefly",
       "date": "2025-03-02",
       "as_published_date": null,
-      "lat": 18.56,
-      "lon": 61.81,
+      "latitude_deg": 18.56,
+      "longitude_deg_east": 61.81,
+      "coordinate_frame": "MOON_ME",
       "elevation_m": 0.0,
       "landing_coords": {
-        "lat": 18.56,
-        "lon": 61.81,
+        "latitude_deg": 18.56,
+        "longitude_deg_east": 61.81,
         "source": "mock"
       },
       "target_coords": null,
