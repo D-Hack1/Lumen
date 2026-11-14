@@ -43,51 +43,53 @@ function longestFalseRun(up: Uint8Array, from: number, to: number): number {
   return best;
 }
 
-export function scanStage1(eph: Ephemeris, input: ScanInput): ScanCandidate[] {
-  const out: ScanCandidate[] = [];
-  for (const r of input.requests) {
-    const windowMs = r.durationDays * DAY;
-    const offsets: number[] = [];
-    for (let d = -input.plusMinusDays; d <= input.plusMinusDays; d++) {
-      const s = r.startMs + d * DAY;
-      if (inEphemerisRange(eph, s) && inEphemerisRange(eph, s + windowMs)) offsets.push(d);
-    }
-    if (offsets.length === 0) continue;
+/**
+ * Stage 1 for ONE site at the given day offsets from `request.startMs` (one 10-minute series over the span the offsets need,
+ * prefix sums for every window). Offsets whose window leaves the ephemeris are skipped. Result is in offsets order.
+ * Shared by the Scan (offsets -N..N) and the Calendar (offsets 0..days-1).
+ */
+export function stage1ForOffsets(eph: Ephemeris, r: ScenarioRequest, requestedOffsets: number[]): ScanCandidate[] {
+  const windowMs = r.durationDays * DAY;
+  const offsets = requestedOffsets.filter((d) => inEphemerisRange(eph, r.startMs + d * DAY) && inEphemerisRange(eph, r.startMs + d * DAY + windowMs));
+  if (offsets.length === 0) return [];
+  const lo = Math.min(...offsets);
+  const hi = Math.max(...offsets);
 
-    // One series per site, covering every candidate window.
-    const tFirst = r.startMs + offsets[0] * DAY;
-    const tLast = r.startMs + offsets[offsets.length - 1] * DAY + windowMs;
-    const n = Math.ceil((tLast - tFirst) / STAGE1_STEP_MS);
-    const site = makeSite(r.latDeg, r.lonDegEast, r.heightM, r.rotation ?? undefined);
-    const horizon = new Horizon({ observerHeightM: r.heightM });
-    const d: Definitions = r.definitions;
-    const sun = new Uint8Array(n);
-    const earth = new Uint8Array(n);
-    const sunCum = new Int32Array(n + 1); // prefix sums: count of "up" samples before index i
-    const earthCum = new Int32Array(n + 1);
-    for (let i = 0; i < n; i++) {
-      const s = stateAt(eph, site, horizon, d, tFirst + i * STAGE1_STEP_MS);
-      sun[i] = s.sun.up ? 1 : 0;
-      earth[i] = s.earth.up ? 1 : 0;
-      sunCum[i + 1] = sunCum[i] + sun[i];
-      earthCum[i + 1] = earthCum[i] + earth[i];
-    }
-
-    const m = Math.round(windowMs / STAGE1_STEP_MS); // samples per candidate window
-    for (const off of offsets) {
-      const start = r.startMs + off * DAY;
-      const i0 = Math.round((start - tFirst) / STAGE1_STEP_MS);
-      const sunlit = (100 * (sunCum[i0 + m] - sunCum[i0])) / m;
-      const link = (100 * (earthCum[i0 + m] - earthCum[i0])) / m;
-      const nightH = (longestFalseRun(sun, i0, i0 + m) * STAGE1_STEP_MS) / 3_600_000;
-      const v = evaluateVerdict({ metrics: judged(sunlit, link, nightH, r.padSlopeDeg), windowHours: r.durationDays * 24, profile: r.profile, weights: r.weights, boundsKind: 'optimistic' });
-      out.push({
-        siteId: r.siteId ?? 'custom', landingUtc: start, viabilityIndex: v.viabilityIndex ?? 0, verdict: v.verdict, provisional: true, boundsStatus: 'nominal',
-        sunlitPct: val(sunlit), linkPct: val(link), longestNightH: val(nightH),
-      });
-    }
+  // One series per site, covering every candidate window.
+  const tFirst = r.startMs + lo * DAY;
+  const tLast = r.startMs + hi * DAY + windowMs;
+  const n = Math.ceil((tLast - tFirst) / STAGE1_STEP_MS);
+  const site = makeSite(r.latDeg, r.lonDegEast, r.heightM, r.rotation ?? undefined);
+  const horizon = new Horizon({ observerHeightM: r.heightM });
+  const d: Definitions = r.definitions;
+  const sun = new Uint8Array(n);
+  const sunCum = new Int32Array(n + 1); // prefix sums: count of "up" samples before index i
+  const earthCum = new Int32Array(n + 1);
+  for (let i = 0; i < n; i++) {
+    const s = stateAt(eph, site, horizon, d, tFirst + i * STAGE1_STEP_MS);
+    sun[i] = s.sun.up ? 1 : 0;
+    sunCum[i + 1] = sunCum[i] + sun[i];
+    earthCum[i + 1] = earthCum[i] + (s.earth.up ? 1 : 0);
   }
-  return out.sort((a, b) => b.viabilityIndex - a.viabilityIndex);
+
+  const m = Math.round(windowMs / STAGE1_STEP_MS); // samples per candidate window
+  return offsets.map((off) => {
+    const start = r.startMs + off * DAY;
+    const i0 = Math.round((start - tFirst) / STAGE1_STEP_MS);
+    const sunlit = (100 * (sunCum[i0 + m] - sunCum[i0])) / m;
+    const link = (100 * (earthCum[i0 + m] - earthCum[i0])) / m;
+    const nightH = (longestFalseRun(sun, i0, i0 + m) * STAGE1_STEP_MS) / 3_600_000;
+    const v = evaluateVerdict({ metrics: judged(sunlit, link, nightH, r.padSlopeDeg), windowHours: r.durationDays * 24, profile: r.profile, weights: r.weights, boundsKind: 'optimistic' });
+    return {
+      siteId: r.siteId ?? 'custom', landingUtc: start, viabilityIndex: v.viabilityIndex ?? 0, verdict: v.verdict, provisional: true, boundsStatus: 'nominal' as const,
+      sunlitPct: val(sunlit), linkPct: val(link), longestNightH: val(nightH),
+    };
+  });
+}
+
+export function scanStage1(eph: Ephemeris, input: ScanInput): ScanCandidate[] {
+  const offsets = Array.from({ length: 2 * input.plusMinusDays + 1 }, (_, i) => i - input.plusMinusDays);
+  return input.requests.flatMap((r) => stage1ForOffsets(eph, r, offsets)).sort((a, b) => b.viabilityIndex - a.viabilityIndex);
 }
 
 /** Stage 2: exact evaluation of one candidate (same engine as the Cockpit). */

@@ -128,8 +128,13 @@ test.describe('Site Explorer', () => {
     expect(anim).toEqual(['sb-pin-pulse']);
     await page.screenshot({ path: `${SHOTS}/card-hover-pin-pulse.png` });
     await page.locator('.sb-card[data-site="cy3_shiv_shakti"]').hover();
-    await expect(page.locator('[data-offmap="cy3_shiv_shakti"].is-card-hover')).toHaveCount(1);
     await expect(pin).toHaveCount(0);
+    // Off-map edge indicators (guide §3.1 L5) were removed from the Basemap on main; check the pulse only if present.
+    if ((await page.locator('[data-offmap]').count()) > 0) {
+      await expect(page.locator('[data-offmap="cy3_shiv_shakti"].is-card-hover')).toHaveCount(1);
+    } else {
+      test.info().annotations.push({ type: 'note', description: 'Basemap has no off-map indicators (Nived)' });
+    }
     await page.mouse.move(960, 5);
     await expect(page.locator('.is-card-hover')).toHaveCount(0);
   });
