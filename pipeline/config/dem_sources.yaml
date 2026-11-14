@@ -1,8 +1,11 @@
+
 # Owner: Shiva Shakthi
 # Verified DEM products and source-selection metadata.
 #
-# Storage dtype, scale, offset, nodata, and vertical-reference details remain
-# pending label verification unless explicitly stated below.
+# PGDA-90 elevations are stored in metres following the documented
+# kilometre-to-metre conversion. The height_relative convention is used
+# provisionally against the 1,737,400 m lunar reference sphere.
+# Formal vertical-datum confirmation remains outstanding.
 
 schema_version: "0.1.0"
 
@@ -22,7 +25,10 @@ products:
     datum_reference: null
     availability_status: "verified_product"
     verification_status: "source_page_and_urls_provided"
-    notes: "Do not classify as COG without verification. No _ERR URL is claimed."
+    notes: >
+      Do not classify as COG without verification. No _ERR URL is claimed.
+      The mosaic contains interpolated fill; nominal pixel spacing does not
+      establish uniform direct LOLA observation support.
 
   site_specific_5m_lola_pgda_78:
     name: "Site-specific 5 m LOLA products"
@@ -46,9 +52,10 @@ products:
       slope_uncertainty: true
       clone_count: 100
     notes: >
-      Register the exact site product URLs after selecting the covered site.
-      Product 78 supplies total Z uncertainty and clone products; do not
-      invent an _ERR URL.
+      Register exact site product URLs only after confirming coverage of the
+      intended site. Product 78 supplies total Z uncertainty and clone
+      products; do not invent an _ERR URL. The inspected Site04 and Site07
+      products do not cover the current Shackleton Ridge coordinates.
 
   polar_10m_lola_pgda_90:
     name: "Polar 10 m LOLA 83-90S mosaic"
@@ -82,8 +89,13 @@ products:
     notes: >
       DEM and matching ERR grids were inspected. CRS, transform, dimensions,
       resolution and nodata match. DEM history records kilometre-to-metre
-      conversion. Shackleton radial coverage was verified. Error values are
-      uncertainty magnitudes; no sphere subtraction is applied to them.
+      conversion. Shackleton radial coverage and a 5 km DemReader window
+      were verified, including a successful matching ERR read. Error values
+      are uncertainty magnitudes; no sphere subtraction is applied to them.
+      Effective LOLA support is not uniform across the nominal 10 m grid.
+      Shackleton count-map inspection showed approximately 34 percent
+      directly supported pixels in the near-field crop. Formal vertical-datum
+      confirmation remains outstanding.
 
   polar_20m_lola_pgda_90:
     name: "Polar 20 m LOLA 80-90S mosaic"
@@ -98,6 +110,16 @@ products:
     slope_url: "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDSM_80S_20MPP_ADJ.TIF"
     frame: "MOON_ME / DE421"
     datum_reference: null
+    unit: "m"
+    scale: 1.0
+    offset: 0.0
+    nodata: .nan
+    vertical_reference: "height_relative"
+    error_unit: "m"
+    error_scale: 1.0
+    error_offset: 0.0
+    error_nodata: .nan
+    error_vertical_reference: "height_relative"
     format_metadata:
       cog: true
       elevation_unit: "m"
@@ -105,6 +127,51 @@ products:
       coordinate_system: "south-polar stereographic"
     availability_status: "verified_product"
     verification_status: "source_page_and_urls_provided"
+    notes: >
+      DEM and matching ERR grids were inspected. CRS, transform, dimensions,
+      resolution and nodata match. DEM history records kilometre-to-metre
+      conversion. ERR values are metre-scale uncertainty magnitudes.
+      Shackleton radial geometric coverage was verified. Actual 1 km
+      DemReader fallback-window read succeeded for both DEM and ERR with
+      100 percent valid pixels. Formal vertical-datum confirmation remains
+      outstanding.
+
+  polar_60m_lola_pgda_90:
+    name: "Regional 60 m LOLA 60-90S mosaic"
+    provider: "PGDA"
+    product_id: 90
+    source_page: "https://pgda.gsfc.nasa.gov/products/90"
+    resolution_m: 60.0
+    latitude_coverage: "60S-90S"
+    format: "GeoTIFF"
+    dem_url: "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDEM_60S_60MPP_ADJ.TIF"
+    error_url: "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDEM_60S_60MPP_ADJ_ERR.TIF"
+    slope_url: "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDSM_60S_60MPP_ADJ.TIF"
+    frame: "MOON_ME / DE421"
+    datum_reference: null
+    unit: "m"
+    scale: 1.0
+    offset: 0.0
+    nodata: .nan
+    vertical_reference: "height_relative"
+    error_unit: "m"
+    error_scale: 1.0
+    error_offset: 0.0
+    error_nodata: .nan
+    error_vertical_reference: "height_relative"
+    format_metadata:
+      cog: true
+      elevation_unit: "m"
+      slope_unit: "deg"
+      coordinate_system: "south-polar stereographic"
+    availability_status: "verified_product"
+    verification_status: "source_page_and_urls_provided"
+    notes: >
+      CRS, resolution, source bounds and matching DEM/ERR grid metadata
+      were inspected. CY-3 5-80 km radial geometric coverage was verified,
+      and sampled DEM pixels were valid. The product describes mean value
+      per bin. Actual DemReader window validation remains pending.
+      Formal vertical-datum confirmation remains outstanding.
 
   regional_240m_lola_pgda_90:
     name: "Regional 240 m LOLA 60-90S mosaic"
@@ -119,6 +186,16 @@ products:
     slope_url: "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDSM_60S_240MPP_ADJ.TIF"
     frame: "MOON_ME / DE421"
     datum_reference: null
+    unit: "m"
+    scale: 1.0
+    offset: 0.0
+    nodata: .nan
+    vertical_reference: "height_relative"
+    error_unit: "m"
+    error_scale: 1.0
+    error_offset: 0.0
+    error_nodata: .nan
+    error_vertical_reference: "height_relative"
     format_metadata:
       cog: true
       elevation_unit: "m"
@@ -126,6 +203,14 @@ products:
       coordinate_system: "south-polar stereographic"
     availability_status: "verified_product"
     verification_status: "source_page_and_urls_provided"
+    notes: >
+      DEM and matching ERR grids were inspected. CRS, transform, dimensions,
+      resolution and nodata match. DEM history records kilometre-to-metre
+      conversion. ERR values are metre-scale uncertainty magnitudes.
+      Shackleton radial geometric coverage was verified. Actual 1 km
+      DemReader fallback-window read succeeded for both DEM and ERR with
+      100 percent valid pixels. Formal vertical-datum confirmation remains
+      outstanding.
 
   chandrayaan3_lroc_vikramsite_dtm:
     name: "LROC pre-landing Vikram-site DTM"
@@ -141,10 +226,15 @@ products:
     datum_reference: null
     availability_status: "candidate"
     verification_status: "frame_and_datum_pending"
-    notes: "Do not use as the active source until the label verifies frame and vertical datum."
+    notes: >
+      PDS labels establish the lunar polar stereographic map geometry and
+      elevation band, but do not establish the elevation unit or vertical
+      reference. Remote pixel reads were blocked by read failures and HTTP
+      rate limiting. Do not activate until data access, confidence coverage,
+      frame and vertical reference are verified.
 
   chandrayaan3_lola_30m_pgda_90:
-    name: "LOLA 30 m product covering 69.37S"
+    name: "LOLA 30 m product covering 75S-90S"
     provider: "PGDA"
     product_id: 90
     source_page: "https://pgda.gsfc.nasa.gov/products/90"
@@ -163,19 +253,24 @@ products:
       coordinate_system: "south-polar stereographic"
     availability_status: "verified_product"
     verification_status: "source_page_and_urls_provided"
+    notes: >
+      Product footprint does not reach the CY-3 landing site, approximately
+      632 km from the lunar south pole. Do not use for CY-3 crop selection.
 
 selection_ladders:
-  chandrayaan3_statio_shiv_shakti:
-    site_id: "statio_shiv_shakti"
+  cy3_shiv_shakti:
+    site_id: "cy3_shiv_shakti"
     order:
       - chandrayaan3_lroc_vikramsite_dtm
+      - polar_60m_lola_pgda_90
       - regional_240m_lola_pgda_90
     active_source: null
     rule: >
-      Preserve this order. The first source that is obtained and passes frame,
-      datum, coverage, and processing verification is selected. Record the
-      actual selected source; do not report the preferred source unless it was
-      obtained and processed.
+      Use the LROC DTM only after its pixel data, confidence map, frame and
+      vertical reference pass verification. Otherwise use the 60 m PGDA-90
+      source for the regional mid-field and the 240 m source for far-field.
+      Do not select the 30 m 75S product; its footprint does not cover CY-3.
+      Record the actual source used for each crop.
 
   shackleton_ridge:
     site_id: "shackleton_ridge"
@@ -185,5 +280,10 @@ selection_ladders:
       - regional_240m_lola_pgda_90
     active_source: null
     rule: >
-      Use the first source that passes frame, datum, coverage, and processing
-      verification. Record the actual selected source.
+      Use the first source that passes frame, datum, coverage and processing
+      verification for the relevant crop. The 10 m DEM and matching ERR
+      window have been read successfully. The 20 m and 240 m fallback DEM
+      and ERR windows have also been read successfully. Formal vertical-datum
+      confirmation remains outstanding. Record the actual source used for
+      each crop; do not report a preferred source as active unless it was
+      obtained and processed.

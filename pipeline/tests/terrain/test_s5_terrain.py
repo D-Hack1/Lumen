@@ -79,13 +79,13 @@ def test_cy3_ladder_prefers_dedicated_then_mid_then_regional():
     """Use explicitly marked synthetic products; this does not verify production sources."""
 
     specs = _crop_specs("cy3_shiv_shakti")
-    assert specs[0].source_keys == (
-        "chandrayaan3_lroc_vikramsite_dtm",
-        "chandrayaan3_lola_30m_pgda_90",
+    assert specs[0].source_keys == ("chandrayaan3_lroc_vikramsite_dtm",)
+    assert specs[1].source_keys == (
+        "polar_60m_lola_pgda_90",
         "regional_240m_lola_pgda_90",
     )
     assert specs[1].source_keys == (
-        "chandrayaan3_lola_30m_pgda_90",
+        "polar_60m_lola_pgda_90",
         "regional_240m_lola_pgda_90",
     )
 
@@ -93,7 +93,7 @@ def test_cy3_ladder_prefers_dedicated_then_mid_then_regional():
         "chandrayaan3_lroc_vikramsite_dtm": _product(
             "chandrayaan3_lroc_vikramsite_dtm", 3.0, "60S-75S"
         ),
-        "chandrayaan3_lola_30m_pgda_90": _product("chandrayaan3_lola_30m_pgda_90", 30.0, "60S-75S"),
+        "polar_60m_lola_pgda_90": _product("polar_60m_lola_pgda_90", 60.0, "60S-90S"),
         "regional_240m_lola_pgda_90": _product("regional_240m_lola_pgda_90", 240.0, "60S-90S"),
     }
     crops = build_crops(
@@ -109,13 +109,13 @@ def test_cy3_ladder_prefers_dedicated_then_mid_then_regional():
     assert crops.mid is not None
     assert crops.far is not None
     assert crops.near.source_key == "chandrayaan3_lroc_vikramsite_dtm"
-    assert crops.mid.source_key == "chandrayaan3_lola_30m_pgda_90"
+    assert crops.mid.source_key == "polar_60m_lola_pgda_90"
     assert crops.far.source_key == "regional_240m_lola_pgda_90"
     assert all(crop.dem.provenance["synthetic"] for crop in (crops.near, crops.mid, crops.far))
 
 
 def test_cy3_ladder_falls_back_to_regional_only_when_verified():
-    """Exercise fallback ordering with synthetic products only."""
+    """Regional 240m can serve mid/far, never the CY-3 near field."""
 
     products = {
         "regional_240m_lola_pgda_90": _product("regional_240m_lola_pgda_90", 240.0, "60S-90S")
@@ -126,14 +126,14 @@ def test_cy3_ladder_falls_back_to_regional_only_when_verified():
         longitude_deg_east=CY3_LONGITUDE,
         reader=_Reader(_dem()),
         products=products,
-        allow_unavailable=False,
+        allow_unavailable=True,
     )
-    assert crops.near is not None
+
+    assert crops.near is None
     assert crops.mid is not None
+    assert crops.mid.source_key == "regional_240m_lola_pgda_90"
     assert crops.far is not None
-    assert {crop.source_key for crop in (crops.near, crops.mid, crops.far)} == {
-        "regional_240m_lola_pgda_90"
-    }
+    assert crops.far.source_key == "regional_240m_lola_pgda_90"
 
 
 def test_registered_sites_use_authoritative_coordinates_and_no_invented_artemis_region_id():
@@ -214,7 +214,7 @@ def test_production_dem_registry_blocks_unresolved_s5_sources():
     products = load_products()
     assert "chandrayaan3_lroc_vikramsite_dtm" not in products
     assert "chandrayaan3_lola_30m_pgda_90" not in products
-    assert "regional_240m_lola_pgda_90" not in products
+    assert "regional_240m_lola_pgda_90" in products
     assert "polar_5m_lola_pgda_81" not in products
 
 
@@ -234,6 +234,7 @@ def test_s5_production_crops_remain_blocked_without_verified_sources(site_id, la
         products=load_products(),
     )
     assert crops.near is None
-    assert crops.mid is None
-    assert crops.far is None
-    assert set(crops.unavailable) == {"near", "mid", "far"}
+    if site_id == "cy3_shiv_shakti":
+        assert set(crops.unavailable) == {"near"}
+    else:
+        assert set(crops.unavailable) == {"near", "mid", "far"}
