@@ -44,7 +44,7 @@ export function mockScenarioResult(
   const u = (): Uint8Array => new Uint8Array(n);
   const s: Series = {
     t0: landingUtc, stepMs: STEP, sunElevDeg: f(), sunAzDeg: f(), sunClearanceDeg: f(), sunDiskPct: f(), earthElevDeg: f(),
-    earthAzDeg: f(), earthClearanceDeg: f(), earthDiskPct: f(), powerW: f(), sunUp: u(), earthUp: u(), linkUp: u(), sigmaBandDeg: f(),
+    earthAzDeg: f(), earthClearanceDeg: f(), earthDiskPct: f(), earthRangeKm: f(), powerW: f(), sunUp: u(), earthUp: u(), linkUp: u(), sigmaBandDeg: f(),
   };
   const mask = tier === 'C' ? -0.09 : 1.0;
   for (let i = 0; i < n; i++) {
@@ -58,6 +58,7 @@ export function mockScenarioResult(
     s.earthElevDeg[i] = earthEl;
     s.earthAzDeg[i] = (((t / (27.3 * D)) * 40 + 20) % 360 + 360) % 360;
     s.earthClearanceDeg[i] = earthEl - (tier === 'C' ? -0.09 : 2.0);
+    s.earthRangeKm[i] = 381_000 + 22_000 * Math.sin((2 * Math.PI * t) / (27.55 * D) + seedPhase); // within the real Earth-Moon range
     s.earthDiskPct[i] = s.earthClearanceDeg[i] > 0.27 ? 100 : s.earthClearanceDeg[i] < -0.27 ? 0 : 50;
     s.sunUp[i] = s.sunDiskPct[i] >= 50 ? 1 : 0;
     s.earthUp[i] = s.earthDiskPct[i] >= 50 && s.earthClearanceDeg[i] >= 1 ? 1 : 0;
