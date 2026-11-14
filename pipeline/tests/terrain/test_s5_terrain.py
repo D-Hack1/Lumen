@@ -79,9 +79,7 @@ def test_cy3_ladder_prefers_dedicated_then_mid_then_regional():
     """Use explicitly marked synthetic products; this does not verify production sources."""
 
     specs = _crop_specs("cy3_shiv_shakti")
-    assert specs[0].source_keys == (
-        "chandrayaan3_lroc_vikramsite_dtm",
-    )
+    assert specs[0].source_keys == ("chandrayaan3_lroc_vikramsite_dtm",)
     assert specs[1].source_keys == (
         "polar_60m_lola_pgda_90",
         "regional_240m_lola_pgda_90",
@@ -120,9 +118,7 @@ def test_cy3_ladder_falls_back_to_regional_only_when_verified():
     """Regional 240m can serve mid/far, never the CY-3 near field."""
 
     products = {
-        "regional_240m_lola_pgda_90": _product(
-            "regional_240m_lola_pgda_90", 240.0, "60S-90S"
-        )
+        "regional_240m_lola_pgda_90": _product("regional_240m_lola_pgda_90", 240.0, "60S-90S")
     }
     crops = build_crops(
         "cy3_shiv_shakti",
@@ -138,7 +134,6 @@ def test_cy3_ladder_falls_back_to_regional_only_when_verified():
     assert crops.mid.source_key == "regional_240m_lola_pgda_90"
     assert crops.far is not None
     assert crops.far.source_key == "regional_240m_lola_pgda_90"
-
 
 
 def test_registered_sites_use_authoritative_coordinates_and_no_invented_artemis_region_id():
