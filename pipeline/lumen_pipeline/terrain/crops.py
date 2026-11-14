@@ -126,21 +126,26 @@ _CY3_CROP_SPECS = (
         "near",
         0.0,
         5.0,
-        (
-            "chandrayaan3_lroc_vikramsite_dtm",
-            "chandrayaan3_lola_30m_pgda_90",
-            "regional_240m_lola_pgda_90",
-        ),
-        5.0,
+        ("chandrayaan3_lroc_vikramsite_dtm",),
+        3.0,
     ),
     CropSpec(
         "mid",
         5.0,
         80.0,
-        ("chandrayaan3_lola_30m_pgda_90", "regional_240m_lola_pgda_90"),
-        30.0,
+        (
+            "polar_60m_lola_pgda_90",
+            "regional_240m_lola_pgda_90",
+        ),
+        60.0,
     ),
-    CropSpec("far", 80.0, 250.0, ("regional_240m_lola_pgda_90",), 240.0),
+    CropSpec(
+        "far",
+        80.0,
+        250.0,
+        ("regional_240m_lola_pgda_90",),
+        240.0,
+    ),
 )
 
 
