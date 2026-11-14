@@ -8,10 +8,13 @@
   "step_s": 1800,
   "count": 140257,
   "quantum_deg": 0.5,
-  "offset_deg": -30.0,
-  "dtype": "uint8",
-  "nodata": 255,
-  "layout": "station-major: stations[k] occupies bytes [k*count, (k+1)*count)",
+  "dtype": "int16",
+  "valid_range": [
+    -180,
+    180
+  ],
+  "decode": "stored_value / 2",
+  "layout": "station-major: stations[k] occupies int16 values [k*count, (k+1)*count)",
   "stations": [
     {
       "id": "DSS-14",

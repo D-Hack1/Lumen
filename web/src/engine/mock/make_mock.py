@@ -167,7 +167,6 @@ def make_ephem():
 
 DSN = [("DSS-14", "Goldstone", 0.0), ("DSS-43", "Canberra", 2 * math.pi / 3), ("DSS-63", "Madrid", 4 * math.pi / 3)]
 DSN_STEP = 1800
-DSN_OFFSET_DEG = -30.0  # stored = round((el - OFFSET) / 0.5), clamped 0..254; 255 = no data
 
 
 def make_dsn():
@@ -177,12 +176,12 @@ def make_dsn():
         t = T0 + i * DSN_STEP
         for k, (_, _, ph) in enumerate(DSN):
             el = 55 * math.sin(2 * math.pi * (t - T0) / 86164.1 + ph) + 20 * math.sin(2 * math.pi * (t - T0) / (27.32 * 86400))
-            q = round((max(-30.0, min(96.5, el)) - DSN_OFFSET_DEG) / 0.5)
-            cols[k].append(max(0, min(254, q)))
+            q = round(max(-90.0, min(90.0, el)) * 2)
+            cols[k] += struct.pack("<h", q)
     w_bin("dsn/dsn.bin", b"".join(bytes(c) for c in cols))
     w_json("dsn/dsn.json", hdr(
-        "dsn", epoch_utc=iso(T0), epoch_unix_s=T0, step_s=DSN_STEP, count=n, quantum_deg=0.5, offset_deg=DSN_OFFSET_DEG,
-        dtype="uint8", nodata=255, layout="station-major: stations[k] occupies bytes [k*count, (k+1)*count)",
+        "dsn", epoch_utc=iso(T0), epoch_unix_s=T0, step_s=DSN_STEP, count=n, quantum_deg=0.5,
+        dtype="int16", valid_range=[-180, 180], decode="stored_value / 2", layout="station-major: stations[k] occupies int16 values [k*count, (k+1)*count)",
         stations=[{"id": s, "complex": c} for s, c, _ in DSN]))
 
 

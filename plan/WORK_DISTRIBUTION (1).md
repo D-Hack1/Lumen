@@ -290,7 +290,7 @@ Produce the Sun/Earth geometry the whole app is built on, prove it is right, and
 - `earth_ref_to_true_azimuth(...)`: conversion for display where true north is defined.
 - Unit tests in `tests/gowri/test_frames.py`: no NaN anywhere 60–90°S including exactly 90°S; rotation is orthonormal; round-trip vector → az/el → vector.
 
-**`lumen_pipeline/common/binio.py`** — writing helpers used by both backend people: write a binary file of little-endian Float32 / UInt8 arrays plus a sidecar JSON header containing `version`, producer, created UTC, git commit, field order, dtype, shape, scale/offset (for quantised data) and units. Also the matching reader (used in tests). Contract in `contracts/README.md`.
+**`lumen_pipeline/common/binio.py`** — writing helpers used by both backend people: write a binary file of little-endian Float32 / Int16 / UInt8 arrays plus a sidecar JSON header containing `version`, producer, created UTC, git commit, field order, dtype, shape, scale/offset (for quantised data) and units. Also the matching reader (used in tests). Contract in `contracts/README.md`.
 
 **`lumen_pipeline/common/timeutil.py`** — UTC ⇄ ET (TDB) conversions via SPICE, ISO formatting, hour-index ⇄ UTC for the ephemeris grid.
 
@@ -298,7 +298,7 @@ Produce the Sun/Earth geometry the whole app is built on, prove it is right, and
 
 **`lumen_pipeline/ephem/ephemeris.py`** — for every hour in the range: Sun and Earth position (km) and velocity (km/s) relative to the Moon centre in MOON_ME with the configured aberration correction. Writes `public/data/ephem/ephem.bin` (per node 12 Float32: Sun pos 3, Sun vel 3, Earth pos 3, Earth vel 3) and `ephem.json` (start epoch UTC + TDB, step, count, frame, units, aberration flag, kernel list + checksums, body order). Includes the **G2 check**: 10,000 random epochs, Hermite-interpolated direction vs direct SPICE, max error < 0.001°; result written into `docs/validation.md`.
 
-**`lumen_pipeline/ephem/dsn.py`** — for each DSN station and every 10 minutes 2023–2030: elevation of the Moon centre in the station's topocentric frame (Earth high-precision PCK). Quantise to 0.5° in UInt8 with offset (store −90°…+90°). Writes `dsn/dsn.bin` + `dsn.json`. Spot-check one station against Horizons.
+**`lumen_pipeline/ephem/dsn.py`** — for each DSN station and every 10 minutes 2023–2030: elevation of the Moon centre in the station's topocentric frame (Earth high-precision PCK). Quantise to 0.5° as little-endian signed Int16 with `round(elevation_deg * 2)` (store −180…+180; decode ÷2). Writes `dsn/dsn.bin` + `dsn.json`. Spot-check one station against Horizons.
 
 **`lumen_pipeline/reference/`** — the Python twin of the browser engine. Must implement PLAN_FINAL §5.2–§5.8 exactly, slowly and clearly (speed is not important here, correctness is):
 - `interp.py` — cubic Hermite interpolation of body position from `ephem.bin`; topocentric direction for a site; rotation into the site frame (uses `frames.py`).
