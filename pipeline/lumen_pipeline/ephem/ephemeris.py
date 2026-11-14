@@ -17,6 +17,7 @@ START_UTC = "2023-01-01T00:00:00Z"
 END_UTC = "2030-12-31T23:00:00Z"
 STEP_SECONDS = 3600
 ABERRATION_CORRECTION = "LT+S"
+PUBLIC_MOON_FRAME = "MOON_ME"
 BODY_ORDER = ("sun", "earth")
 FIELDS = [
     "sun_position_km",
@@ -96,8 +97,10 @@ def build_ephemeris(
                 "end_utc": end_utc,
                 "step_seconds": STEP_SECONDS,
                 "count": len(ets),
-                "frame": MOON_FRAME,
+                "frame": PUBLIC_MOON_FRAME,
+                "spice_frame": MOON_FRAME,
                 "aberration_correction": ABERRATION_CORRECTION,
+                "cadence_s": STEP_SECONDS,
                 "body_order": list(BODY_ORDER),
                 "kernel_provenance": [
                     {"filename": item.name, "sha256": hashlib.sha256(item.read_bytes()).hexdigest()}

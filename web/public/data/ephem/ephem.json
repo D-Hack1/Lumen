@@ -4,6 +4,7 @@
     "sun",
     "earth"
   ],
+  "cadence_s": 3600,
   "count": 70128,
   "created_utc": "2026-11-14T07:28:08.634720Z",
   "dtype": "float32",
@@ -14,7 +15,7 @@
     "earth_position_km",
     "earth_velocity_km_s"
   ],
-  "frame": "MOON_ME_DE421",
+  "frame": "MOON_ME",
   "kernel_provenance": [
     {
       "filename": "naif0012.tls",
@@ -45,6 +46,7 @@
     70128,
     12
   ],
+  "spice_frame": "MOON_ME_DE421",
   "start_et_tdb": 725803268.1839136,
   "start_utc": "2023-01-01T00:00:00Z",
   "step_seconds": 3600,
