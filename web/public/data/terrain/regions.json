@@ -1,0 +1,7 @@
+{
+  "reason": "No verified Artemis candidate-region geometry or official shapefile is present in the repository.",
+  "regions": [],
+  "schema": "regions",
+  "status": "unavailable",
+  "version": "0.1.0"
+}
