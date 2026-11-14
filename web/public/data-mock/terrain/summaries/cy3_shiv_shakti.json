@@ -9,7 +9,7 @@
   "dem_source": "MOCK-DEM",
   "files": {
     "mask": "masks/cy3_shiv_shakti.json",
-    "sigma": "sigma/cy3_shiv_shakti.bin",
+    "sigma": "sigma/cy3_shiv_shakti.json",
     "pad": "pad/cy3_shiv_shakti.json",
     "dispersion": "dispersion/cy3_shiv_shakti.json"
   },
