@@ -94,3 +94,5 @@ desktop.ini
 
 .claude/*
 .claude/
+CLAUDE.md
+web/e2e/screens/
