@@ -225,7 +225,7 @@
       "expected": {
         "cross_slope_effective_deg": -1.0,
         "flat_or_downhill_effective_deg": -1.0,
-        "uphill_effective_deg": 6.25
+        "uphill_effective_deg": 6.2597
       },
       "id": "synthetic_near_zone_slope_edges",
       "input": {
@@ -389,6 +389,59 @@
         ],
         "time_scale": "ET seconds"
       }
+    },
+    {
+      "expected": {
+        "dsn_aware": {
+          "event_times_et": [
+            450.0,
+            750.0,
+            1200.0
+          ],
+          "event_types": [
+            "link_down",
+            "link_recovery",
+            "link_down"
+          ],
+          "link_pct": 50.0,
+          "longest_comm_gap_hours": 0.16666666666666666
+        }
+      },
+      "id": "synthetic_dsn_out_of_coverage",
+      "input": {
+        "cadence_s": 600,
+        "dsn_mask_deg": 5.0,
+        "earth_visible": true,
+        "interpolation": "linear",
+        "range_et": [
+          0,
+          1800
+        ],
+        "site_id": "synthetic_dsn_coverage",
+        "station_elevations_deg": [
+          [
+            20.0,
+            0.0,
+            20.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "station_order": [
+          "DSS-14",
+          "DSS-43",
+          "DSS-63"
+        ],
+        "time_scale": "ET seconds"
+      }
     }
   ],
   "description": "Deterministic R3 edge vectors for reference and browser parity; not production terrain or site results.",
@@ -426,6 +479,7 @@
       "synthetic_three_pass_bounds": "TS replays scalar three-pass mask bounds; scenario-window bounds are Python-only."
     },
     "python_only": {
+      "synthetic_dsn_out_of_coverage": "TS has no DSN-aware link-window metrics.",
       "synthetic_guarded_span_spike": "TS has no envelope-guarded coarse sampler or exact span-extrema proof."
     }
   },

@@ -1,7 +1,7 @@
 """R3 three-pass scenario bounds using refined event-driven windows.
 
-The caller supplies each visibility predicate and the event-pairing policy.
-This keeps DSN/link and mission-specific definitions outside the generic
+The caller supplies each visibility predicate. The default event-pairing
+policy keeps DSN/link and mission-specific definitions outside the generic
 terrain-mask uncertainty mechanics.
 """
 
@@ -30,6 +30,7 @@ WindowPredicate = Callable[[float, Horizon], bool]
 PeakElevation = Callable[[float, float, Horizon], float]
 EventPairer = Callable[[Event, Sequence[Event]], Event | None]
 WINDOW_TYPES = frozenset(("sun", "earth", "link", "ops"))
+PAIR_WINDOW_SECONDS = 36 * 3600.0
 
 
 @dataclass(frozen=True)
@@ -82,6 +83,12 @@ class ScenarioBounds:
     windows: dict[str, tuple[BoundedWindow, ...]]
     metrics: dict[str, BoundedValue]
     sunlit_duration_hours: BoundedValue
+
+
+def pair_nearest_event(event: Event, candidates: Sequence[Event]) -> Event | None:
+    """Return the nearest same-type event within the 36-hour pairing window."""
+    matches = (candidate for candidate in candidates if candidate.type == event.type and abs(candidate.et - event.et) <= PAIR_WINDOW_SECONDS)
+    return min(matches, key=lambda candidate: abs(candidate.et - event.et), default=None)
 
 
 def _pass_metrics(start_et: float, end_et: float, windows: dict[str, tuple[Window, ...]]) -> dict[str, float | None]:
@@ -207,13 +214,12 @@ def evaluate_with_bounds(
     sigma_deg: float | Sequence[float] | np.ndarray,
     specs: Sequence[WindowSpec],
     *,
-    pair_event: EventPairer,
+    pair_event: EventPairer | None = None,
 ) -> ScenarioBounds:
     """Run R3's correlated -sigma, nominal, and +sigma passes.
 
-    ``pair_event`` is required because R3 does not define one event matching
-    policy for shifted passes.  It must only pair events of the same predicate
-    and transition type; an unmatched event is reported as vanished.
+    By default, shifted events pair to the nearest same-type event within 36
+    hours. An unmatched event is reported as vanished.
     """
     if not start_et < end_et:
         raise ValueError("scenario range must have positive duration")
@@ -222,6 +228,7 @@ def evaluate_with_bounds(
         raise ValueError("spec types must be unique members of sun, earth, link, ops")
     if not specs:
         raise ValueError("at least one window specification is required")
+    pair_event = pair_nearest_event if pair_event is None else pair_event
 
     passes = three_pass_bounds(horizon, sigma_deg, lambda current: _evaluate_pass(start_et, end_et, current, specs))
     lower, nominal, upper = passes.lower_mask, passes.nominal, passes.upper_mask

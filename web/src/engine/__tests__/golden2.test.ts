@@ -42,10 +42,11 @@ describe('Golden Set 2 (synthetic) vs the TypeScript engine', () => {
     expect(file.cases.map((c) => c.id)).toEqual([
       'synthetic_flat_visibility_boundaries', 'synthetic_terrain_mask_boundary', 'synthetic_disk_limb_conventions', 'synthetic_event_at_window_start',
       'synthetic_refined_visibility_window', 'synthetic_total_clearance_rate', 'synthetic_three_pass_bounds', 'synthetic_exact_event_uncertainty',
-      'synthetic_grazing_rate', 'synthetic_near_zone_slope_edges', 'synthetic_guarded_span_spike', 'synthetic_tier_c_smooth_moon',
-      'synthetic_min_sun_elevation_ops', 'synthetic_power_eclipse_soc', 'synthetic_dsn_link_modes',
+       'synthetic_grazing_rate', 'synthetic_near_zone_slope_edges', 'synthetic_guarded_span_spike', 'synthetic_tier_c_smooth_moon',
+       'synthetic_min_sun_elevation_ops', 'synthetic_power_eclipse_soc', 'synthetic_dsn_link_modes', 'synthetic_dsn_out_of_coverage',
     ]);
     expect(file.typescript_parity.python_only).toHaveProperty('synthetic_guarded_span_spike');
+    expect(file.typescript_parity.python_only).toHaveProperty('synthetic_dsn_out_of_coverage');
     expect(Object.keys(file.typescript_parity.partial).sort()).toEqual(['synthetic_dsn_link_modes', 'synthetic_three_pass_bounds']);
     expect(file.typescript_parity.full).not.toContain('synthetic_guarded_span_spike');
   });
@@ -144,8 +145,7 @@ describe('Golden Set 2 (synthetic) vs the TypeScript engine', () => {
     expect(Math.abs(flatH.effectiveAt(i.uphill_azimuth_deg) - c.expected.flat_or_downhill_effective_deg)).toBeLessThanOrEqual(TOL.angle_deg);
     expect(Math.abs(h.effectiveAt((i.uphill_azimuth_deg + 180) % 360) - c.expected.flat_or_downhill_effective_deg)).toBeLessThanOrEqual(TOL.angle_deg);
     expect(Math.abs(h.effectiveAt((i.uphill_azimuth_deg + 90) % 360) - c.expected.cross_slope_effective_deg)).toBeLessThanOrEqual(TOL.angle_deg);
-    // The file stores the hand-rounded 6.25; the exact value is atan(tan 10deg - 1/15) = 6.2597 deg, so (as Gowri's own pytest does) allow 0.01 deg here.
-    expect(Math.abs(h.effectiveAt(i.uphill_azimuth_deg) - c.expected.uphill_effective_deg)).toBeLessThanOrEqual(0.01);
+    expect(Math.abs(h.effectiveAt(i.uphill_azimuth_deg) - c.expected.uphill_effective_deg)).toBeLessThanOrEqual(TOL.angle_deg);
   });
 
   it('synthetic_min_sun_elevation_ops: 5 deg elevation fails the 6 deg ISRO ops minimum even with the full disk', () => {

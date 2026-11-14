@@ -1,7 +1,12 @@
 import numpy as np
 import pytest
 
-from lumen_pipeline.reference.bounds import WindowSpec, evaluate_with_bounds
+from lumen_pipeline.reference.bounds import (
+    PAIR_WINDOW_SECONDS,
+    WindowSpec,
+    evaluate_with_bounds,
+    pair_nearest_event,
+)
 from lumen_pipeline.reference.events import Event
 from lumen_pipeline.reference.visibility import Horizon
 
@@ -19,6 +24,14 @@ def _triangle_spec(type: str = "sun") -> WindowSpec:
         lambda et, horizon: 1.0 - abs(et - 360.0) / 120.0 >= horizon.effective_at(0.0),
         lambda _start, _end, _horizon: 1.0,
     )
+
+
+def test_pair_nearest_event_matches_type_ties_boundary_and_vanished():
+    nominal = Event("sunset", 100.0)
+    first_tie = Event("sunset", 90.0)
+    assert pair_nearest_event(nominal, (Event("shadowExit", 100.0), Event("sunset", 130.0), first_tie, Event("sunset", 110.0))) is first_tie
+    assert pair_nearest_event(nominal, (Event("sunset", 100.0 + PAIR_WINDOW_SECONDS),)).et == 100.0 + PAIR_WINDOW_SECONDS
+    assert pair_nearest_event(nominal, (Event("sunset", 100.0 + PAIR_WINDOW_SECONDS + 0.1),)) is None
 
 
 def test_three_pass_bounds_use_independent_refined_windows_and_metrics():
