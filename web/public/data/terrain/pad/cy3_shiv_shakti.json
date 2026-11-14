@@ -1,0 +1,35 @@
+{
+  "created_utc": "2026-11-14T23:47:24.596716Z",
+  "d_min_m": 180.0,
+  "dispersion_slope_stats": {
+    "available": false,
+    "reason": "dispersion_radius_m and slope_tolerance_deg are unresolved project defaults (pad_statistics in pipeline/config/terrain.yaml); no value is invented"
+  },
+  "downhill_aspect_deg": 10.641259650773463,
+  "ground_normal_me": [
+    0.3061095167533531,
+    0.18943988944922707,
+    -0.9329573902587907
+  ],
+  "near_field_resolution_m": 60.0,
+  "plane_fit": {
+    "baseline_m": 360.0,
+    "dem_source": "polar_60m_lola_pgda_90",
+    "k": 3,
+    "window_dim_m": [
+      420.0,
+      420.0
+    ],
+    "window_px": [
+      7,
+      7
+    ]
+  },
+  "producer": "lumen_pipeline.terrain.pad",
+  "site_id": "cy3_shiv_shakti",
+  "slope_deg": 0.5137536572065825,
+  "under_resolved": null,
+  "uphill_az_deg": 190.64125965077343,
+  "version": "0.1.0",
+  "z0_m": 529.2657095770135
+}

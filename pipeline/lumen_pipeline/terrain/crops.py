@@ -127,7 +127,19 @@ _CY3_CROP_SPECS = (
         "near",
         0.0,
         5.0,
-        ("chandrayaan3_lroc_vikramsite_dtm",),
+        # PLAN_FINAL §4.1's full CY-3 near-field source ladder, in order:
+        # (1) a verified published DTM of the landing area; (2) the finest
+        # LOLA gridded product covering 69.37°S (polar_60m_lola_pgda_90; no
+        # 5/10/20/30 m polar product reaches this latitude; see
+        # dem_sources.yaml notes); (3) the 60-90S 240 m product, explicitly
+        # "guaranteed" by the plan as the near-field fallback of last resort.
+        # _select_product tries these strictly in order and only reaches
+        # item (3) when both (1) and (2) are unavailable or unverified.
+        (
+            "chandrayaan3_lroc_vikramsite_dtm",
+            "polar_60m_lola_pgda_90",
+            "regional_240m_lola_pgda_90",
+        ),
         3.0,
     ),
     CropSpec(
