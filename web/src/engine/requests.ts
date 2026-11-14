@@ -10,7 +10,10 @@ const DAY_MS = 86_400_000;
 
 /** Store definitions (percent, UI units) -> engine definitions (fractions). */
 export function engineDefinitions(d: StoreDefinitions) {
-  return { sunDiskThreshold: d.sunDiskThresholdPct / 100, earthDiskThreshold: d.dteDiskThresholdPct / 100, earthMarginDeg: d.earthMarginDeg, minSunElevationOpsDeg: d.minSunElevationOps };
+  return {
+    sunDiskThreshold: d.sunDiskThresholdPct / 100, earthDiskThreshold: d.dteDiskThresholdPct / 100, earthMarginDeg: d.earthMarginDeg, minSunElevationOpsDeg: d.minSunElevationOps,
+    dsnMaskDeg: d.dsnMode === 'dsnAware' ? d.dsnMaskDeg : null, // null = DSN not applied
+  };
 }
 
 export interface RequestParts {

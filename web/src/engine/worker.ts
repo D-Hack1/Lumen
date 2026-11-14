@@ -4,6 +4,7 @@
 // 30-day window, but it must never block scrubbing or typing.
 import * as Comlink from 'comlink';
 import { buildScenarioResult, type ScenarioRequest } from './core/buildResult';
+import { loadDsnOrNull } from './data/dsn';
 import { loadEphem } from './data/ephem';
 import { setDataMode, type DataMode } from './data/source';
 import { refineCandidate, scanStage1, stage1ForOffsets, type ScanInput } from './compare/scanEngine';
@@ -20,19 +21,19 @@ const api: EngineApi = {
   async evaluateScenario(mode, req) {
     setDataMode(mode); // the worker has its own module state; mirror the main thread's mock/real choice
     const eph = await loadEphem();
-    return buildScenarioResult(eph, { ...req, dataVersions: { ...req.dataVersions, ephem: eph.mock ? 'mock' : 'real' } });
+    return buildScenarioResult(eph, { ...req, dataVersions: { ...req.dataVersions, ephem: eph.mock ? 'mock' : 'real' } }, await loadDsnOrNull());
   },
   async scanStage1(mode, input) {
     setDataMode(mode);
-    return scanStage1(await loadEphem(), input);
+    return scanStage1(await loadEphem(), input, await loadDsnOrNull());
   },
   async stage1Offsets(mode, req, offsets) {
     setDataMode(mode);
-    return stage1ForOffsets(await loadEphem(), req, offsets);
+    return stage1ForOffsets(await loadEphem(), req, offsets, await loadDsnOrNull());
   },
   async refineCandidate(mode, req, candidate) {
     setDataMode(mode);
-    return refineCandidate(await loadEphem(), req, candidate);
+    return refineCandidate(await loadEphem(), req, candidate, await loadDsnOrNull());
   },
 };
 
