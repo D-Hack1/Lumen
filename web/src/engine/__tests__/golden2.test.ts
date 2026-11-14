@@ -8,21 +8,28 @@ import { describe, expect, it } from 'vitest';
 import { AU_KM } from '../core/constants';
 import { detectEvents } from '../core/events';
 import { evaluatePowerSeries } from '../core/power';
+import { energyPerDayWh } from '../core/padPower';
 import { availability } from '../core/visibility';
 import { Horizon } from '../core/visibility';
 import { mergeWindows } from '../core/windows';
+import { dsnElevationsAt, dsnLinkUp } from '../core/dsn';
 import { fastEventUncertainty, limbOffsetDeg, numericBounds, shiftHorizonMask, threePassBounds, totalClearanceRateDegPerHour, exactEventUncertainty } from '../core/uncertainty';
 import { evaluateWithBounds } from '../core/bounds';
 import { DEFAULT_DEFINITIONS } from '../core/evaluate';
 import { buildScenarioResult } from '../core/buildResult';
 import { makeSite } from '../core/geometry';
 import { loadEphem } from '../data/ephem';
+import type { DsnSeries } from '../data/dsn';
 import { setDataMode } from '../data/source';
 import { PUBLIC, stubFetch } from './helpers';
 import type { EventRecord } from '../types';
 
 type Case = { id: string; input: Record<string, any>; expected: Record<string, any> }; // eslint-disable-line @typescript-eslint/no-explicit-any
-const file = JSON.parse(readFileSync(join(PUBLIC, 'data/golden/golden_set2_synthetic.json'), 'utf8')) as { cases: Case[]; tolerances: { angle_deg: number; event_time_s: number; delta_t_percent: number } };
+const file = JSON.parse(readFileSync(join(PUBLIC, 'data/golden/golden_set2_synthetic.json'), 'utf8')) as {
+  cases: Case[];
+  tolerances: { angle_deg: number; event_time_s: number; delta_t_percent: number };
+  typescript_parity: { full: string[]; partial: Record<string, string>; python_only: Record<string, string> };
+};
 const TOL = file.tolerances;
 const get = (id: string): Case => file.cases.find((c) => c.id === id)!;
 const S = 1000;
@@ -31,12 +38,16 @@ const ev = (et: number): EventRecord => ({ type: 'sunset', t: et * S, dtMs: null
 const opts = { diskThreshold: 0.5 };
 
 describe('Golden Set 2 (synthetic) vs the TypeScript engine', () => {
-  it('has the 12 documented cases (guards against the file silently changing shape)', () => {
+  it('has the 15 documented cases and explicit TypeScript parity classifications', () => {
     expect(file.cases.map((c) => c.id)).toEqual([
       'synthetic_flat_visibility_boundaries', 'synthetic_terrain_mask_boundary', 'synthetic_disk_limb_conventions', 'synthetic_event_at_window_start',
-      'synthetic_total_clearance_rate', 'synthetic_three_pass_bounds', 'synthetic_exact_event_uncertainty', 'synthetic_grazing_rate',
-      'synthetic_near_zone_slope_edges', 'synthetic_tier_c_smooth_moon', 'synthetic_min_sun_elevation_ops', 'synthetic_power_eclipse_soc',
+      'synthetic_refined_visibility_window', 'synthetic_total_clearance_rate', 'synthetic_three_pass_bounds', 'synthetic_exact_event_uncertainty',
+      'synthetic_grazing_rate', 'synthetic_near_zone_slope_edges', 'synthetic_guarded_span_spike', 'synthetic_tier_c_smooth_moon',
+      'synthetic_min_sun_elevation_ops', 'synthetic_power_eclipse_soc', 'synthetic_dsn_link_modes',
     ]);
+    expect(file.typescript_parity.python_only).toHaveProperty('synthetic_guarded_span_spike');
+    expect(Object.keys(file.typescript_parity.partial).sort()).toEqual(['synthetic_dsn_link_modes', 'synthetic_three_pass_bounds']);
+    expect(file.typescript_parity.full).not.toContain('synthetic_guarded_span_spike');
   });
 
   it.each(['synthetic_flat_visibility_boundaries', 'synthetic_terrain_mask_boundary'])('%s: elevation +-2 deg about the horizon gives clearance, disk fraction and visibility', (id) => {
@@ -70,6 +81,26 @@ describe('Golden Set 2 (synthetic) vs the TypeScript engine', () => {
     expect(w[0].partialStart).toBe(c.expected.window.partial_start);
   });
 
+  it('synthetic_refined_visibility_window: refined transitions delimit a complete window', () => {
+    const c = get('synthetic_refined_visibility_window');
+    const [a, b] = c.input.range_et as [number, number];
+    const predicate = (t: number) => 120 <= t / S && t / S < 480;
+    const events = detectEvents(a * S, b * S, predicate, { down: 'sunset', up: 'shadowExit' });
+    const expected = c.expected.window;
+    const times = [a * S, ...events.map((event) => event.t), b * S, (b + 120) * S];
+    const windows = mergeWindows('sun', times, [false, true, false, false, false], [1, 1, 1, 1, 1]);
+
+    expect(events.map((event) => event.type)).toEqual(c.expected.event_types);
+    events.forEach((event, index) => {
+      expect(Math.abs(event.t / S - [expected.start_et, expected.end_et][index])).toBeLessThanOrEqual(TOL.event_time_s);
+    });
+    expect(windows).toHaveLength(1);
+    expect(Math.abs(windows[0].startMs / S - expected.start_et)).toBeLessThanOrEqual(TOL.event_time_s);
+    expect(Math.abs(windows[0].endMs / S - expected.end_et)).toBeLessThanOrEqual(TOL.event_time_s);
+    expect(windows[0].partialStart).toBe(expected.partial_start);
+    expect(windows[0].partialEnd).toBe(expected.partial_end);
+  });
+
   it('synthetic_total_clearance_rate: d el/dt - (d mask/d az)(d az/dt) = -32.4 deg/h for a moving mask', () => {
     const c = get('synthetic_total_clearance_rate');
     const v = Float64Array.from({ length: 3600 }, (_, i) => c.input.mask_deg_per_bin * i);
@@ -80,7 +111,7 @@ describe('Golden Set 2 (synthetic) vs the TypeScript engine', () => {
     expect(totalClearanceRateDegPerHour(event, geom, h)).toBeCloseTo(c.expected.clearance_rate_deg_per_hour, 6);
   });
 
-  it('synthetic_three_pass_bounds: mask 1.0 +- sigma 0.2 -> [0.8, 1.0, 1.2]', () => {
+  it('synthetic_three_pass_bounds: mask 1.0 +- sigma 0.25 -> [0.75, 1.0, 1.25]', () => {
     const c = get('synthetic_three_pass_bounds');
     const h = new Horizon({ elevationsDeg: [c.input.mask_deg, c.input.mask_deg], binWidthDeg: 180 });
     const shifted = [shiftHorizonMask(h, c.input.sigma_deg, -1), h, shiftHorizonMask(h, c.input.sigma_deg, 1)].map((x) => x.elevationAt(90));
@@ -135,6 +166,28 @@ describe('Golden Set 2 (synthetic) vs the TypeScript engine', () => {
     c.expected.generation_w.forEach((x: number, k: number) => expect(r.generationW[k]).toBeCloseTo(x, 9));
     c.expected.net_w.forEach((x: number, k: number) => expect(r.netW[k]).toBeCloseTo(x, 9));
     c.expected.stored_energy_wh.forEach((x: number, k: number) => expect(r.storedEnergyWh[k]).toBeCloseTo(x, 9));
+    expect(energyPerDayWh(r.generationW, 3_600_000)).toBeCloseTo(c.expected.energyPerDayWh, 9);
+  });
+
+  it('synthetic_dsn_link_modes: replay interpolation and pointwise DSN on/off states only', () => {
+    const c = get('synthetic_dsn_link_modes');
+    const i = c.input;
+    const elevations = i.station_elevations_deg as number[][];
+    const series: DsnSeries = {
+      stations: i.station_order as string[],
+      startMs: 0,
+      cadenceMs: i.cadence_s * S,
+      count: elevations[0].length,
+      elevDeg: (station, node) => elevations[station][node],
+    };
+    const queryTimes = [0, 450, 600, 750, 1200];
+    const states = queryTimes.map((et) => dsnLinkUp(series, et * S, i.dsn_mask_deg));
+    const dsnOffStates = queryTimes.map(() => i.earth_visible);
+
+    expect(dsnElevationsAt(series, 450 * S)).toEqual([5, 0, 0]);
+    expect(states).toEqual([true, true, false, true, true]);
+    expect(dsnOffStates).toEqual([true, true, true, true, true]);
+    expect(file.typescript_parity.partial.synthetic_dsn_link_modes).toContain('link-window metrics are Python-only');
   });
 
   it('synthetic_tier_c_smooth_moon: no terrain => no sigma, labelled "smooth-Moon bound", and no +- on any value', async () => {
