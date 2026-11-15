@@ -31,6 +31,11 @@ const MUST_FIND: readonly [string, readonly string[]][] = [
   ['what do the colours mean', ['help:what-do-the-amber-and-sage-colours-mean']],
   ['what does sets in mean', ['help:what-does-sets-in']],
   ['how do i use this box', ['help:how-do-i-use-ask-lumen']],
+  ['what are the numbers for this window', ['help:what-are-numbers-for-this-window']],
+  ['what does the why button do', ['help:what-does-the-why-button-next-to-a-number-do']],
+  ['what does sigma pending mean', ['help:why-is-there-no']],
+  ['why is there no plus minus', ['help:why-is-there-no', 'term:uncertainty']],
+  ['what does smooth moon mean', ['help:what-does-smooth-moon-mean-on-a-site']],
   ['what can i ask you', ['help:how-do-i-use-ask-lumen', 'help:what-questions-can-lumen-answer']],
   // ---- how results are calculated
   ['how are the results calculated', ['help:how-does-lumen-work']],
@@ -75,6 +80,19 @@ const MUST_FIND: readonly [string, readonly string[]][] = [
   ['how do you know it is validated', ['help:how-was-lumen-checked-and-how-do-i-know-it-is-right']],
 ];
 
+/** For these the RIGHT answer must be the very first strong hit, not just somewhere in the top 3. */
+const MUST_BE_FIRST: readonly [string, string][] = [
+  ['why did you choose to show a plus minus', 'help:why-does-lumen-show-a'],
+  ['why do you show plus minus on everything', 'help:why-does-lumen-show-a'],
+  ['how is the earth elevation calculated', 'help:how-is-earth-elevation-calculated'],
+  ['how do i compare two sites', 'help:how-do-i-compare-sites'],
+  ['how are the results calculated', 'help:how-does-lumen-work'],
+  ['what is libration', 'term:libration'],
+  ['what does sigma pending mean', 'help:why-is-there-no'],
+  ['how is sunlight calculated', 'help:how-is-the-sunlit-percentage-calculated'],
+  ['are these numbers real', 'help:are-the-numbers-on-the-pages-real'],
+];
+
 /** Things the knowledge file does not cover. It must NOT present any of these as a confident answer. */
 const MUST_NOT_ANSWER: readonly string[] = ['banana smoothie recipe', 'what is the capital of france', 'who won the football match', 'how do i bake sourdough bread', 'what is the weather tomorrow'];
 
@@ -85,6 +103,10 @@ describe('ordinary questions find the right answer (top 3 strong matches)', () =
       expect(got.some((g) => ids.some((id) => g.startsWith(id))), `got: ${got.join(', ') || '(nothing strong)'}`).toBe(true);
     });
   }
+});
+
+describe('the most common questions get the right answer FIRST', () => {
+  for (const [q, id] of MUST_BE_FIRST) it(q, () => expect(strong(q)[0]).toBe(id.startsWith('help:') || id.startsWith('term:') ? strong(q).find((g) => g.startsWith(id)) : id));
 });
 
 describe('questions outside what LUMEN knows are not answered with confidence', () => {
