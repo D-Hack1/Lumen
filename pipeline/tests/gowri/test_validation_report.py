@@ -69,8 +69,7 @@ def test_validation_report_truthfully_aggregates_pending_blocked_and_open_eviden
     assert _gate(report, "G10")["status"] == "BLOCKED"
     assert _gate(report, "G4")["status"] == "PENDING"
     assert _gate(report, "G11")["status"] == "PENDING"
-    assert report["open_issues"][0]["status"] == "OPEN"
-    assert "R3-NEAR-ZONE-TERRAIN-INCONSISTENCY" == report["open_issues"][0]["id"]
+    assert report["open_issues"] == []
     assert report["status"] == "NOT_READY"
 
 

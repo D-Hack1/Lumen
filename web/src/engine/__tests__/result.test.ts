@@ -47,10 +47,10 @@ describe.skipIf(!run)('buildScenarioResult (real IM-2 ephemeris)', () => {
   it('never invents values it does not have: no sigma bounds, no power, verdict pending, honest labels', () => {
     const r = buildScenarioResult(eph, base);
     expect(r.verdict).toBe('PENDING');
-    expect(r.verdictReasons.join(' ')).toMatch(/smooth-Moon bound; terrain data is needed to confirm/);
+    expect(r.verdictReasons.join(' ')).toMatch(/smooth-sphere estimates; terrain data is needed to determine pass or fail/);
     expect(r.metrics!.energyPerDayWh.value).toBeNull();
     expect(r.metrics!.sunlitPct.lo).toBeNull(); // no +/- until the uncertainty passes exist
-    expect(r.meta!.sigmaSource).toBe('smooth-Moon bound');
+    expect(r.meta!.sigmaSource).toBe('smooth-sphere estimate; terrain unavailable');
     expect(r.meta!.definitionsSummary).toMatch(/DSN not applied/);
     expect(r.metrics!.sunlitPct.value).toBeCloseTo(IM2_REFINED.sunlitPct, 3); // refined-window method (her Python); Golden Set 1's sample-based 49.2963 differs by 0.003
   });
@@ -143,20 +143,20 @@ describe.skipIf(!run)('verdict wired into the real result (oracle: golden set 1,
   // golden (Python): sunlit 49.296%, Earth visible 67.208% of 720 h = 483.9 h, over the 30-day window.
   const req = (profile: ScenarioRequest['profile']): ScenarioRequest => ({ ...base, profile, weights });
 
-  it('NO-GO when even the optimistic best case misses the profile: min sunlit 60 > 49.3', () => {
+  it('PENDING when the nominal smooth-sphere result misses the profile: terrain is needed to determine the result', () => {
     const r = buildScenarioResult(eph, req({ minSunlitPct: 60, minLinkHours: 100, maxLongestNightH: 500, maxPadSlopeDeg: 10 }));
-    expect(r.verdict).toBe('NO-GO');
-    expect(r.verdictReasons.join(' ')).toMatch(/Sunlit time 49\.3% is below the minimum \(60%\)/);
+    expect(r.verdict).toBe('PENDING');
+    expect(r.verdictReasons.join(' ')).toMatch(/smooth-sphere estimate/);
   });
-  it('NO-GO on link hours: 483.9 h < 500 h', () => {
+  it('PENDING when nominal smooth-sphere link hours miss the profile', () => {
     const r = buildScenarioResult(eph, req({ minSunlitPct: 10, minLinkHours: 500, maxLongestNightH: 500, maxPadSlopeDeg: 10 }));
-    expect(r.verdict).toBe('NO-GO');
-    expect(r.verdictReasons.join(' ')).toMatch(/Link time 483\.9 h is below the minimum \(500 h\)/);
+    expect(r.verdict).toBe('PENDING');
+    expect(r.verdictReasons.join(' ')).toMatch(/smooth-sphere estimate/);
   });
-  it('PENDING (never GO) when the smooth-Moon best case passes: terrain is needed to confirm', () => {
+  it('PENDING when nominal smooth-sphere values pass: terrain is needed to determine the result', () => {
     const r = buildScenarioResult(eph, req({ minSunlitPct: 40, minLinkHours: 100, maxLongestNightH: 500, maxPadSlopeDeg: 10 }));
     expect(r.verdict).toBe('PENDING');
-    expect(r.verdictReasons.join(' ')).toMatch(/smooth-Moon bound/);
+    expect(r.verdictReasons.join(' ')).toMatch(/smooth-sphere estimate/);
   });
   it('exposes the Viability Index components, scored from the same metrics', () => {
     const r = buildScenarioResult(eph, req({ minSunlitPct: 60, minLinkHours: 100, maxLongestNightH: 500, maxPadSlopeDeg: 10 }));

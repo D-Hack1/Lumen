@@ -3,7 +3,7 @@
 //   Stage 1: ONE nominal visibility series per site (10-minute samples over the whole scan span), then every candidate
 //            landing date is scored with prefix sums (O(1) each). Verdicts are provisional. Target <= 100 ms.
 //   Stage 2: full evaluation (2-minute grid, events refined) of a chosen candidate: exact values, no longer provisional.
-// Without a terrain mask every value is a smooth-Moon best case, so a stage-1/2 pass is PENDING at best (see verdict.ts).
+// Stage 1 has nominal values only, so its geometry requirements are always provisional.
 import { buildScenarioResult, type ScenarioRequest } from '../core/buildResult';
 import { horizonFromMask } from '../core/terrainHorizon';
 import type { Mask } from '../data/masks';
@@ -83,7 +83,7 @@ export function stage1ForOffsets(eph: Ephemeris, r: ScenarioRequest, requestedOf
     const sunlit = (100 * (sunCum[i0 + m] - sunCum[i0])) / m;
     const link = (100 * (earthCum[i0 + m] - earthCum[i0])) / m;
     const nightH = (longestFalseRun(sun, i0, i0 + m) * STAGE1_STEP_MS) / 3_600_000;
-    const v = evaluateVerdict({ metrics: judged(sunlit, link, nightH, r.padSlopeDeg), windowHours: r.durationDays * 24, profile: r.profile, weights: r.weights, boundsKind: 'optimistic' });
+    const v = evaluateVerdict({ metrics: judged(sunlit, link, nightH, r.padSlopeDeg), windowHours: r.durationDays * 24, profile: r.profile, weights: r.weights, boundsKind: 'insufficient', verifiedRequirements: r.padSlopeDeg == null ? [] : ['slope'] });
     return {
       siteId: r.siteId ?? 'custom', landingUtc: start, viabilityIndex: v.viabilityIndex ?? 0, verdict: v.verdict, provisional: true, boundsStatus: 'nominal' as const,
       sunlitPct: val(sunlit), linkPct: val(link), longestNightH: val(nightH),

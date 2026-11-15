@@ -80,7 +80,7 @@ def test_sparklines_mark_missing_masks_and_exclude_preliminary_shackleton(tmp_pa
     )
 
     assert metadata["sites"] == ["smooth"]
-    assert metadata["provenance"] == {"smooth": "smooth-Moon bounds"}
+    assert metadata["provenance"] == {"smooth": "smooth-sphere estimate; terrain unavailable"}
     assert "unresolved target coordinates" in metadata["excluded_sites"]["shackleton_ridge"]
 
 

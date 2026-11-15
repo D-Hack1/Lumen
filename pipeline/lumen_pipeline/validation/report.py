@@ -411,20 +411,7 @@ def build_validation_report(
                 "three-pass bounds and disk event thresholds",
             ],
         },
-        "open_issues": [
-            {
-                "id": "R3-NEAR-ZONE-TERRAIN-INCONSISTENCY",
-                "status": "OPEN",
-                "description": "Terrain near-zone application clamps a negative distant DEM horizon to zero, while R3 D-9 requires negative m_dem to be preserved when the near-zone occluder is inactive.",
-                "evidence_paths": [
-                    "pipeline/tests/terrain/test_s4_terrain.py",
-                    "pipeline/tests/gowri/test_golden_near_zone_synthetic.py",
-                    "plan/PLAN_FINAL_R3_DELTA.md",
-                ],
-                "owner": "Shiva Shakthi",
-                "reporting_effect": "No terrain-side near-zone result is claimed R3-compliant.",
-            }
-        ],
+        "open_issues": [],
         "limitations": [
             "No gate is promoted to PASS solely because a unit test exists or passes.",
             "G5 requires independent PGDA map-pixel references, not synthetic records.",

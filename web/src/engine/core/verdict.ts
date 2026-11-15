@@ -3,8 +3,7 @@
 //   GO       every hard requirement passes at the CONSERVATIVE bound (lo for a minimum, hi for a maximum)
 //   MARGINAL some requirement passes only at the nominal value, or is within 10% of its limit
 //   NO-GO    some requirement fails even at the nominal value
-//   PENDING  nothing fails, nothing is marginal, but something cannot be judged (missing data, or bounds that are only
-//            optimistic because there is no terrain). A failure is still reported even then: if the best case fails, it fails.
+//   PENDING  nothing fails, nothing is marginal, but something cannot be judged because data or uncertainty bounds are missing.
 import type { Bounded, MetricSet, Verdict } from '../types';
 
 export interface VerdictProfile {
@@ -27,10 +26,12 @@ export interface VerdictInput {
   windowHours: number;
   profile: VerdictProfile;
   weights: VerdictWeights;
-  /** 'bounded': lo/hi are real uncertainty bounds. 'optimistic': smooth-Moon horizon, so values are best cases (never GO). */
-  boundsKind: 'bounded' | 'optimistic';
-  /** What the 'optimistic' values were computed on, for the reason text only. Default 'smooth-moon'; 'mask' = real terrain mask but no sigma yet. */
+  /** 'bounded': lo/hi are real uncertainty bounds. 'insufficient': geometry has no terrain or sigma-qualified bounds. */
+  boundsKind: 'bounded' | 'insufficient';
+  /** What the insufficient-evidence values were computed on, for the reason text only. */
   basis?: 'smooth-moon' | 'mask';
+  /** Requirements supported by independent evidence even when geometry bounds are unavailable (for example, measured pad slope). */
+  verifiedRequirements?: readonly RequirementId[];
 }
 
 export type RequirementId = 'sunlit' | 'link' | 'night' | 'slope';
@@ -88,7 +89,8 @@ export function evaluateVerdict(input: VerdictInput): VerdictResult {
     { id: 'slope', label: 'Pad slope', unit: '°', kind: 'max', limit: p.maxPadSlopeDeg, value: m.padSlopeDeg },
   ];
   const reasons: string[] = [];
-  const optimistic: string[] = []; // requirements that pass only on the smooth-Moon bound: reported once, together
+  const insufficient: string[] = [];
+  const verified = new Set(input.verifiedRequirements);
   const requirements: RequirementResult[] = specs.map((s) => {
     const v = s.value?.value ?? null;
     const word = s.kind === 'min' ? 'below the minimum' : 'above the maximum';
@@ -97,13 +99,13 @@ export function evaluateVerdict(input: VerdictInput): VerdictResult {
       return { id: s.id, status: 'unknown' };
     }
     const meets = (x: number) => (s.kind === 'min' ? x >= s.limit : x <= s.limit);
+    if (input.boundsKind === 'insufficient' && !verified.has(s.id)) {
+      insufficient.push(s.label);
+      return { id: s.id, status: 'unknown' };
+    }
     if (!meets(v)) {
       reasons.push(`${s.label} ${v.toFixed(1)}${s.unit} is ${word} (${s.limit}${s.unit}).`);
-      return { id: s.id, status: 'fail' }; // fails even at the nominal value (certain, even on an optimistic bound)
-    }
-    if (input.boundsKind === 'optimistic') {
-      optimistic.push(s.label);
-      return { id: s.id, status: 'unknown' };
+      return { id: s.id, status: 'fail' };
     }
     // Conservative bound: the worse end of the range (lo for a minimum, hi for a maximum). No bound => the nominal value.
     const conservative = (s.kind === 'min' ? s.value?.lo : s.value?.hi) ?? v;
@@ -118,13 +120,14 @@ export function evaluateVerdict(input: VerdictInput): VerdictResult {
     }
     return { id: s.id, status: 'pass' };
   });
-  if (optimistic.length > 0) {
-    const names = optimistic.map((n, i) => (i === 0 ? n : n.charAt(0).toLowerCase() + n.slice(1)));
+  if (insufficient.length > 0) {
+    const names = insufficient.map((n, i) => (i === 0 ? n : n.charAt(0).toLowerCase() + n.slice(1)));
     const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
-    // Combined line goes first among the "cannot confirm" reasons, ahead of the per-requirement "no data yet" lines.
     const firstUnknown = reasons.findIndex((r) => r.endsWith('no data yet.'));
-    const tail = input.basis === 'mask' ? 'only at the nominal terrain mask; terrain uncertainty (σ) is needed to confirm.' : 'only on the smooth-Moon bound; terrain data is needed to confirm.';
-    const line = `${list} ${names.length === 1 ? 'passes' : 'pass'} ${tail}`;
+    const tail = input.basis === 'mask'
+      ? (names.length === 1 ? 'is a nominal terrain-mask result; terrain uncertainty (σ) is needed to determine pass or fail.' : 'are nominal terrain-mask results; terrain uncertainty (σ) is needed to determine pass or fail.')
+      : (names.length === 1 ? 'is a smooth-sphere estimate; terrain data is needed to determine pass or fail.' : 'are smooth-sphere estimates; terrain data is needed to determine pass or fail.');
+    const line = `${list} ${tail}`;
     if (firstUnknown === -1) reasons.push(line);
     else reasons.splice(firstUnknown, 0, line);
   }

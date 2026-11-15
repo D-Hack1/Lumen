@@ -498,7 +498,7 @@ export function OrbitPage({ onStandHere, onAddToCompare }: OrbitPageProps) {
                   : 'Sample values for design preview.'
                 : usesTerrain(site, mast)
                   ? 'Real ephemeris and published terrain mask.'
-                  : 'Real ephemeris. No terrain mask for this site or array height, so the horizon is the smooth-Moon bound (optimistic).'}
+                  : 'Real ephemeris. No terrain mask for this site or array height, so results use a smooth-sphere estimate (terrain unavailable).'}
             </div>
           </div>
 

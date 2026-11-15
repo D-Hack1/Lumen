@@ -81,7 +81,7 @@ export function loadRealModel(): Promise<void> {
 interface Prepared {
   site: EngineSite;
   horizon: Horizon;
-  /** true when the horizon is the real terrain mask, false for the smooth-Moon bound. */
+  /** true when the horizon is the real terrain mask, false for the smooth-sphere estimate. */
   terrain: boolean;
 }
 
@@ -105,7 +105,7 @@ function prepare(site: Site, mast: number): Prepared {
   return p;
 }
 
-/** Whether this site / array height is evaluated on a real terrain mask (otherwise the smooth-Moon, optimistic bound). */
+/** Whether this site / array height is evaluated on a real terrain mask (otherwise the smooth-sphere estimate). */
 export const usesTerrain = (site: Site, mast: number): boolean => (loaded ? prepare(site, mast).terrain : false);
 
 export function realSnapshot(t: number, site: Site, mast: number): Snapshot {
@@ -130,7 +130,7 @@ export function realHorizon(az: number, site: Site, mast: number): number {
 // ---- Verdict tags (the curated-site list) ----------------------------------------------------------------------------------
 // The engine's own go / no-go rule (core/verdict.ts) on the same 14-day window Compare shows, against the Mission Profile in the
 // scenario store (so it follows the profile rather than a copy of it).
-// No terrain uncertainty (sigma) exists yet, so a pass can only be "unconfirmed": the engine never says GO on an optimistic bound.
+// No terrain uncertainty (sigma) exists yet, so geometry requirements remain unconfirmed.
 import { getScenario } from '../../state/scenarioStore';
 import type { Verdict } from '../../engine/types';
 
@@ -166,8 +166,9 @@ export function realSiteTag(site: Site, mast: number): SiteTag {
       windowHours: WINDOW_H,
       profile: getScenario().profile,
       weights: getScenario().weights,
-      boundsKind: 'optimistic',
+      boundsKind: 'insufficient',
       basis: prepare(site, mast).terrain ? 'mask' : 'smooth-moon',
+      verifiedRequirements: slope === null ? [] : ['slope'],
     });
     tag = { ...TAG[r.verdict], verdict: r.verdict, reason: r.reasons[0] ?? '' };
     tagCache.set(key, tag);

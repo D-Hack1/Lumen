@@ -242,7 +242,7 @@ describe('Golden Set 2 (synthetic) vs the TypeScript engine', () => {
     expect(dsnLinkUp(series, 1200 * S, i.dsn_mask_deg)).toBe(true); // the last node itself is covered
   });
 
-  it('synthetic_tier_c_smooth_moon: no terrain => no sigma, labelled "smooth-Moon bound", and no +- on any value', async () => {
+  it('synthetic_tier_c_smooth_moon: no terrain => no sigma, labelled as a smooth-sphere estimate, and no +- on any value', async () => {
     const c = get('synthetic_tier_c_smooth_moon');
     setDataMode('real');
     stubFetch();
@@ -254,7 +254,7 @@ describe('Golden Set 2 (synthetic) vs the TypeScript engine', () => {
         startMs: T, durationDays: 14, tScrubMs: T, definitions: DEFAULT_DEFINITIONS, dataVersions: { catalog: 1 },
         profile: { minSunlitPct: 0, minLinkHours: 0, maxLongestNightH: 1e9, maxPadSlopeDeg: 90 }, weights: { sunlit: 1, link: 1, night: 1, slope: 1 },
       };
-      expect(buildScenarioResult(eph, base).meta!.sigmaSource).toBe(c.expected.label);
+      expect(buildScenarioResult(eph, base).meta!.sigmaSource).toBe('smooth-sphere estimate; terrain unavailable');
       const b = evaluateWithBounds({ eph, site: makeSite(base.latDeg, base.lonDegEast, base.heightM), horizon: new Horizon({ observerHeightM: base.heightM }), startMs: T, durationDays: 14, definitions: DEFAULT_DEFINITIONS }, { sigmaDeg: 0.1, sigmaAtAzimuthDeg: () => 0.1 });
       expect(b.hasBounds).toBe(false);
       expect(b.metrics.sunlitPct.lo).toBeNull();

@@ -59,7 +59,7 @@ describe('sigma wiring (synthetic sigma)', () => {
     expect(r.meta!.sigmaSource).toBe('default');
     expect(r.meta!.tierBadge).toBe('Terrain mask · σ default');
     expect(r.verdict).not.toBe('PENDING'); // bounded values can be judged; the same request without sigma is PENDING
-    expect(r.verdictReasons.join(' ')).not.toMatch(/sigma|σ\) is needed|smooth-Moon bound/);
+    expect(r.verdictReasons.join(' ')).not.toMatch(/sigma|σ\) is needed|smooth-sphere estimate/);
     // the Answer Strip carries the bounds too
     expect(r.answer!.windowSunlitPct.lo).not.toBeNull();
   });

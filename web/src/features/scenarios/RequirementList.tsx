@@ -15,7 +15,7 @@ export function RequirementList({ result, compact }: { result: Pick<ScenarioResu
   const weights = useScenario((s) => s.weights);
   const durationDays = useScenario((s) => s.durationDays);
   const metrics = result?.metrics ?? null;
-  const rows = requirementRows(metrics, profile, weights, durationDays * 24, result ? boundsKindOf(result) : 'optimistic', result?.verdictRequirements);
+  const rows = requirementRows(metrics, profile, weights, durationDays * 24, result ? boundsKindOf(result) : 'insufficient', result?.verdictRequirements);
   const night: Bounded | null = metrics?.longestNightH ?? null;
   const bat = batteryCheck(profile, night);
   const batHead = batteryHeadline(bat, t);

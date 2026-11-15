@@ -76,13 +76,20 @@ describe('slice 3: link hours and the direction of the conservative bound', () =
 });
 
 describe('slice 4: honesty when the data cannot support a verdict', () => {
-  it('optimistic bounds (smooth-Moon, no terrain): a nominal pass cannot be GO => PENDING, with a reason', () => {
-    const r = evaluateVerdict(input(metrics(), { boundsKind: 'optimistic' }));
+  it('insufficient terrain evidence: a nominal pass cannot be GO => PENDING, with a reason', () => {
+    const r = evaluateVerdict(input(metrics(), { boundsKind: 'insufficient' }));
     expect(r.verdict).toBe('PENDING');
     expect(r.reasons.join(' ')).toMatch(/terrain/i);
   });
-  it('...but a failure on an OPTIMISTIC bound is still a certain NO-GO (best case already fails)', () => {
-    expect(evaluateVerdict(input(metrics({ sunlitPct: b(30, null, null) }), { boundsKind: 'optimistic' })).verdict).toBe('NO-GO');
+  it('a nominal geometry failure with insufficient terrain evidence is PENDING, not NO-GO', () => {
+    const r = evaluateVerdict(input(metrics({ sunlitPct: b(30, null, null) }), { boundsKind: 'insufficient' }));
+    expect(r.verdict).toBe('PENDING');
+    expect(r.requirements.find((x) => x.id === 'sunlit')!.status).toBe('unknown');
+  });
+  it('preserves an independently verified failure while geometry evidence is insufficient', () => {
+    const r = evaluateVerdict(input(metrics({ padSlopeDeg: b(20) }), { boundsKind: 'insufficient', verifiedRequirements: ['slope'] }));
+    expect(r.verdict).toBe('NO-GO');
+    expect(r.requirements.find((x) => x.id === 'slope')!.status).toBe('fail');
   });
   it('a missing value is "unknown", not a failure: no pad data => PENDING when everything else passes', () => {
     const r = evaluateVerdict(input(metrics({ padSlopeDeg: null })));
@@ -125,25 +132,24 @@ describe('slice 5: Viability Index (weighted components, 0-100)', () => {
 });
 
 describe('slice 6: one sentence per cause, not one per requirement', () => {
-  it('optimistic passes are reported ONCE, naming every requirement it applies to', () => {
-    const r = evaluateVerdict(input(metrics(), { boundsKind: 'optimistic' }));
-    expect(r.reasons).toEqual(['Sunlit time, link time, longest night and pad slope pass only on the smooth-Moon bound; terrain data is needed to confirm.']);
+  it('insufficient geometry evidence is reported once, naming every affected requirement', () => {
+    const r = evaluateVerdict(input(metrics(), { boundsKind: 'insufficient' }));
+    expect(r.reasons).toEqual(['Sunlit time, link time, longest night and pad slope are smooth-sphere estimates; terrain data is needed to determine pass or fail.']);
   });
   it('a single requirement uses the singular verb', () => {
-    const r = evaluateVerdict(input(metrics({ linkPct: null, longestNightH: null, padSlopeDeg: null }), { boundsKind: 'optimistic' }));
-    expect(r.reasons[0]).toBe('Sunlit time passes only on the smooth-Moon bound; terrain data is needed to confirm.');
+    const r = evaluateVerdict(input(metrics({ linkPct: null, longestNightH: null, padSlopeDeg: null }), { boundsKind: 'insufficient' }));
+    expect(r.reasons[0]).toBe('Sunlit time is a smooth-sphere estimate; terrain data is needed to determine pass or fail.');
   });
   it('missing data is still listed separately, after the combined line', () => {
-    const r = evaluateVerdict(input(metrics({ padSlopeDeg: null }), { boundsKind: 'optimistic' }));
+    const r = evaluateVerdict(input(metrics({ padSlopeDeg: null }), { boundsKind: 'insufficient' }));
     expect(r.reasons).toEqual([
-      'Sunlit time, link time and longest night pass only on the smooth-Moon bound; terrain data is needed to confirm.',
+      'Sunlit time, link time and longest night are smooth-sphere estimates; terrain data is needed to determine pass or fail.',
       'Pad slope: no data yet.',
     ]);
   });
-  it('a real failure is reported on its own line and is not folded into the combined one', () => {
-    const r = evaluateVerdict(input(metrics({ sunlitPct: b(30, null, null) }), { boundsKind: 'optimistic' }));
-    expect(r.reasons[0]).toMatch(/^Sunlit time 30\.0% is below the minimum/);
-    expect(r.reasons.join(' ')).toContain('Link time, longest night and pad slope pass only on the smooth-Moon bound');
+  it('a nominal geometry failure is folded into the insufficient-evidence reason', () => {
+    const r = evaluateVerdict(input(metrics({ sunlitPct: b(30, null, null) }), { boundsKind: 'insufficient' }));
+    expect(r.reasons).toEqual(['Sunlit time, link time, longest night and pad slope are smooth-sphere estimates; terrain data is needed to determine pass or fail.']);
   });
 });
 

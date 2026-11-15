@@ -89,9 +89,9 @@ describe.skipIf(!run)('verdict requirements on the engine result', () => {
         profile: { minSunlitPct: 90, minLinkHours: 0, maxLongestNightH: 1e9, maxPadSlopeDeg: 90 }, weights: { sunlit: 1, link: 1, night: 1, slope: 1 },
       });
       expect(r.verdictRequirements!.map((q) => q.id)).toEqual(['sunlit', 'link', 'night', 'slope']);
-      expect(r.verdictRequirements!.find((q) => q.id === 'sunlit')!.status).toBe('fail'); // ~49% sunlit < 90%
+      expect(r.verdictRequirements!.find((q) => q.id === 'sunlit')!.status).toBe('unknown'); // ~49% nominal smooth-sphere sunlit, but terrain is unavailable
       expect(r.verdictRequirements!.find((q) => q.id === 'slope')!.status).toBe('unknown'); // no pad slope data
-      expect(r.verdict).toBe('NO-GO');
+      expect(r.verdict).toBe('PENDING');
     } finally {
       setDataMode(null);
     }
