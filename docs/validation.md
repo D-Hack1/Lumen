@@ -34,6 +34,5 @@ Human-readable gate results, scope statement.
 when its required measured evidence artifact is available. In particular, G5 remains
 BLOCKED without independent PGDA map-pixel references, G10 remains BLOCKED without terrain
 Monte Carlo sigma and Tier-B calibration artifacts, and G7 remains SOURCE UNVERIFIED despite
-its numerical PASS. The report also records the R3 near-zone terrain inconsistency as OPEN:
-the terrain near-zone helper clamps a negative distant DEM horizon although R3 D-9 says not
-to clamp `m_dem` itself.
+its numerical PASS. The R3 near-zone helper now preserves the distant DEM horizon whenever
+the near-zone contribution is zero, including negative and unavailable values.
