@@ -92,20 +92,26 @@ async function doLoad(): Promise<Catalog> {
       mock: raw.mock === true,
     };
   });
-  return { sites, sparklines: await loadSparklines().catch(() => ({})) }; // sparklines.bin is not produced yet in real mode
+  return { sites, sparklines: await loadSparklines(sites).catch(() => ({})) };
 }
 
-/** catalog/sparklines.{bin,json}: uint8 percent, shape [site, series(sunlit,link), day]. `sites` + `start_utc` are DRAFT extras. */
-async function loadSparklines(): Promise<Record<string, Sparkline>> {
+/** catalog/sparklines.{bin,json}: uint8 percent, shape [site, series(sunlit,link), day]. */
+async function loadSparklines(catalogSites: SiteRecord[]): Promise<Record<string, Sparkline>> {
   const { sidecar: s, data } = await loadBinArray('catalog/sparklines', ['1', 1]);
   if (s.dtype !== 'uint8' || s.shape.length !== 3 || s.shape[1] !== 2) {
     throw new DataError(`sparklines: expected uint8 shape [sites, 2, days], got ${s.dtype} [${s.shape.join(', ')}]`);
   }
   const ids = s.sites;
   if (!Array.isArray(ids) || ids.length !== s.shape[0]) throw new DataError('sparklines: sidecar `sites` must list one id per row');
+  if (ids.some((id) => typeof id !== 'string') || new Set(ids).size !== ids.length) {
+    throw new DataError('sparklines: sidecar `sites` must contain unique string ids');
+  }
+  const catalogIds = new Set(catalogSites.map((site) => site.id));
+  if ((ids as string[]).some((id) => !catalogIds.has(id))) throw new DataError('sparklines: sidecar references an unknown catalog site');
   const [, , days] = s.shape;
   const startUtc = utcExtra('sparklines', s, 'start_utc');
   const u8 = data as Uint8Array;
+  if (u8.some((value) => value > 100)) throw new DataError('sparklines: percentages must be in [0, 100]');
   const out: Record<string, Sparkline> = {};
   (ids as string[]).forEach((id, i) => {
     const o = i * 2 * days;

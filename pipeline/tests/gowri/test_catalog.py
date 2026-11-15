@@ -1,6 +1,7 @@
 import json
 
 import numpy as np
+import pytest
 import yaml
 
 from lumen_pipeline.catalog.build_catalog import (
@@ -108,3 +109,18 @@ def test_g6_catalog_allows_missing_optional_metadata(tmp_path):
     assert athena_catalog["touchdown_utc"] is None
     assert athena_catalog["touchdown_precision"] is None
     assert athena_catalog["last_contact_utc"] is None
+
+
+def test_g6_catalog_rejects_missing_or_unknown_site_rows(tmp_path):
+    source = yaml.safe_load(default_sites_path().read_text(encoding="utf-8"))
+    source["sites"].pop()
+    sites_path = tmp_path / "sites.yaml"
+    sites_path.write_text(yaml.safe_dump(source), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="requires exactly these sites"):
+        build_catalog(sites_path=sites_path, output_path=tmp_path / "sites.json")
+
+    source["sites"].append({"id": "unverified_extra"})
+    sites_path.write_text(yaml.safe_dump(source), encoding="utf-8")
+    with pytest.raises(ValueError, match="requires exactly these sites"):
+        build_catalog(sites_path=sites_path, output_path=tmp_path / "sites.json")
