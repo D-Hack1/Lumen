@@ -40,7 +40,7 @@ def _slope_at(url: str, lat: float, lon: float) -> dict:
         x, y = Transformer.from_crs(LUNAR_SPHERICAL_CRS, ds.crs, always_xy=True).transform(lon, lat)
         row, col = ds.index(x, y)
         window = rasterio.windows.Window(col - 1, row - 1, 3, 3)
-        block = ds.read(1, window=window, boundless=True, fill_value=np.nan).astype("float64")
+        block = ds.read(1, window=window).astype("float64")  # sites are far from the raster edge; a plain (non-boundless) window works over HTTP
         nodata = ds.nodata
         if nodata is not None and not np.isnan(nodata):
             block[block == nodata] = np.nan

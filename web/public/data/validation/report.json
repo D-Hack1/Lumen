@@ -346,11 +346,41 @@
       "status": "BLOCKED"
     },
     {
-      "criterion": "within a few degrees",
+      "artifact_paths": [
+        "pipeline/reports/g6_pad_slope_vs_pgda.json"
+      ],
+      "criterion": "within a few degrees (read as <= 3 deg)",
       "description": "Pad slope versus PGDA slope rasters",
       "id": "G6",
-      "reason": "No independent PGDA slope-raster comparison artifact is available.",
-      "status": "PENDING"
+      "provenance": "Recorded 2026-11-15T16:28:59Z at commit d80ff83a0e. PGDA slope raster read over HTTP at the site; centre pixel compared with the published pad slope. The baselines differ (70 m plane fit vs 20 m / 60 m pixel slope). PGDA's slope products are derived from the same LOLA elevation data, so this checks the plane-fit and geometry, not the elevation data itself.",
+      "status": "PASS",
+      "test_commands": [
+        "python pipeline/scripts/run_g6.py"
+      ],
+      "value": {
+        "max_abs_difference_deg": 0.2686279619895431,
+        "per_site": {
+          "cy3_shiv_shakti": {
+            "difference_deg": 0.03414893613721737,
+            "pad_deg": 0.5137536572065533,
+            "pgda_deg": 0.47960472106933594,
+            "pgda_product": "polar_60m_lola_pgda_90"
+          },
+          "im2_athena": {
+            "difference_deg": 0.2686279619895431,
+            "pad_deg": 2.8089403306282548,
+            "pgda_deg": 3.077568292617798,
+            "pgda_product": "polar_20m_lola_pgda_90"
+          },
+          "shackleton_rim_ridge": {
+            "difference_deg": 0.07173859696472018,
+            "pad_deg": 5.83101069550598,
+            "pgda_deg": 5.75927209854126,
+            "pgda_product": "polar_20m_lola_pgda_90"
+          }
+        },
+        "sites_compared": 3
+      }
     },
     {
       "artifact_paths": [
@@ -511,7 +541,6 @@
   ],
   "non_pass_gates": [
     "G5",
-    "G6",
     "G7",
     "G8",
     "G9",

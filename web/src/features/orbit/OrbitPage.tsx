@@ -34,8 +34,9 @@ import {
 } from './orbitModel';
 import { PolarStage, type PolarStats } from './PolarStage';
 import { usePolarTerrain } from './polarAssets';
+import { polarPinAt, polarUntil } from './polarPin';
 import { keyRows, layerDescription, lightDirection, LAYER_LABELS } from './polarCopy';
-import { realSiteTag, showsSampleValues, usesTerrain } from './realModel';
+import { realSiteTag, showsSampleValues, useEngineTagVersion, usesTerrain } from './realModel';
 import { phaseAt, polarSunAzimuthDeg } from './ephemeris';
 import type { PolarLayer } from './polarTerrain';
 import './orbit.css';
@@ -79,6 +80,7 @@ export function OrbitPage({ onStandHere, onAddToCompare }: OrbitPageProps) {
   const shared = useContext(LumenContext);
   const { light, site, mast, setMast, t, setT, selectSite, dropCustom: dropSite } = shared ?? own;
   const terrain = usePolarTerrain();
+  useEngineTagVersion(); // the site list's verdict tags arrive from the engine a moment after the list is drawn
   const globe = useRef<OrbitGlobeHandle>(null);
   const lastLit = useRef(0);
   const statKey = useRef('');
@@ -130,11 +132,27 @@ export function OrbitPage({ onStandHere, onAddToCompare }: OrbitPageProps) {
   const earthBands = useMemo(() => bands('earth', site, mast), [site, mast]);
   const dsnBands = useMemo(() => bands('dsn', site, mast), [site, mast]);
 
-  const lit = m.frac > 0.5;
-  const sunset = until(t, site, mast, (q) => (lit ? q.frac <= 0.5 : q.frac > 0.5));
-  const earthset = until(t, site, mast, (q) => (m.earthUp ? !q.earthUp : q.earthUp));
-  const nextDsn = m.dsn ? 0 : until(t, site, mast, (q) => q.dsn);
-  const watts = Math.round(1361 * m.frac * Math.cos((m.sunEl * Math.PI) / 180));
+  // A pin with no terrain mask is evaluated on the smooth Moon, which cannot see the terrain around it. Inside the south-polar map the map can, so for such
+  // a pin the lit / shadow state, the horizon and Earth's visibility come from the map (coarse, labelled) and the smooth-Moon values are not shown as fact.
+  const mapPin =
+    !showsSampleValues() && terrain.status === 'ready' && !usesTerrain(site, mast) ? terrain.terrain : null;
+  const pm = mapPin ? polarPinAt(mapPin, site.lat, site.lon, t) : null;
+  const lit = pm ? pm.sunlit : m.frac > 0.5;
+  const earthUp = pm ? pm.earthVisible : m.earthUp;
+  const dsnUp = pm ? m.dsn && pm.earthVisible : m.dsn;
+  const sunset = pm
+    ? polarUntil(mapPin!, site.lat, site.lon, t, (q) => (lit ? !q.sunlit : q.sunlit))
+    : until(t, site, mast, (q) => (lit ? q.frac <= 0.5 : q.frac > 0.5));
+  const earthset = pm
+    ? polarUntil(mapPin!, site.lat, site.lon, t, (q) => (earthUp ? !q.earthVisible : q.earthVisible))
+    : until(t, site, mast, (q) => (m.earthUp ? !q.earthUp : q.earthUp));
+  const nextDsn = dsnUp
+    ? 0
+    : pm
+      ? polarUntil(mapPin!, site.lat, site.lon, t, (q) => q.earthVisible)
+      : until(t, site, mast, (q) => q.dsn);
+  const sunFrac = pm && !pm.sunlit ? 0 : m.frac;
+  const watts = Math.round(1361 * sunFrac * Math.cos((m.sunEl * Math.PI) / 180));
   const phase = phaseAt(t + SUN_PHASE_OFFSET_H);
   const whole = view === 'whole';
   const poleVisible = site.lat <= -80;
@@ -177,12 +195,16 @@ export function OrbitPage({ onStandHere, onAddToCompare }: OrbitPageProps) {
 
   const metrics: { label: string; value: string; tone: string }[] = [
     { label: 'Sun elevation', value: `${m.sunEl.toFixed(2)}°`, tone: 'amber' },
-    { label: 'Terrain horizon at Sun azimuth', value: `${horizon(m.sunAz, site, mast).toFixed(2)}°`, tone: '' },
-    { label: 'Solar disk visible', value: `${Math.round(m.frac * 100)}%`, tone: 'amber' },
+    {
+      label: 'Terrain horizon at Sun azimuth',
+      value: `${(pm ? pm.sunHorizonDeg : horizon(m.sunAz, site, mast)).toFixed(2)}°`,
+      tone: '',
+    },
+    { label: 'Solar disk visible', value: `${Math.round(sunFrac * 100)}%`, tone: 'amber' },
     { label: lit ? 'Sunset in' : 'Sunrise in', value: fmtHours(sunset), tone: '' },
     { label: 'Array output (vertical, tracking)', value: `${watts} W/m²`, tone: '' },
     { label: 'Earth elevation', value: `${m.earthEl.toFixed(2)}°`, tone: 'sage' },
-    { label: m.earthUp ? 'Earthset in' : 'Earthrise in', value: fmtHours(earthset), tone: '' },
+    { label: earthUp ? 'Earthset in' : 'Earthrise in', value: fmtHours(earthset), tone: '' },
     { label: 'Next DSN contact', value: nextDsn === 0 ? 'now' : fmtHours(nextDsn), tone: 'clay' },
   ];
 
@@ -251,24 +273,23 @@ export function OrbitPage({ onStandHere, onAddToCompare }: OrbitPageProps) {
                   <span className="lm-site__name">{s.name}</span>
                   <span className="lm-site__group">{s.group}</span>
                 </span>
-                {showsSampleValues() ? (
-                  s.tone && <span className={`lm-tag lm-tag--${TONES[s.tone]}`}>{s.tag}</span>
-                ) : (
-                  (() => {
-                    const g = realSiteTag(s, mast);
-                    return (
-                      <span className={`lm-tag lm-tag--${g.tone}`} title={g.reason}>
-                        {g.label}
-                      </span>
-                    );
-                  })()
-                )}
+                {showsSampleValues()
+                  ? s.tone && <span className={`lm-tag lm-tag--${TONES[s.tone]}`}>{s.tag}</span>
+                  : (() => {
+                      const g = realSiteTag(s, mast);
+                      return (
+                        <span className={`lm-tag lm-tag--${g.tone}`} title={g.reason}>
+                          {g.label}
+                        </span>
+                      );
+                    })()}
               </button>
             ))}
           </section>
 
           <div className="lm-note">
-            You can also click anywhere on the Moon to drop a pin.{showsSampleValues() ? ' Values are sample data in this preview.' : ''}
+            You can also click anywhere on the Moon to drop a pin.
+            {showsSampleValues() ? ' Values are sample data in this preview.' : ''}
           </div>
         </aside>
 
@@ -498,7 +519,9 @@ export function OrbitPage({ onStandHere, onAddToCompare }: OrbitPageProps) {
                   : 'Sample values for design preview.'
                 : usesTerrain(site, mast)
                   ? 'Real ephemeris and published terrain mask.'
-                  : 'Real ephemeris. No terrain mask for this site or array height, so results use a smooth-sphere estimate (terrain unavailable).'}
+                  : pm
+                    ? 'Real ephemeris. No terrain mask here, so lit or shadow, the horizon and Earth’s visibility come from NASA’s 80 m polar map (coarse, about 0.8 km per pixel).'
+                    : 'Real ephemeris. No terrain mask for this site or array height, so results use a smooth-sphere estimate (terrain unavailable).'}
             </div>
           </div>
 
@@ -507,9 +530,9 @@ export function OrbitPage({ onStandHere, onAddToCompare }: OrbitPageProps) {
               <div className="lm-status__k">POWER</div>
               <div className="lm-status__v">{lit ? 'Sunlit' : 'In shadow'}</div>
             </div>
-            <div className={`lm-status ${m.dsn ? 'lm-status--sage' : ''}`}>
+            <div className={`lm-status ${dsnUp ? 'lm-status--sage' : ''}`}>
               <div className="lm-status__k">DIRECT-TO-EARTH</div>
-              <div className="lm-status__v">{m.dsn ? 'Link up' : m.earthUp ? 'No DSN' : 'Earth hidden'}</div>
+              <div className="lm-status__v">{dsnUp ? 'Link up' : earthUp ? 'No DSN' : 'Earth hidden'}</div>
             </div>
           </div>
 

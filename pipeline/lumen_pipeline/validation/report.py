@@ -54,6 +54,11 @@ def default_g8_report_path() -> Path:
     return Path(__file__).resolve().parents[2] / "reports" / "g8_live_measurements.json"
 
 
+def default_g6_report_path() -> Path:
+    """Return the checked-in G6 (pad slope versus PGDA slope rasters) artifact."""
+    return Path(__file__).resolve().parents[2] / "reports" / "g6_pad_slope_vs_pgda.json"
+
+
 def default_g4_report_path() -> Path:
     """Return the checked-in G4 (TypeScript versus Python golden vectors) artifact."""
     return Path(__file__).resolve().parents[2] / "reports" / "g4_ts_python_parity.json"
@@ -95,13 +100,6 @@ def _pending_gates() -> list[dict[str, Any]]:
             criterion="within a few percent; differences explained",
             reason="Independent documented PGDA map-pixel references have not been supplied.",
             required_artifacts=["pipeline/data/validation/pgda_reference.json"],
-        ),
-        _gate(
-            "G6",
-            "Pad slope versus PGDA slope rasters",
-            "PENDING",
-            criterion="within a few degrees",
-            reason="No independent PGDA slope-raster comparison artifact is available.",
         ),
         _gate(
             "G9",
@@ -463,6 +461,41 @@ def _g8_gate(path: Path) -> dict[str, Any]:
         return _gate("G8", G8_DESCRIPTION, "BLOCKED", reason=f"Invalid G8 artifact: {error}", artifact_paths=[_relative(path)])
 
 
+G6_DESCRIPTION = "Pad slope versus PGDA slope rasters"
+G6_CRITERION = "within a few degrees"
+G6_TOLERANCE_DEG = 3.0
+
+
+def _g6_gate(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return _gate(
+            "G6", G6_DESCRIPTION, "PENDING", criterion=G6_CRITERION,
+            reason="No independent PGDA slope-raster comparison artifact is available; run pipeline/scripts/run_g6.py.",
+            artifact_paths=[_relative(path)],
+        )
+    try:
+        report = json.loads(path.read_text(encoding="utf-8"))
+        rows = report["sites"]
+        diffs = [float(r["abs_difference_vs_centre_deg"]) for r in rows]
+        finite = all(math.isfinite(d) for d in diffs) and len(rows) >= 3
+        # The recorded tolerance must be no looser than the gate's own reading of "a few degrees", and every site must meet it.
+        meets = finite and report["criterion_deg"] <= G6_TOLERANCE_DEG and all(d <= report["criterion_deg"] for d in diffs)
+        return _gate(
+            "G6", G6_DESCRIPTION, "PASS" if meets else "FAIL", criterion=G6_CRITERION + f" (read as <= {G6_TOLERANCE_DEG:g} deg)",
+            value={
+                "sites_compared": len(rows),
+                "max_abs_difference_deg": max(diffs) if diffs else None,
+                "per_site": {r["site_id"]: {"pad_deg": r["pad_slope_deg"], "pgda_deg": r["pgda"]["centre_deg"], "difference_deg": r["abs_difference_vs_centre_deg"], "pgda_product": r["pgda_product"]} for r in rows},
+            },
+            artifact_paths=[_relative(path)],
+            provenance=f"Recorded {report['recorded_utc']} at commit {report['git_commit'][:10]}. {report['method']} "
+            "PGDA's slope products are derived from the same LOLA elevation data, so this checks the plane-fit and geometry, not the elevation data itself.",
+            test_commands=["python pipeline/scripts/run_g6.py"],
+        )
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+        return _gate("G6", G6_DESCRIPTION, "BLOCKED", reason=f"Invalid G6 artifact: {error}", artifact_paths=[_relative(path)])
+
+
 G4_CRITERION = "elevation < 0.005 deg; events +/-1 min; dt +/-5%; metrics +/-1%"
 G4_DESCRIPTION = "TypeScript versus Python golden vectors"
 G11_DESCRIPTION = "Windows Table, barcode, and CSV integrity"
@@ -557,6 +590,7 @@ def build_validation_report(
     validation_doc_path: str | Path | None = None, g1_report_path: str | Path | None = None,
     g4_report_path: str | Path | None = None, g11_report_path: str | Path | None = None,
     g0_report_path: str | Path | None = None, g8_report_path: str | Path | None = None,
+    g6_report_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """Assemble report data from checked-in artifacts without network access."""
     fixture_directory = Path(fixtures_dir) if fixtures_dir is not None else default_fixture_dir()
@@ -564,6 +598,7 @@ def build_validation_report(
     g1_path = Path(g1_report_path) if g1_report_path is not None else default_g1_report_path()
     g0_path = Path(g0_report_path) if g0_report_path is not None else default_g0_report_path()
     g8_path = Path(g8_report_path) if g8_report_path is not None else default_g8_report_path()
+    g6_path = Path(g6_report_path) if g6_report_path is not None else default_g6_report_path()
     g4_path = Path(g4_report_path) if g4_report_path is not None else default_g4_report_path()
     g11_path = Path(g11_report_path) if g11_report_path is not None else default_g11_report_path()
     g2_path = Path(validation_doc_path) if validation_doc_path is not None else default_validation_doc_path()
@@ -575,6 +610,7 @@ def build_validation_report(
         _g7_gate(g7_path),
         _g0_gate(g0_path),
         _g4_gate(g4_path),
+        _g6_gate(g6_path),
         _g8_gate(g8_path),
         _g11_gate(g11_path),
     ]

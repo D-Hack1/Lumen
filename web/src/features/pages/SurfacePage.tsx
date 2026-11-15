@@ -19,6 +19,7 @@ import { useLumenContext } from './usePages';
 import { PANO_H, PANO_W, azToX, compassPoint, horizonPath, skyTrack, skyY, xToAz } from './pagesModel';
 import { go } from './nav';
 import { getBaseUtc, longDate } from '../orbit/windowStart';
+import { usePolarShadowNote } from '../orbit/polarPin';
 import { standHereView, useEngineResult, useSkyline } from './engineBindings';
 import { StandHereNumbers } from './StandHereNumbers';
 import { StandHereDetails } from '../analysis/StandHereDetails';
@@ -36,9 +37,12 @@ export function SurfacePage() {
   // Real engine values when the data mode is real and the result has arrived; otherwise the design's sample model (the fallback).
   const eng = useEngineResult(site, mast);
   const sky = useSkyline(site, mast);
+  const shadowNote = usePolarShadowNote(site.lat, site.lon, sky?.terrain ?? false);
   const v = useMemo(() => (eng ? standHereView(eng, sky, t) : null), [eng, sky, t]);
   const sample = useMemo(() => model(t, site, mast), [t, site, mast]);
-  const m = v ? { ...sample, sunAz: v.sunAz, sunEl: v.sunEl, earthAz: v.earthAz, earthEl: v.earthEl, earthUp: v.earthUp } : sample;
+  const m = v
+    ? { ...sample, sunAz: v.sunAz, sunEl: v.sunEl, earthAz: v.earthAz, earthEl: v.earthEl, earthUp: v.earthUp }
+    : sample;
   const path = useMemo(() => v?.path ?? horizonPath(site, mast), [v, site, mast]);
   const sunTrack = useMemo(() => v?.sunTrack ?? skyTrack('sun', site, mast), [v, site, mast]);
   const earthTrack = useMemo(() => v?.earthTrack ?? skyTrack('earth', site, mast), [v, site, mast]);
@@ -137,7 +141,11 @@ export function SurfacePage() {
           </text>
         </svg>
         <div className="lm-overlay lm-overlay--tl lm-overlay--soft">
-          {v ? (v.source === 'terrain' ? 'Real engine · terrain mask' : 'Real engine · smooth Moon, no terrain data for this site / array height') : 'Design preview · sample values'}
+          {v
+            ? v.source === 'terrain'
+              ? 'Real engine · terrain mask'
+              : 'Real engine · smooth Moon, no terrain data for this site / array height'
+            : 'Design preview · sample values'}
         </div>
         <div ref={readout} className="lm-pano__read" role="status" />
         <div className="lm-pano__axis" aria-hidden="true">
@@ -158,49 +166,6 @@ export function SurfacePage() {
           <span>Hover for bearing and skyline height</span>
         </div>
       </section>
-
-      <div className="lm-split">
-        <div className="lm-cards2">
-          <div className={`lm-bigcard ${lit ? 'lm-bigcard--amber' : ''}`}>
-            <div className="lm-bigcard__k">SUN</div>
-            <div className="lm-bigcard__v">{lit ? 'Above the ridge' : 'Behind terrain'}</div>
-            <div className="lm-bigcard__m">
-              Elevation {m.sunEl.toFixed(2)}° · horizon {hAt(m.sunAz).toFixed(2)}°
-            </div>
-            <div className="lm-bigcard__n">
-              {lit ? 'Sets' : 'Rises'} in {fmtHours(sunChange)}{v && sunChange === null ? ' (not within this month)' : ''}
-            </div>
-          </div>
-          <div className={`lm-bigcard ${m.earthUp ? 'lm-bigcard--sage' : ''}`}>
-            <div className="lm-bigcard__k">EARTH</div>
-            <div className="lm-bigcard__v">{m.earthUp ? 'In view' : 'Hidden'}</div>
-            <div className="lm-bigcard__m">
-              Elevation {m.earthEl.toFixed(2)}° · azimuth {Math.round(m.earthAz)}°
-            </div>
-            <div className="lm-bigcard__n">
-              {m.earthUp ? 'Sets' : 'Rises'} in {fmtHours(earthChange)}{v && earthChange === null ? ' (not within this month)' : ''}
-            </div>
-          </div>
-        </div>
-        <div className="lm-box">
-          <div id="lm-mast-s" className="lm-mastlabel lm-mastlabel--flush">
-            Solar array height above ground
-          </div>
-          <div role="group" aria-labelledby="lm-mast-s" className="lm-masts">
-            {MASTS.map((v) => (
-              <button key={v} type="button" aria-pressed={mast === v} onClick={() => L.setMast(v)}>
-                {v} m
-              </button>
-            ))}
-          </div>
-          <div className="lm-hint">Taller masts see over nearby terrain. Watch the horizon line drop.</div>
-        </div>
-      </div>
-
-      {eng && v && <StandHereNumbers result={eng} terrain={v.source === 'terrain'} windowLabel={`30 days from ${longDate(getBaseUtc())}`} />}
-
-      {/* Windows Table, Pointing & Link (DSN lanes), Power curve and Barcode — drawn from the same result as the numbers above. */}
-      {eng && <StandHereDetails result={eng} t={t} onSeek={(h) => setT(Math.max(0, Math.min(T_MAX, Math.round(h))))} />}
 
       <section aria-label="Time" className="lm-box lm-box--row">
         <button
@@ -240,6 +205,62 @@ export function SurfacePage() {
           Back to orbit
         </a>
       </section>
+
+      <div className="lm-split">
+        <div className="lm-cards2">
+          <div className={`lm-bigcard ${lit ? 'lm-bigcard--amber' : ''}`}>
+            <div className="lm-bigcard__k">SUN</div>
+            <div className="lm-bigcard__v">{lit ? 'Above the ridge' : 'Behind terrain'}</div>
+            <div className="lm-bigcard__m">
+              Elevation {m.sunEl.toFixed(2)}° · horizon {hAt(m.sunAz).toFixed(2)}°
+            </div>
+            <div className="lm-bigcard__n">
+              {lit ? 'Sets' : 'Rises'} in {fmtHours(sunChange)}
+              {v && sunChange === null ? ' (not within this month)' : ''}
+            </div>
+          </div>
+          <div className={`lm-bigcard ${m.earthUp ? 'lm-bigcard--sage' : ''}`}>
+            <div className="lm-bigcard__k">EARTH</div>
+            <div className="lm-bigcard__v">{m.earthUp ? 'In view' : 'Hidden'}</div>
+            <div className="lm-bigcard__m">
+              Elevation {m.earthEl.toFixed(2)}° · azimuth {Math.round(m.earthAz)}°
+            </div>
+            <div className="lm-bigcard__n">
+              {m.earthUp ? 'Sets' : 'Rises'} in {fmtHours(earthChange)}
+              {v && earthChange === null ? ' (not within this month)' : ''}
+            </div>
+          </div>
+        </div>
+        <div className="lm-box">
+          <div id="lm-mast-s" className="lm-mastlabel lm-mastlabel--flush">
+            Solar array height above ground
+          </div>
+          <div role="group" aria-labelledby="lm-mast-s" className="lm-masts">
+            {MASTS.map((v) => (
+              <button key={v} type="button" aria-pressed={mast === v} onClick={() => L.setMast(v)}>
+                {v} m
+              </button>
+            ))}
+          </div>
+          <div className="lm-hint">Taller masts see over nearby terrain. Watch the horizon line drop.</div>
+        </div>
+      </div>
+
+      {eng && v && v.source !== 'terrain' && shadowNote && (
+        <p className="lm-hint lm-hint--warn" role="note" data-testid="polar-shadow-note">
+          {shadowNote}
+        </p>
+      )}
+      {eng && v && (
+        <StandHereNumbers
+          result={eng}
+          terrain={v.source === 'terrain'}
+          windowLabel={`30 days from ${longDate(getBaseUtc())}`}
+        />
+      )}
+
+      {/* Windows Table, Pointing & Link (DSN lanes), Power curve and Barcode — drawn from the same result as the numbers above. */}
+      {eng && <StandHereDetails result={eng} t={t} onSeek={(h) => setT(Math.max(0, Math.min(T_MAX, Math.round(h))))} />}
     </main>
   );
 }

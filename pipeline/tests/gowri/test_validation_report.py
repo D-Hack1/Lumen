@@ -79,6 +79,7 @@ def test_validation_report_truthfully_aggregates_pending_blocked_and_open_eviden
     assert _gate(report, "G5")["status"] == "BLOCKED"
     assert _gate(report, "G10")["status"] == "BLOCKED"
     assert _gate(report, "G0")["status"] == "PASS"
+    assert _gate(report, "G6")["status"] == "PASS"
     g8 = _gate(report, "G8")
     assert g8["status"] == "PENDING"  # partly measured: reported, never promoted
     assert "site switch" in g8["reason"] and "demo laptop" in g8["reason"]
@@ -96,11 +97,13 @@ def test_validation_report_marks_missing_evidence_blocked_or_pending(tmp_path):
         validation_doc_path=missing / "validation.md",
         g1_report_path=missing / "g1.json",
         g0_report_path=missing / "g0.json",
+        g6_report_path=missing / "g6.json",
         g4_report_path=missing / "g4.json",
         g11_report_path=missing / "g11.json",
     )
 
     assert _gate(report, "G0")["status"] == "PENDING"
+    assert _gate(report, "G6")["status"] == "PENDING"
     assert _gate(report, "G4")["status"] == "PENDING"
     assert _gate(report, "G11")["status"] == "PENDING"
     assert _gate(report, "G1")["status"] == "BLOCKED"
@@ -158,3 +161,16 @@ def test_g0_is_not_a_pass_when_a_required_test_did_not_pass_or_the_tolerance_is_
     broken = _tamper(src, tmp_path / "d.json", lambda d: d.pop("tests"))
     for path, expected in ((failed, "FAIL"), (loose, "FAIL"), (missing_required, "FAIL"), (broken, "BLOCKED")):
         assert _gate(build_validation_report(g0_report_path=path), "G0")["status"] == expected
+
+
+def test_g6_is_not_a_pass_when_any_site_differs_by_more_than_the_tolerance(tmp_path):
+    from lumen_pipeline.validation.report import default_g6_report_path
+
+    src = default_g6_report_path()
+    far = _tamper(src, tmp_path / "a.json", lambda d: d["sites"][0].update(abs_difference_vs_centre_deg=3.5))
+    loose = _tamper(src, tmp_path / "b.json", lambda d: d.update(criterion_deg=10.0))
+    too_few = _tamper(src, tmp_path / "c.json", lambda d: d.update(sites=d["sites"][:2]))
+    nan = _tamper(src, tmp_path / "d.json", lambda d: d["sites"][1].update(abs_difference_vs_centre_deg=float("nan")))
+    broken = _tamper(src, tmp_path / "e.json", lambda d: d.pop("sites"))
+    for path, expected in ((far, "FAIL"), (loose, "FAIL"), (too_few, "FAIL"), (nan, "FAIL"), (broken, "BLOCKED")):
+        assert _gate(build_validation_report(g6_report_path=path), "G6")["status"] == expected

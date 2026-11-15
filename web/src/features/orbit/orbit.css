@@ -1010,3 +1010,12 @@
     transition: none;
   }
 }
+
+.lm-hint--warn {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--amber);
+  border-radius: 10px;
+  color: var(--fg);
+  background: var(--raise);
+}

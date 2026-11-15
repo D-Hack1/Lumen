@@ -2,20 +2,21 @@
 // The Orbit page model backed by the real engine data (ephemeris, DSN series, terrain masks) instead of the design's synthetic
 // numbers. Same shape as orbitModel's `model` / `horizon`, so every page reads it unchanged. Only used when VITE_LUMEN_DATA=real
 // (see orbitModel.ts); until `loadRealModel()` resolves nothing here may be called.
+import { useSyncExternalStore } from 'react';
 import { DEFAULT_DEFINITIONS, stateAt, type Definitions } from '../../engine/core/evaluate';
 import { makeSite, type Site as EngineSite } from '../../engine/core/geometry';
-import { evaluateVerdict } from '../../engine/core/verdict';
 import { horizonFromMask } from '../../engine/core/terrainHorizon';
 import { Horizon } from '../../engine/core/visibility';
+import { evaluateScenario } from '../../engine/client';
 import { loadCatalog } from '../../engine/data/catalog';
 import { loadDsnOrNull, type DsnSeries } from '../../engine/data/dsn';
 import { loadEphem, type Ephemeris } from '../../engine/data/ephem';
 import { loadMaskOrNull, type Mask } from '../../engine/data/masks';
 import { dataMode } from '../../engine/data/source';
-import type { SiteRecord } from '../../engine/types';
+import { makeRequest } from '../../engine/requests';
+import type { ScenarioResult, SiteRecord } from '../../engine/types';
 import { setRealEphemeris } from './realEphem';
 import { SITES, type Site, type Snapshot } from './orbitModel';
-import { windowStats } from '../pages/pagesModel';
 import { getBaseUtc } from './windowStart';
 
 /** Hours-since-epoch of the design's t = 0 (2027-02-08 00:00 UTC); duplicated from orbitModel to avoid a runtime import cycle. */
@@ -155,8 +156,6 @@ export function realHorizon(az: number, site: Site, mast: number): number {
 import { getScenario } from '../../state/scenarioStore';
 import type { Verdict } from '../../engine/types';
 
-const WINDOW_H = 336;
-
 export interface SiteTag {
   verdict: Verdict;
   label: string;
@@ -172,32 +171,85 @@ const TAG: Record<Verdict, { label: string; tone: SiteTag['tone'] }> = {
   PENDING: { label: 'Unconfirmed', tone: 'mut' },
 };
 
-const tagCache = new Map<string, SiteTag>();
+// The tag is the ENGINE's verdict for the same 14-day window Compare shows, so it uses the σ-bounded metrics where a site has σ (a Go or No-go is only
+// possible then) and says WHY a site cannot be judged where it does not: no terrain mask (smooth-Moon estimate) or a mask without σ yet.
+// The engine runs in a worker, so tags arrive a moment after the list is drawn; until then the list says "Checking".
+const engineTags = new Map<string, SiteTag>();
+const engineTagsPending = new Set<string>();
+const tagListeners = new Set<() => void>();
+let tagVersion = 0;
+
+/** Re-render when more engine tags have arrived. */
+export function useEngineTagVersion(): number {
+  return useSyncExternalStore(
+    (cb) => {
+      tagListeners.add(cb);
+      return () => tagListeners.delete(cb);
+    },
+    () => tagVersion,
+    () => tagVersion,
+  );
+}
+
+/** Pure: the list tag for an engine result. */
+export function tagFromResult(r: ScenarioResult): SiteTag {
+  const badge = r.meta?.tierBadge ?? '';
+  const verdict = r.verdict;
+  let label = TAG[verdict].label;
+  if (verdict === 'PENDING') {
+    if (badge.startsWith('Smooth-Moon')) label = 'No terrain data';
+    else if (badge.includes('σ pending')) label = 'σ pending';
+  }
+  return {
+    verdict,
+    label,
+    tone: TAG[verdict].tone,
+    reason: r.verdictReasons[0]
+      ? `${r.verdictReasons[0]} (judged against the Mission Profile, 14-day window)`
+      : badge
+        ? `${badge}.`
+        : '',
+  };
+}
+
+function engineTagKey(site: Site, mast: number): string {
+  return `${site.id}|${site.lat}|${site.lon}|${mast}|${getBaseUtc()}|${JSON.stringify([getScenario().profile, getScenario().weights])}`;
+}
+
+function requestEngineTag(site: Site, mast: number, key: string): void {
+  if (engineTagsPending.has(key)) return;
+  engineTagsPending.add(key);
+  const L = loaded as Loaded;
+  const ref = L.records.has(site.id)
+    ? ({ kind: 'site', id: site.id } as const)
+    : ({ kind: 'point', lat: site.lat, lon: site.lon } as const);
+  void (async () => {
+    const req = makeRequest({ ...getScenario(), durationDays: 14, slipDays: 0 }, [...L.records.values()], {
+      siteRef: ref,
+      landingUtc: getBaseUtc(),
+      heightM: mast,
+      scrubUtc: getBaseUtc(),
+    });
+    const r = await evaluateScenario(req);
+    if (r.status === 'ready') {
+      engineTags.set(key, tagFromResult(r));
+      tagVersion++;
+      tagListeners.forEach((l) => l());
+    }
+  })()
+    .catch(() => undefined)
+    .finally(() => engineTagsPending.delete(key));
+}
 
 export function realSiteTag(site: Site, mast: number): SiteTag {
-  const key = `${site.id}|${site.lat}|${site.lon}|${mast}|${JSON.stringify([getScenario().profile, getScenario().weights])}`;
-  let tag = tagCache.get(key);
-  if (!tag) {
-    const L = loaded as Loaded;
-    const w = windowStats(site, mast);
-    const slope = L.records.get(site.id)?.padSlopeDeg ?? null;
-    const b = (v: number | null) => ({ value: v, lo: null, hi: null });
-    const r = evaluateVerdict({
-      metrics: {
-        sunlitPct: b(w.sun),
-        linkPct: b(w.dsn),
-        longestNightH: b(w.dark),
-        padSlopeDeg: slope === null ? null : b(slope),
-      } as never,
-      windowHours: WINDOW_H,
-      profile: getScenario().profile,
-      weights: getScenario().weights,
-      boundsKind: 'insufficient',
-      basis: prepare(site, mast).terrain ? 'mask' : 'smooth-moon',
-      verifiedRequirements: slope === null ? [] : ['slope'],
-    });
-    tag = { ...TAG[r.verdict], verdict: r.verdict, reason: r.reasons[0] ?? '' };
-    tagCache.set(key, tag);
-  }
-  return tag;
+  const key = engineTagKey(site, mast);
+  const have = engineTags.get(key);
+  if (have) return have;
+  requestEngineTag(site, mast, key);
+  return {
+    verdict: 'PENDING',
+    label: 'Checking',
+    tone: 'mut',
+    reason: 'The engine is working out this site’s verdict.',
+  };
 }
