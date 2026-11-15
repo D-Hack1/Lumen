@@ -33,8 +33,8 @@ test.describe('Why? on Stand here explains the numbers on screen', () => {
       expect(text).not.toMatch(/±\s*\d/); // σ pending: no ± number anywhere, and the clearance rate is derived from the series
       expect(text).toMatch(/derived from the series/);
     } else {
-      // σ is available (Tier-A default for IM-2): the ± comes from the result and the card names its source — never hard-coded.
-      expect(text).toContain('σ source: default');
+      // σ is available (Monte-Carlo σ for IM-2): the ± comes from the result and the card names its source — never hard-coded.
+      expect(text).toMatch(/σ source: ["“]?(Monte-Carlo|default)/); // the source is named, whichever σ the site has
       expect(text).toMatch(/in .+ ± .+/); // "Sunset in 17 d 19 h ± 1 min"
       expect(text).toMatch(/σ ÷ \|rate\|/); // the rate × σ explanation is derived from the series
     }
