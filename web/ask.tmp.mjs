@@ -1,0 +1,21 @@
+import { chromium } from '@playwright/test';
+const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1280, height: 800 } });
+const errs=[]; p.on('pageerror', e=>errs.push(String(e))); p.on('console', m=>m.type()==='error'&&errs.push(m.text().slice(0,200)));
+await p.goto('http://localhost:5201/ask.tmp.html'); await p.waitForTimeout(1500);
+const dbg = () => p.locator('#dbg').innerText();
+// "/" is ignored while typing in a normal input
+await p.locator('#plain').click(); await p.keyboard.press('/'); console.log('slash in input opens box?', await p.locator('.ask').count());
+await p.locator('body').click({ position: { x: 5, y: 5 } }); await p.keyboard.press('/'); await p.waitForTimeout(300); console.log('slash on page opens box?', await p.locator('.ask').count());
+await p.screenshot({ path: 'ask_open.png' });
+const type = async (t) => { await p.locator('.ask__input').fill(t); await p.waitForTimeout(400); };
+await type('go to compare'); console.log('items:', (await p.locator('.ask__row').allInnerTexts()).join(' | ')); await p.keyboard.press('Enter'); await p.waitForTimeout(1000); console.log('after go:', await dbg(), 'box open?', await p.locator('.ask').count());
+await p.locator('body').click({ position: { x: 5, y: 5 } }); await p.keyboard.press('/'); await p.waitForTimeout(200);
+await type('show malapert'); await p.keyboard.press('Enter'); await p.waitForTimeout(1000); console.log('after site:', await dbg());
+await p.keyboard.press('/'); await p.waitForTimeout(200); await type('slip 9 days'); console.log('slip note:', (await p.locator('.ask__note').allInnerTexts()).join(' | '));
+await type('rim'); console.log('rim →', (await p.locator('.ask__row, .ask__note').allInnerTexts()).join(' | '));
+await type('what is libration'); await p.screenshot({ path: 'ask_term.png' }); console.log('libration →', (await p.locator('.ask__cardtitle').allInnerTexts()).join(' | '));
+await type('banana smoothie'); console.log('banana →', (await p.locator('.ask__note').allInnerTexts()).join(' | '));
+await type('why is this ± so big?'); await p.waitForTimeout(3500); await p.screenshot({ path: 'ask_why.png' });
+console.log('WHY:\n' + (await p.locator('.ask__card--why').first().innerText().catch(()=> '(no why card)')));
+await p.keyboard.press('Escape'); await p.waitForTimeout(200); console.log('esc closes?', (await p.locator('.ask').count()) === 0);
+console.log('errors', errs.slice(0,4)); await b.close();
