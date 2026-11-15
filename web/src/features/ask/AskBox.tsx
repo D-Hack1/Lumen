@@ -14,7 +14,7 @@ import type { ScenarioResult } from '../../engine/types';
 import { HELP_EXAMPLES, parseCommand, runCommand, type AskCommand, type AskPorts, type AskSite } from './commands';
 import { loadKnowledge, searchKnowledge, snippet, type KnowledgeIndex } from './knowledge';
 import { OPEN_EVENT } from './askWhy';
-import { detectWhy, explain, type Why, type WhyTarget } from './why';
+import { detectWhy, explain, explainGeneric, hasTemplate, type Why, type WhyRequest } from './why';
 import './ask.css';
 
 export interface AskBoxProps {
@@ -51,7 +51,7 @@ export function AskBox({ ports, sites, canSlip, result, resultNote, light, onOpe
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
-  const [forced, setForced] = useState<WhyTarget | null>(null);
+  const [forced, setForced] = useState<WhyRequest | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [index, setIndex] = useState<KnowledgeIndex | null>(null);
   const input = useRef<HTMLInputElement>(null);
@@ -84,7 +84,7 @@ export function AskBox({ ports, sites, canSlip, result, resultNote, light, onOpe
     };
     const onOpen = (e: Event) => {
       returnFocus.current = document.activeElement as HTMLElement | null;
-      setForced((e as CustomEvent<{ target?: WhyTarget }>).detail?.target ?? null);
+      setForced((e as CustomEvent<{ target?: WhyRequest }>).detail?.target ?? null);
       setQuery('');
       setOpen(true);
     };
@@ -105,7 +105,11 @@ export function AskBox({ ports, sites, canSlip, result, resultNote, light, onOpe
   const items = useMemo<Item[]>(() => {
     const out: Item[] = [];
     const knowledge = index?.docs.map((d) => d.entry) ?? [];
-    const whyFor = (t: WhyTarget): Item => ({ id: `why:${t}`, kind: 'why', why: result ? explain(t, result, knowledge) : { target: t, title: 'Explanation', context: null, lines: [{ kind: 'value', text: 'There is no result to explain yet.' }], sources: [] } });
+    const whyFor = (t: WhyRequest): Item => ({
+      id: `why:${t}`,
+      kind: 'why',
+      why: !result ? { target: 'events', title: 'Explanation', context: null, lines: [{ kind: 'value', text: 'There is no result to explain yet.' }], sources: [] } : hasTemplate(t) ? explain(t, result, knowledge) : explainGeneric(t, result),
+    });
 
     if (forced) out.push(whyFor(forced));
     const q = query.trim();

@@ -11,7 +11,7 @@
 // Reads only fields Nived promised to keep stable: status, verdict, verdictReasons, verdictRequirements, metrics.*,
 // events[], windows[], meta.{siteId,tier,tierBadge,sigmaSource,definitionsSummary}, series.*, answer.
 import { fmtBounded, fmtDeg, fmtSpan } from '../../engine/format';
-import type { Bounded, EventRecord, ScenarioResult } from '../../engine/types';
+import type { Bounded, EventRecord, MetricSet, ScenarioResult } from '../../engine/types';
 import type { KnowledgeEntry } from './knowledge';
 
 export type WhyMetricKey =
@@ -25,6 +25,20 @@ export type WhyMetricKey =
   | 'opsHours'
   | 'psrDistanceKm';
 export type WhyTarget = WhyMetricKey | 'events';
+/** What a tile's `onWhy` can hand us: any MetricSet key (Nived's prop type) or 'events'. Keys without a template get a generic card. */
+export type WhyRequest = keyof MetricSet | 'events';
+
+const TEMPLATED = new Set<string>(['sunElevationDeg', 'sunClearanceDeg', 'earthElevationDeg', 'sunlitPct', 'linkPct', 'longestNightH', 'longestCommGapH', 'opsHours', 'psrDistanceKm', 'events']);
+export const hasTemplate = (k: string): k is WhyTarget => TEMPLATED.has(k);
+
+/** Honest fallback for a metric we have no template for: its value and range from the result, and nothing else. */
+export function explainGeneric(key: string, r: ScenarioResult): Why {
+  const why: Why = { target: 'events', title: key, context: r.meta ? `for ${r.meta.siteId}` : null, lines: [], sources: [`result.metrics.${key}`] };
+  const v = (r.metrics as unknown as Record<string, Bounded | null> | null)?.[key];
+  why.lines.push(v && v.value != null ? { kind: 'value', text: `${key}: ${fmtBounded(v, 2)}.` } : { kind: 'value', text: 'No value yet for this scenario.' });
+  why.lines.push({ kind: 'basis', text: 'There is no written explanation for this number yet. Try a term in the search box, or ask about Sun elevation, clearance, sunlight, link or the longest night.' });
+  return why;
+}
 
 export interface WhyLine {
   kind: 'what' | 'value' | 'range' | 'why' | 'basis' | 'verdict';

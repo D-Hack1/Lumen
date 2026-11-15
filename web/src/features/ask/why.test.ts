@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ScenarioResult, Series } from '../../engine/types';
-import { clearanceRateDegPerH, detectWhy, explain, reasonNoPm, sigmaDeg } from './why';
+import { clearanceRateDegPerH, detectWhy, explain, explainGeneric, hasTemplate, reasonNoPm, sigmaDeg } from './why';
 import type { KnowledgeEntry } from './knowledge';
 
 const H = 3_600_000;
@@ -165,5 +165,19 @@ describe('detectWhy', () => {
   it('ignores things that are not "why" questions', () => {
     expect(detectWhy('go to compare')).toBeNull();
     expect(detectWhy('banana')).toBeNull();
+  });
+});
+
+describe('any MetricSet key is accepted (Nived’s onWhy hands us keyof MetricSet)', () => {
+  it('knows which keys have a template', () => {
+    for (const k of ['sunElevationDeg', 'sunClearanceDeg', 'earthElevationDeg', 'sunlitPct', 'linkPct', 'longestNightH', 'longestCommGapH', 'opsHours', 'psrDistanceKm', 'events']) expect(hasTemplate(k)).toBe(true);
+    expect(hasTemplate('dteMarginDeg')).toBe(false);
+  });
+  it('an untemplated metric gets its value and an honest "no explanation yet", nothing invented', () => {
+    const w = explainGeneric('dteMarginDeg', result());
+    const t = text(w);
+    expect(t).toContain('dteMarginDeg: 3.00');
+    expect(t).toContain('no written explanation for this number yet');
+    expect(t).not.toMatch(/±\s*\d/);
   });
 });
