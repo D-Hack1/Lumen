@@ -30,7 +30,7 @@ for (const g of glossary.entries ?? []) {
     kind: 'term',
     title: g.term,
     summary: g.definition,
-    body: clean([g.definition, g.impact, g.formula && `Formula: ${g.formula}`, g.uncertainty && `Uncertainty: ${g.uncertainty}`].filter(Boolean).join(' ')),
+    body: clean([g.definition, g.impact, g.formula && `Formula: ${g.formula}`, g.uncertainty && `Caveat: ${g.uncertainty}`].filter(Boolean).join(' ')),
     source: g.source ?? 'glossary',
     anchor: g.learn_more_anchor ?? `gloss-${g.id}`,
     metrics: g.related_metric_ids ?? [],
