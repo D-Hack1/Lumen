@@ -300,7 +300,8 @@ export interface RegionOutline {
 
 export interface LayersResult {
   layers: LayerEntry[];
-  extents: Record<MapExtent, LayerExtent> | null;
+  /** Only extents that have at least one available layer; null when no layer is available. */
+  extents: Partial<Record<MapExtent, LayerExtent>> | null;
   sizePx: [number, number] | null;
   regions: RegionOutline[];
   loading: boolean;
