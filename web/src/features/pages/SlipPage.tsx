@@ -2,7 +2,7 @@
 // Slip explorer: how a later landing changes sunlight and the link home. One bar per slip day (a 14-day window each).
 // Converted from the design. Additions: bars are clickable and keyboard-reachable, a dashed line marks the on-time level, the
 // best window is flagged with a "jump to it" button, and the array height follows the shared setting.
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { SITES, type Site } from '../orbit/orbitModel';
 import { useLumenContext } from './usePages';
 import { SLIP_DAYS, bestSlip, fmtDuration, fmtPoints, slipWindows, type WindowStats } from './pagesModel';
@@ -57,8 +57,7 @@ function Bars({
 
 export function SlipPage() {
   const L = useLumenContext();
-  const { site, mast } = L;
-  const [slip, setSlip] = useState(6);
+  const { site, mast, slip, setSlip } = L;
   const wins = useMemo(() => slipWindows(site, mast), [site, mast]);
   const best = useMemo(() => bestSlip(wins), [wins]);
   const cur = wins[slip];

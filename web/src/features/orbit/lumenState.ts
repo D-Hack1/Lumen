@@ -5,6 +5,10 @@
 import { createContext, useCallback, useMemo, useState } from 'react';
 import { SITES, customSite, type Site } from './orbitModel';
 
+/** Slip explorer range: 0 … SLIP_MAX days (28 windows, matches pagesModel.SLIP_DAYS − 1). */
+export const SLIP_MAX = 27;
+export const DEFAULT_SLIP = 6;
+
 const THEME_KEY = 'lumen-theme';
 const readLight = (): boolean => {
   try {
@@ -30,6 +34,10 @@ export interface LumenState {
   setMast: (m: number) => void;
   /** Hours since 2027-02-08 00:00 UTC. */
   t: number;
+  /** Landing slip in whole days (0 … SLIP_MAX). Shared so the Slip explorer and commands ("slip 9 days") agree. */
+  slip: number;
+  /** Clamped and rounded to a whole day in 0 … SLIP_MAX. */
+  setSlip: (days: number) => void;
   setT: (v: number | ((prev: number) => number)) => void;
   picked: readonly string[];
   togglePick: (id: string) => void;
@@ -44,6 +52,10 @@ export function useLumenState(): LumenState {
   const [custom, setCustom] = useState<Site | null>(null);
   const [mast, setMast] = useState(2);
   const [t, setT] = useState(96);
+  const [slip, setSlipRaw] = useState(DEFAULT_SLIP);
+  const setSlip = useCallback((days: number) => {
+    if (Number.isFinite(days)) setSlipRaw(Math.max(0, Math.min(SLIP_MAX, Math.round(days))));
+  }, []);
   const [picked, setPicked] = useState<string[]>(['im2', 'shack', 'malapert']);
 
   const toggleTheme = useCallback(() => {
@@ -97,10 +109,12 @@ export function useLumenState(): LumenState {
       setMast,
       t,
       setT,
+      slip,
+      setSlip,
       picked,
       togglePick,
       addPick,
     }),
-    [light, toggleTheme, site, selectSite, dropCustom, allSites, mast, t, picked, togglePick, addPick],
+    [light, toggleTheme, site, selectSite, dropCustom, allSites, mast, t, slip, setSlip, picked, togglePick, addPick],
   );
 }

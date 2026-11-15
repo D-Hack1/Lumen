@@ -9,13 +9,13 @@ import { batteryHeadline } from './rowModel';
 
 const GLYPH = { pass: '✓', marginal: '◐', fail: '✗', unknown: '○' } as const;
 
-export function RequirementList({ result, compact }: { result: Pick<ScenarioResult, 'metrics' | 'meta'> | null; compact?: boolean }) {
+export function RequirementList({ result, compact }: { result: Pick<ScenarioResult, 'metrics' | 'meta'> & Partial<Pick<ScenarioResult, 'verdictRequirements'>> | null; compact?: boolean }) {
   const t = useCopyFn();
   const profile = useScenario((s) => s.profile);
   const weights = useScenario((s) => s.weights);
   const durationDays = useScenario((s) => s.durationDays);
   const metrics = result?.metrics ?? null;
-  const rows = requirementRows(metrics, profile, weights, durationDays * 24, result ? boundsKindOf(result) : 'optimistic');
+  const rows = requirementRows(metrics, profile, weights, durationDays * 24, result ? boundsKindOf(result) : 'optimistic', result?.verdictRequirements);
   const night: Bounded | null = metrics?.longestNightH ?? null;
   const bat = batteryCheck(profile, night);
   const batHead = batteryHeadline(bat, t);

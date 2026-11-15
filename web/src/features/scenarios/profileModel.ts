@@ -117,6 +117,8 @@ export function requirementRows(
   weights: Weights,
   windowHours: number,
   boundsKind: 'bounded' | 'optimistic',
+  /** The engine's own per-requirement statuses (`result.verdictRequirements`). Absent on mock results: recomputed then. */
+  engineStatuses?: ReadonlyArray<{ id: RequirementKey; status: RequirementStatus }>,
 ): RequirementRow[] {
   const linkH = (b: Bounded | null): Bounded | null =>
     b == null
@@ -132,7 +134,9 @@ export function requirementRows(
     night: metrics?.longestNightH ?? null,
     slope: metrics?.padSlopeDeg ?? null,
   };
-  const statuses = metrics
+  const statuses = engineStatuses?.length
+    ? engineStatuses
+    : metrics
     ? evaluateVerdict({ metrics, windowHours, profile, weights, boundsKind }).requirements
     : REQ.map((r) => ({ id: r.id, status: 'unknown' as RequirementStatus }));
   return REQ.map((r) => {
