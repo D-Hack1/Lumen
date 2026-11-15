@@ -55,6 +55,9 @@ export const showsSampleValues = (): boolean => dataMode() !== 'real';
 
 export const realModelReady = (): boolean => loaded !== null;
 
+/** Is this page site id one of the real catalog's sites (the pages' site list is the catalog once real data has loaded)? */
+export const isCatalogSite = (id: string): boolean => loaded?.records.has(id) ?? false;
+
 export function loadRealModel(): Promise<void> {
   if (!loading) {
     loading = (async () => {

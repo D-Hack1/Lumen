@@ -11,7 +11,7 @@ changes results), `concept` (background), `status` (what is and isn't connected 
 Kind: status
 Source: live pages ("Design preview · sample values" labels)
 Tags: real, sample, fake, mock, placeholder, accurate, trust, preview, data
-Not yet. The four pages (Orbit, Stand here, Compare, Slip explorer) currently show the design's sample values and say so ("Design preview · sample values"). The calculation engine behind LUMEN is checked separately against reference data (see the validation report), but the pages are not connected to its results yet. Treat the page numbers as illustrative until that connection is made.
+It depends on the mode LUMEN is running in. With real data, the pages wait for the ephemeris, Deep Space Network series and terrain masks and show numbers from the real calculation engine; Stand here says where each view comes from ("Real engine · terrain mask", or "smooth Moon" when a site or array height has no terrain data). Without real data the pages show the design's sample values and say so ("Design preview · sample values"). Either way, sites with a terrain mask currently show "σ pending": the terrain uncertainty is not available yet, so no ± ranges are shown. The engine itself is checked against reference data (see the validation report).
 
 ## What questions can LUMEN answer?
 Kind: concept
@@ -318,3 +318,27 @@ Kind: concept
 Source: docs/validation.md and PLAN_FINAL §10
 Tags: validation, validated, tested, checks, gates, accurate, correct, trust, verified, proof, golden, how do you know
 LUMEN has a set of validation gates (G0 to G11) with results in the validation report. Examples recorded so far: the interpolation of Sun and Earth positions agrees with direct evaluation to far better than 0.001° (gate G2), and the Chandrayaan-3 touchdown Sun elevation was calculated and compared with the planned value (gate G7 — the numerical comparison passes, but the plan's reference value has no primary source yet, so the report marks G7 as not yet independently sourced). The browser calculations are also checked against their Python twins with golden test cases.
+
+## What are "Numbers for this window" on the Stand here page?
+Kind: howto
+Source: live pages (Stand here, "Numbers for this window")
+Tags: numbers for this window, numbers, metrics, tiles, panel, results, verdict, summary, clearance, sunlit, link, longest night, comm gap, ops hours, psr
+Below the panorama, Stand here lists the engine's numbers for the chosen site and array height over 30 days from 8 Feb 2027: Sun clearance and disk, Earth elevation and margin, sunlit %, link %, the longest night, the longest communications gap, operating hours and the distance to the nearest permanently shadowed region. Above them are the verdict, the reasons for it, and a badge saying what the numbers rest on (for example "Terrain mask · σ pending").
+
+## What does the "Why?" button next to a number do?
+Kind: howto
+Source: live pages (Stand here) and Ask LUMEN
+Tags: why button, why, explain this number, why this number, tile, button, what does why do, explain, understand a number
+It opens Ask LUMEN on an explanation of that exact number, for the same site and array height you are looking at: what the quantity means, its value, whether it has a ± (and if not, why not), the definitions it used, and the engine's own verdict reasons. You can also press / and ask, for example, "why is this ± so big?".
+
+## Why is there no ± on my numbers? (What does "σ pending" mean?)
+Kind: concept
+Source: engine results (tier badge and σ source) and PLAN_FINAL §5.8
+Tags: sigma pending, σ pending, terrain mask, no plus minus, uncertainty missing, badge, tier badge, no range, where did the range go
+"Terrain mask · σ pending" means the site uses a real terrain skyline, but the terrain uncertainty (σ) for it is not available yet. Without σ, LUMEN cannot compute the ± on event times or the [low, high] ranges on percentages, so it shows the nominal values and says why there is no ±, instead of inventing one. When σ becomes available, the ± values appear without any change in how the numbers are calculated.
+
+## What does "smooth Moon" mean on a site?
+Kind: concept
+Source: live pages (Stand here) and PLAN_FINAL §4.2
+Tags: smooth moon, smooth-moon, no terrain, tier c, flat horizon, no skyline, sphere, no terrain data
+"Smooth Moon" means there is no terrain data for that site or array height, so LUMEN treats the Moon as a smooth sphere with no skyline. The Sun and Earth are then blocked only by the curvature of the Moon, so times are the earliest-possible sunrise and latest-possible sunset, not a real skyline. Stand here says so on the page.

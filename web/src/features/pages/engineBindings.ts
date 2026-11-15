@@ -21,6 +21,7 @@ import { makeRequest } from '../../engine/requests';
 import type { ScenarioRequest } from '../../engine/core/buildResult';
 import type { ScenarioResult, SiteRecord } from '../../engine/types';
 import { BASE_UTC } from '../orbit/orbitModel';
+import { isCatalogSite } from '../orbit/realModel';
 import { PANO_H, PANO_W, azToX } from './pagesModel';
 
 const DAY_MS = 86_400_000;
@@ -28,7 +29,8 @@ const HOUR_MS = 3_600_000;
 
 /** Live page site id -> engine catalog id. The only copy; see engineBindings.test.ts. */
 export const ENGINE_SITE_ID: Readonly<Record<string, string>> = { im2: 'im2_athena', shack: 'shackleton_ridge' };
-export const engineSiteId = (liveId: string): string | null => ENGINE_SITE_ID[liveId] ?? null;
+/** The design's ids map through the table; in real mode the pages' ids ARE catalog ids, so those pass straight through. */
+export const engineSiteId = (liveId: string): string | null => ENGINE_SITE_ID[liveId] ?? (isCatalogSite(liveId) ? liveId : null);
 
 /** Observer heights the terrain masks were built for (data_masks.md). Any other mast (0 m) has no mask. */
 export const MASK_HEIGHTS_M: readonly number[] = [1, 2, 5, 10];

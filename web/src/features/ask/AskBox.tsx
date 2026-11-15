@@ -95,6 +95,7 @@ export function AskBox({ ports, sites, canSlip, slipRange, result, resultNote, l
   const [feedback, setFeedback] = useState<string | null>(null);
   const [index, setIndex] = useState<KnowledgeIndex | null>(null);
   const input = useRef<HTMLInputElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
   const listId = useId();
   useEffect(() => onOpenChange?.(open), [open, onOpenChange]);
@@ -203,6 +204,27 @@ export function AskBox({ ports, sites, canSlip, slipRange, result, resultNote, l
 
   if (!open) return null;
 
+  // aria-modal only hides the rest of the page from assistive tech; keyboard focus must be kept inside too.
+  const trapTab = (e: React.KeyboardEvent) => {
+    if (e.key !== 'Tab' || !panel.current) return;
+    const focusable = [...panel.current.querySelectorAll<HTMLElement>('input, button, [href], [tabindex]:not([tabindex="-1"])')].filter((el) => !el.hasAttribute('disabled'));
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement;
+    if (e.shiftKey && active === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && active === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
+
+  // One short sentence for screen readers when the results change (the visible list is also aria-live, but a card of
+  // text is a poor announcement).
+  const announcement = !query.trim() ? '' : runnable.length > 0 ? `${runnable.length} action${runnable.length > 1 ? 's' : ''} available. Press Enter to run the first.` : `${items.filter((i) => i.kind === 'hit' || i.kind === 'why').length} answer${items.filter((i) => i.kind === 'hit' || i.kind === 'why').length === 1 ? '' : 's'} shown.`;
+
   const onInputKey = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown' && runnable.length) {
       e.preventDefault();
@@ -219,7 +241,7 @@ export function AskBox({ ports, sites, canSlip, slipRange, result, resultNote, l
 
   return (
     <div className={`ask ${light ? 'lm-theme-light' : 'lm-theme-dark'}`} role="presentation" onMouseDown={(e) => e.target === e.currentTarget && close()}>
-      <div className="ask__panel" role="dialog" aria-modal="true" aria-label="Ask LUMEN">
+      <div ref={panel} className="ask__panel" role="dialog" aria-modal="true" aria-label="Ask LUMEN" onKeyDown={trapTab}>
         <div className="ask__head">
           <span className="ask__title">Ask LUMEN</span>
           <span className="ask__sub">commands and explanations · works offline · search and templates, not a chatbot</span>
@@ -241,7 +263,10 @@ export function AskBox({ ports, sites, canSlip, slipRange, result, resultNote, l
           spellCheck={false}
           autoComplete="off"
         />
-        <div className="ask__list" id={listId} role="listbox" aria-label="Results" aria-live="polite">
+        <div className="ask__sr" role="status" aria-live="polite">
+          {announcement}
+        </div>
+        <div className="ask__list" id={listId} role="listbox" aria-label="Results">
           {feedback && <div className="ask__feedback">{feedback}</div>}
           {items.length === 0 && !query.trim() && <ExampleChips onPick={setQuery} withCommands />}
           {items.map((it) => {

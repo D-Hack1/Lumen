@@ -6,6 +6,8 @@ import { useMemo } from 'react';
 import { showsSampleValues } from '../orbit/realModel';
 import { SITES, type Site } from '../orbit/orbitModel';
 import { useLumenContext } from './usePages';
+import { useEngineResult } from './engineBindings';
+import { StandHereNumbers } from './StandHereNumbers';
 import { SLIP_DAYS, bestSlip, fmtDuration, fmtPoints, slipWindows, type WindowStats } from './pagesModel';
 
 const SHORT: Record<string, string> = { im2: 'IM-2', shack: 'Ridge', malapert: 'Malapert', haworth: 'Haworth' };
@@ -63,6 +65,9 @@ export function SlipPage() {
   const cur = wins[slip];
   const base = wins[0];
   const QUICK = SITES.slice(0, 4);
+  // The engine's exact (refined-window) numbers, verdict and labels for the window the slider is on. The bars above are the page's hourly view-model; this is the
+  // figure to quote. Null (and nothing shown) unless the data mode is real and the result has arrived.
+  const eng = useEngineResult(site, mast, slip, 14);
   const options: Site[] = QUICK.some((s) => s.id === site.id) ? [...QUICK] : [...QUICK, site];
 
   return (
@@ -152,6 +157,8 @@ export function SlipPage() {
           )}
         </div>
       </section>
+
+      {eng && <StandHereNumbers result={eng} terrain={eng.meta?.tierBadge.startsWith('Terrain mask') ?? false} windowLabel={`14 days from ${dateOf(slip)}`} />}
 
       <div className="lm-statgrid">
         <div className="lm-stat">

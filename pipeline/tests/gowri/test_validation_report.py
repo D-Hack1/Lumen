@@ -1,6 +1,7 @@
 import json
 import math
 
+from lumen_pipeline.validation.frame_check import default_output_path as default_g1_evidence_path
 from lumen_pipeline.validation.horizons_client import (
     AZIMUTH_TOLERANCE_DEG,
     DSN_ELEVATION_TOLERANCE_DEG,
@@ -22,6 +23,15 @@ def test_validation_report_uses_actual_horizons_and_g7_evidence(tmp_path):
     assert json.loads((tmp_path / "report.json").read_text(encoding="utf-8")) == report
     assert (tmp_path / "report.json").read_bytes() == repeated_path.read_bytes()
     assert report["status"] == "NOT_READY"
+    g1 = _gate(report, "G1")
+    assert g1["status"] == "PASS"
+    assert g1["value"]["max_matrix_error"] < g1["tolerances"]["matrix_max_abs_error"]
+    assert g1["value"]["max_direction_error_rad"] < g1["tolerances"]["direction_max_angular_error_rad"]
+    evidence = json.loads(default_g1_evidence_path().read_text(encoding="utf-8"))
+    assert g1["value"] == evidence["metrics"]
+    assert g1["epochs_utc"] == evidence["epochs_utc"]
+    assert g1["frames"] == evidence["frames"]
+    assert g1["provenance"]["kernels"] == evidence["kernels"]
     g3 = _gate(report, "G3")
     assert g3["status"] == "PASS"
     assert g3["tolerances"] == {
@@ -70,8 +80,10 @@ def test_validation_report_marks_missing_evidence_blocked_or_pending(tmp_path):
         fixtures_dir=missing,
         g7_report_path=missing / "g7.json",
         validation_doc_path=missing / "validation.md",
+        g1_report_path=missing / "g1.json",
     )
 
+    assert _gate(report, "G1")["status"] == "BLOCKED"
     assert _gate(report, "G2")["status"] == "PENDING"
     assert _gate(report, "G3")["status"] == "BLOCKED"
     assert _gate(report, "G3b")["status"] == "BLOCKED"

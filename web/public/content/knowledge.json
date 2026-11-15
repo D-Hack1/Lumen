@@ -1,7 +1,7 @@
 {
  "version": "1",
  "generated": "by web/scripts/build-knowledge.mjs",
- "count": 90,
+ "count": 95,
  "entries": [
   {
    "id": "term:sun-elevation",
@@ -278,6 +278,16 @@
    "metrics": []
   },
   {
+   "id": "validation:g1-de421-lunar-frame-validation",
+   "kind": "validation",
+   "title": "G1 - DE421 lunar frame validation",
+   "summary": "- Result: PASS for the checked thresholds. The comparison uses SpiceyPy 8.4.0 pxform and Skyfield 1.55 PlanetaryConstants at 2023-01-01T00:00:00Z, 2025-03-06T17:28:50Z, and 2030-12-31T23:00:00Z. - Frames: MOON_PA_DE421 to MOON_ME_DE421 and ",
+   "body": "- Result: PASS for the checked thresholds. The comparison uses SpiceyPy 8.4.0 pxform and Skyfield 1.55 PlanetaryConstants at 2023-01-01T00:00:00Z, 2025-03-06T17:28:50Z, and 2030-12-31T23:00:00Z. - Frames: MOON_PA_DE421 to MOON_ME_DE421 and the reverse. The DE421 mean-Earth frame is fixed to the principal-axis frame by the 3-2-1 Euler rotation in moon_080317.tf. - Maximum matrix absolute error: 3.480837840186268e-11 (limit < 1e-9). Maximum angular direction error: 3.57755385468222e-11 rad (limit < 1e-6 rad). - Maximum PA-to-ME angular residual: 4.239636467986046e-15 deg; maximum ME-to-PA residual: 4.412742011943044e-15 deg. Maximum orthogonality error: 6.661338147750939e-16 (limit <= 1e-9); minimum determinant: 0.9999999999999996. - PA-ME surface offset: 874.7474688514714 m (about 874.75 m). Round-trip vector error is 1.149714193796099e-9 m; R3 defines no separate round-trip tolerance. - Both implementations use the same DE421 kernel inputs but independently compute the transformations. Kernel filenames, sizes, SHA-256 identifiers, frame metadata, epoch results, and software versions are recorded in [the machine-readable G1 evidence](../pipeline/reports/g1_lunar_frames.json).",
+   "source": "docs/validation.md",
+   "anchor": "g1-de421-lunar-frame-validation",
+   "metrics": []
+  },
+  {
    "id": "validation:g2-hourly-ephemeris-hermite-validation",
    "kind": "validation",
    "title": "G2 - Hourly ephemeris Hermite validation",
@@ -311,8 +321,8 @@
    "id": "help:are-the-numbers-on-the-pages-real",
    "kind": "status",
    "title": "Are the numbers on the pages real?",
-   "summary": "Not yet. The four pages (Orbit, Stand here, Compare, Slip explorer) currently show the design's sample values and say so (\"Design preview · sample values\"). The calculation engine behind LUMEN is checked separately against reference data (see the validation report), but the pages are not connected to its results yet. Treat the page numbers as illustrative until that connection is made.",
-   "body": "Not yet. The four pages (Orbit, Stand here, Compare, Slip explorer) currently show the design's sample values and say so (\"Design preview · sample values\"). The calculation engine behind LUMEN is checked separately against reference data (see the validation report), but the pages are not connected to its results yet. Treat the page numbers as illustrative until that connection is made.",
+   "summary": "It depends on the mode LUMEN is running in. With real data, the pages wait for the ephemeris, Deep Space Network series and terrain masks and show numbers from the real calculation engine; Stand here says where each view comes from (\"Real engine · terrain mask\", or \"smooth Moon\" when a site or array height has no terrain data). Without real data the pages show the design's sample values and say so (\"Design preview · sample values\"). Either way, sites with a terrain mask currently show \"σ pending\": the terrain uncertainty is not available yet, so no ± ranges are shown. The engine itself is checked against reference data (see the validation report).",
+   "body": "It depends on the mode LUMEN is running in. With real data, the pages wait for the ephemeris, Deep Space Network series and terrain masks and show numbers from the real calculation engine; Stand here says where each view comes from (\"Real engine · terrain mask\", or \"smooth Moon\" when a site or array height has no terrain data). Without real data the pages show the design's sample values and say so (\"Design preview · sample values\"). Either way, sites with a terrain mask currently show \"σ pending\": the terrain uncertainty is not available yet, so no ± ranges are shown. The engine itself is checked against reference data (see the validation report).",
    "source": "live pages (\"Design preview · sample values\" labels)",
    "anchor": "are-the-numbers-on-the-pages-real",
    "metrics": [],
@@ -1410,6 +1420,95 @@
     "proof",
     "golden",
     "how do you know"
+   ]
+  },
+  {
+   "id": "help:what-are-numbers-for-this-window-on-the-stand-here-page",
+   "kind": "howto",
+   "title": "What are \"Numbers for this window\" on the Stand here page?",
+   "summary": "Below the panorama, Stand here lists the engine's numbers for the chosen site and array height over 30 days from 8 Feb 2027: Sun clearance and disk, Earth elevation and margin, sunlit %, link %, the longest night, the longest communications gap, operating hours and the distance to the nearest permanently shadowed region. Above them are the verdict, the reasons for it, and a badge saying what the numbers rest on (for example \"Terrain mask · σ pending\").",
+   "body": "Below the panorama, Stand here lists the engine's numbers for the chosen site and array height over 30 days from 8 Feb 2027: Sun clearance and disk, Earth elevation and margin, sunlit %, link %, the longest night, the longest communications gap, operating hours and the distance to the nearest permanently shadowed region. Above them are the verdict, the reasons for it, and a badge saying what the numbers rest on (for example \"Terrain mask · σ pending\").",
+   "source": "live pages (Stand here, \"Numbers for this window\")",
+   "anchor": "what-are-numbers-for-this-window-on-the-stand-here-page",
+   "metrics": [],
+   "tags": [
+    "numbers for this window",
+    "numbers",
+    "metrics",
+    "tiles",
+    "panel",
+    "results",
+    "verdict",
+    "summary",
+    "clearance",
+    "sunlit",
+    "link",
+    "longest night",
+    "comm gap",
+    "ops hours",
+    "psr"
+   ]
+  },
+  {
+   "id": "help:what-does-the-why-button-next-to-a-number-do",
+   "kind": "howto",
+   "title": "What does the \"Why?\" button next to a number do?",
+   "summary": "It opens Ask LUMEN on an explanation of that exact number, for the same site and array height you are looking at: what the quantity means, its value, whether it has a ± (and if not, why not), the definitions it used, and the engine's own verdict reasons. You can also press / and ask, for example, \"why is this ± so big?\".",
+   "body": "It opens Ask LUMEN on an explanation of that exact number, for the same site and array height you are looking at: what the quantity means, its value, whether it has a ± (and if not, why not), the definitions it used, and the engine's own verdict reasons. You can also press / and ask, for example, \"why is this ± so big?\".",
+   "source": "live pages (Stand here) and Ask LUMEN",
+   "anchor": "what-does-the-why-button-next-to-a-number-do",
+   "metrics": [],
+   "tags": [
+    "why button",
+    "why",
+    "explain this number",
+    "why this number",
+    "tile",
+    "button",
+    "what does why do",
+    "explain",
+    "understand a number"
+   ]
+  },
+  {
+   "id": "help:why-is-there-no-on-my-numbers-what-does-pending-mean",
+   "kind": "concept",
+   "title": "Why is there no ± on my numbers? (What does \"σ pending\" mean?)",
+   "summary": "\"Terrain mask · σ pending\" means the site uses a real terrain skyline, but the terrain uncertainty (σ) for it is not available yet. Without σ, LUMEN cannot compute the ± on event times or the [low, high] ranges on percentages, so it shows the nominal values and says why there is no ±, instead of inventing one. When σ becomes available, the ± values appear without any change in how the numbers are calculated.",
+   "body": "\"Terrain mask · σ pending\" means the site uses a real terrain skyline, but the terrain uncertainty (σ) for it is not available yet. Without σ, LUMEN cannot compute the ± on event times or the [low, high] ranges on percentages, so it shows the nominal values and says why there is no ±, instead of inventing one. When σ becomes available, the ± values appear without any change in how the numbers are calculated.",
+   "source": "engine results (tier badge and σ source) and PLAN_FINAL §5.8",
+   "anchor": "why-is-there-no-on-my-numbers-what-does-pending-mean",
+   "metrics": [],
+   "tags": [
+    "sigma pending",
+    "σ pending",
+    "terrain mask",
+    "no plus minus",
+    "uncertainty missing",
+    "badge",
+    "tier badge",
+    "no range",
+    "where did the range go"
+   ]
+  },
+  {
+   "id": "help:what-does-smooth-moon-mean-on-a-site",
+   "kind": "concept",
+   "title": "What does \"smooth Moon\" mean on a site?",
+   "summary": "\"Smooth Moon\" means there is no terrain data for that site or array height, so LUMEN treats the Moon as a smooth sphere with no skyline. The Sun and Earth are then blocked only by the curvature of the Moon, so times are the earliest-possible sunrise and latest-possible sunset, not a real skyline. Stand here says so on the page.",
+   "body": "\"Smooth Moon\" means there is no terrain data for that site or array height, so LUMEN treats the Moon as a smooth sphere with no skyline. The Sun and Earth are then blocked only by the curvature of the Moon, so times are the earliest-possible sunrise and latest-possible sunset, not a real skyline. Stand here says so on the page.",
+   "source": "live pages (Stand here) and PLAN_FINAL §4.2",
+   "anchor": "what-does-smooth-moon-mean-on-a-site",
+   "metrics": [],
+   "tags": [
+    "smooth moon",
+    "smooth-moon",
+    "no terrain",
+    "tier c",
+    "flat horizon",
+    "no skyline",
+    "sphere",
+    "no terrain data"
    ]
   },
   {
