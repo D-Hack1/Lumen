@@ -12,7 +12,7 @@ import { fmtBounded, fmtSpan } from '../../engine/format';
 import { formatUtc } from '../../app/time';
 import { Chip } from '../../ui/Chip';
 import { color } from '../../ui/tokens';
-import type { WindowRecord, WindowType } from '../../engine/types';
+import type { ScenarioResult, WindowRecord, WindowType } from '../../engine/types';
 
 const TYPE_ICON: Record<WindowType, string> = { sun: '☀', earth: '⊕', link: '◉', ops: '⚙' };
 const TYPE_COLOR: Record<WindowType, string> = { sun: color.sun, earth: color.earth, link: color.both, ops: color.accent };
@@ -56,8 +56,17 @@ function flagsOf(r: WindowRecord): string {
   return f.join(' · ');
 }
 
-export function WindowsTable() {
-  const result = useResult();
+export interface WindowsTableProps {
+  /**
+   * Show this scenario result instead of the Cockpit's (Compare view: the selected row —
+   * `useCompareResults().rows.find(r => r.scenarioId === selected)?.result`). Omit to follow the Cockpit result.
+   */
+  result?: ScenarioResult;
+}
+
+export function WindowsTable({ result: given }: WindowsTableProps = {}) {
+  const cockpit = useResult();
+  const result = given ?? cockpit;
   const [filter, setFilter] = useState<WindowType | 'all'>('all');
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'start', dir: 1 });
 
