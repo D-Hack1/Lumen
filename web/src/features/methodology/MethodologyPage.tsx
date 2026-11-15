@@ -15,7 +15,7 @@ interface Gate {
   criterion?: string;
   status: string;
   reason?: unknown;
-  provenance?: string;
+  provenance?: unknown;
   value?: unknown;
 }
 interface Report {
@@ -40,9 +40,10 @@ const GLYPH: Record<string, string> = { PASS: '●', PENDING: '○', BLOCKED: '�
 const asText = (x: unknown): string => {
   if (x == null) return '';
   if (typeof x === 'string') return x;
+  if (Array.isArray(x)) return x.map(asText).filter(Boolean).join('; ');
   if (typeof x === 'object') {
     const o = x as Record<string, unknown>;
-    return asText(o.reason ?? o.summary ?? o.detail ?? o.description ?? '');
+    return asText(o.reason ?? o.summary ?? o.detail ?? o.description ?? o.research_note ?? '');
   }
   return String(x);
 };
@@ -57,9 +58,9 @@ export function gateEvidence(g: Gate): string {
         .map(([k, n]) => `${k.replace(/_/g, ' ')}: ${Number(n).toPrecision(3)}`);
       if (nums.length) return nums.join(' · ');
     }
-    return g.provenance ?? 'Passed.';
+    return asText(g.provenance) || 'Passed.';
   }
-  return asText(g.reason) || g.provenance || 'No result is available yet.';
+  return asText(g.reason) || asText(g.provenance) || 'No result is available yet.';
 }
 
 const SECTIONS = [
