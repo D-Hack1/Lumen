@@ -34,6 +34,28 @@ def _served_path(path: Path, terrain_root: Path) -> str:
     return f"terrain/{path.relative_to(terrain_root).as_posix()}"
 
 
+def _source_manifest(crop: Any) -> dict[str, Any]:
+    provenance = crop.dem.provenance
+    cache_key = provenance.get("cache_key")
+    cache_manifest = Path(__file__).resolve().parents[2] / "cache" / "dem" / f"{cache_key}.json"
+    cache_sha256 = None
+    if isinstance(cache_key, str) and cache_manifest.is_file():
+        cached = json.loads(cache_manifest.read_text(encoding="utf-8"))
+        cache_sha256 = cached.get("sha256")
+    return {
+        "source_key": crop.source_key,
+        "source_url": crop.source_url,
+        "shape": list(crop.dem.elevation.shape),
+        "resolution_m": list(crop.dem.resolution_m),
+        "crs": provenance.get("source_crs"),
+        "frame": provenance.get("frame"),
+        "vertical_reference": provenance.get("vertical_reference"),
+        "datum_reference": provenance.get("datum_reference"),
+        "cache_key": cache_key,
+        "cache_sha256": cache_sha256,
+    }
+
+
 def write_terrain_summary(
     site_id: str,
     crops: TerrainCrops,
@@ -42,6 +64,7 @@ def write_terrain_summary(
     output_root: Path | None = None,
     tier: str = "Tier A",
     pad_headline: dict[str, Any] | None = None,
+    pad_json_path: Path | None = None,
     psr: dict[str, Any] | None = None,
 ) -> Path:
     """Write one actual-output summary and preserve all prior manifest entries."""
@@ -58,7 +81,7 @@ def write_terrain_summary(
         "mask_json": _served_path(mask.sidecar_path, terrain_root) if mask else None,
         "sigma_bin": None,
         "sigma_json": None,
-        "pad_json": None,
+        "pad_json": _served_path(pad_json_path, terrain_root) if pad_json_path else None,
         "dispersion_bin": None,
         "dispersion_json": None,
     }
@@ -104,18 +127,31 @@ def write_terrain_summary(
         "files": {},
     }
     if mask is not None:
-        entry["files"] = {
-            "mask_bin": {
-                "path": files_present["mask_bin"],
-                "version": mask.metadata["version"],
-                "sha256": _sha256(mask.binary_path),
-            },
-            "mask_json": {
-                "path": files_present["mask_json"],
-                "version": mask.metadata["version"],
-                "sha256": _sha256(mask.sidecar_path),
-            },
+        entry["files"].update(
+            {
+                "mask_bin": {
+                    "path": files_present["mask_bin"],
+                    "version": mask.metadata["version"],
+                    "sha256": _sha256(mask.binary_path),
+                },
+                "mask_json": {
+                    "path": files_present["mask_json"],
+                    "version": mask.metadata["version"],
+                    "sha256": _sha256(mask.sidecar_path),
+                },
+            }
+        )
+    if pad_json_path is not None:
+        entry["files"]["pad_json"] = {
+            "path": files_present["pad_json"],
+            "version": json.loads(Path(pad_json_path).read_text(encoding="utf-8"))["version"],
+            "sha256": _sha256(Path(pad_json_path)),
         }
+    entry["sources"] = {
+        name: _source_manifest(crop)
+        for name, crop in (("near", crops.near), ("mid", crops.mid), ("far", crops.far))
+        if crop is not None
+    }
     artifacts[site_id] = entry
     manifest["version"] = manifest.get("version", "0.1.0")
     manifest_path.write_text(

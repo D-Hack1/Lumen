@@ -18,6 +18,8 @@ import { nearestHeightIndex } from '../shared/ribbonGeometry';
 import { useSiteMask } from './useSiteMask';
 import { bodyImageReady, ensureBodyBitmap, getBodyBitmap } from './bodyImages';
 import { earthAppearance, visibleDiskFraction } from './lensGeometry';
+import { COACH, coachAnchor } from '../shared/coachAnchors';
+import { useVisualCopy, visualCopy } from '../shared/visualCopy';
 
 const SUN_DEG = 0.53;
 const EARTH_DEG = 1.9;
@@ -42,6 +44,7 @@ export function RibbonLens() {
   const heightM = useScenario((s) => s.heightM);
   const mask = useSiteMask(result.meta?.siteId ?? null);
   const heightIdx = nearestHeightIndex(heightM);
+  const vc = useVisualCopy();
   const { sites } = useCatalog();
   const siteRef = useScenario((s) => s.site);
   // Latitude orients Earth's pole in the local sky; read inside drawOverlay via a ref (no re-render on change).
@@ -52,7 +55,7 @@ export function RibbonLens() {
   ensureBodyBitmap('earth_epic');
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }} {...coachAnchor(COACH.ribbonLens)}>
       <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '2px 0' }}>
         <Segmented<Body>
           size="sm"
@@ -68,7 +71,7 @@ export function RibbonLens() {
       <div style={{ flex: 1, minHeight: 0 }}>
         <LayeredCanvas
           className="ribbon-lens"
-          staticKey={`${body}:${mask.mask?.siteId}:${heightIdx}`}
+          staticKey={`${body}:${mask.mask?.siteId}:${heightIdx}:${vc.persona}`}
           drawOverlay={(ctx, w, h) => {
             if (!series) return;
             const { tScrub } = crosshairBus.get();
@@ -186,9 +189,10 @@ export function RibbonLens() {
             ctx.fillStyle = color.text;
             ctx.font = '11px var(--font-mono)';
             ctx.textAlign = 'left';
-            ctx.fillText(`${body === 'sun' ? 'Sun' : 'Earth'} disk ${diskPct.toFixed(0)}% (engine) · drawn ${drawnPct.toFixed(0)}%`, 6, h - 8);
+            const c = visualCopy();
+            ctx.fillText(c.t(body === 'sun' ? 'lens.sunDisk' : 'lens.earthDisk', { pct: c.pct(diskPct), drawn: c.pct(drawnPct) }), 6, h - 8);
             ctx.fillStyle = color.textFaint;
-            ctx.fillText('true scale · clipped by terrain', 6, 12);
+            ctx.fillText(c.t('lens.scale'), 6, 12);
           }}
           drawStatic={() => {
             /* all drawing happens in the overlay, redrawn whenever crosshairBus changes (scrub/hover/play) */

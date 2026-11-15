@@ -1,0 +1,324 @@
+{
+  "gate_count": 13,
+  "gates": [
+    {
+      "artifact_paths": [
+        "pipeline/tests/terrain/test_horizon_synthetic.py"
+      ],
+      "criterion": "< 0.01 deg",
+      "description": "Raycaster on synthetic cone/crater DEM",
+      "id": "G0",
+      "reason": "No persisted terrain-owner G0 measurement artifact is available to this reporter.",
+      "status": "PENDING"
+    },
+    {
+      "artifact_paths": [
+        "pipeline/lumen_pipeline/validation/frame_check.py"
+      ],
+      "criterion": "matrix < 1e-9; direction < 1e-6 rad",
+      "description": "SpiceyPy versus Skyfield MOON_ME_DE421 frame",
+      "id": "G1",
+      "reason": "The G1 implementation exists, but no persisted run result records its measured residuals.",
+      "status": "PENDING"
+    },
+    {
+      "artifact_paths": [
+        "docs/validation.md"
+      ],
+      "criterion": "< 0.001 deg across 10,000 epochs",
+      "description": "Hourly Hermite interpolation versus direct SpiceyPy",
+      "id": "G2",
+      "provenance": "Recorded deterministic G2 run, seed 421.",
+      "status": "PASS",
+      "test_commands": [
+        "pytest tests/gowri/test_ephem.py"
+      ],
+      "value": {
+        "epochs": 10000,
+        "max_earth_direction_error_deg": 2.091e-06,
+        "max_sun_direction_error_deg": 6.502e-06
+      }
+    },
+    {
+      "artifact_paths": [
+        "pipeline/tests/gowri/fixtures/horizons/im2_athena_sun.json",
+        "pipeline/tests/gowri/fixtures/horizons/im2_athena_earth.json",
+        "pipeline/tests/gowri/fixtures/horizons/cy3_shiv_shakti_sun.json",
+        "pipeline/tests/gowri/fixtures/horizons/cy3_shiv_shakti_earth.json",
+        "pipeline/tests/gowri/fixtures/horizons/shackleton_ridge_sun.json",
+        "pipeline/tests/gowri/fixtures/horizons/shackleton_ridge_earth.json",
+        "pipeline/tests/gowri/fixtures/horizons/blue_ghost_m1_sun.json",
+        "pipeline/tests/gowri/fixtures/horizons/blue_ghost_m1_earth.json",
+        "pipeline/tests/gowri/fixtures/horizons/equator_zero_sun.json",
+        "pipeline/tests/gowri/fixtures/horizons/equator_zero_earth.json"
+      ],
+      "criterion": "elevation/azimuth < 0.01 deg; Earth range < 1 km",
+      "description": "Smooth-sphere topocentric geometry versus NASA/JPL Horizons",
+      "id": "G3",
+      "provenance": [
+        {
+          "fetched_utc": "2026-11-14T07:59:26.939092Z",
+          "path": "pipeline/tests/gowri/fixtures/horizons/im2_athena_sun.json",
+          "source": "NASA/JPL Horizons API"
+        },
+        {
+          "fetched_utc": "2026-11-14T07:59:27.807711Z",
+          "path": "pipeline/tests/gowri/fixtures/horizons/im2_athena_earth.json",
+          "source": "NASA/JPL Horizons API"
+        },
+        {
+          "fetched_utc": "2026-11-14T07:59:28.695546Z",
+          "path": "pipeline/tests/gowri/fixtures/horizons/cy3_shiv_shakti_sun.json",
+          "source": "NASA/JPL Horizons API"
+        },
+        {
+          "fetched_utc": "2026-11-14T07:59:29.551703Z",
+          "path": "pipeline/tests/gowri/fixtures/horizons/cy3_shiv_shakti_earth.json",
+          "source": "NASA/JPL Horizons API"
+        },
+        {
+          "fetched_utc": "2026-11-14T07:59:30.459939Z",
+          "path": "pipeline/tests/gowri/fixtures/horizons/shackleton_ridge_sun.json",
+          "source": "NASA/JPL Horizons API"
+        },
+        {
+          "fetched_utc": "2026-11-14T07:59:31.421160Z",
+          "path": "pipeline/tests/gowri/fixtures/horizons/shackleton_ridge_earth.json",
+          "source": "NASA/JPL Horizons API"
+        },
+        {
+          "fetched_utc": "2026-11-14T07:59:32.371989Z",
+          "path": "pipeline/tests/gowri/fixtures/horizons/blue_ghost_m1_sun.json",
+          "source": "NASA/JPL Horizons API"
+        },
+        {
+          "fetched_utc": "2026-11-14T07:59:33.338046Z",
+          "path": "pipeline/tests/gowri/fixtures/horizons/blue_ghost_m1_earth.json",
+          "source": "NASA/JPL Horizons API"
+        },
+        {
+          "fetched_utc": "2026-11-14T07:59:34.205413Z",
+          "path": "pipeline/tests/gowri/fixtures/horizons/equator_zero_sun.json",
+          "source": "NASA/JPL Horizons API"
+        },
+        {
+          "fetched_utc": "2026-11-14T07:59:35.051645Z",
+          "path": "pipeline/tests/gowri/fixtures/horizons/equator_zero_earth.json",
+          "source": "NASA/JPL Horizons API"
+        }
+      ],
+      "status": "PASS",
+      "test_commands": [
+        "pytest tests/gowri/test_horizons.py"
+      ],
+      "tolerances": {
+        "azimuth_deg": 0.01,
+        "earth_range_km": 1.0,
+        "elevation_deg": 0.01
+      },
+      "value": {
+        "comparison_count": 200,
+        "max_azimuth_error_deg": 0.000837971840269347,
+        "max_earth_range_error_km": 0.2253940497757867,
+        "max_elevation_error_deg": 0.0001461610999413665
+      }
+    },
+    {
+      "artifact_paths": [
+        "pipeline/tests/gowri/fixtures/horizons/dss-14_moon.json",
+        "pipeline/tests/gowri/fixtures/horizons/dss-43_moon.json",
+        "pipeline/tests/gowri/fixtures/horizons/dss-63_moon.json"
+      ],
+      "criterion": "Moon elevation < 0.1 deg",
+      "description": "DSS Moon-centre elevation versus NASA/JPL Horizons",
+      "id": "G3b",
+      "provenance": [
+        {
+          "fetched_utc": "2026-11-15T01:12:12.175538Z",
+          "path": "pipeline/tests/gowri/fixtures/horizons/dss-14_moon.json",
+          "source": "NASA/JPL Horizons API"
+        },
+        {
+          "fetched_utc": "2026-11-15T01:12:14.613790Z",
+          "path": "pipeline/tests/gowri/fixtures/horizons/dss-43_moon.json",
+          "source": "NASA/JPL Horizons API"
+        },
+        {
+          "fetched_utc": "2026-11-15T01:12:17.498015Z",
+          "path": "pipeline/tests/gowri/fixtures/horizons/dss-63_moon.json",
+          "source": "NASA/JPL Horizons API"
+        }
+      ],
+      "status": "PASS",
+      "test_commands": [
+        "pytest tests/gowri/test_horizons.py tests/gowri/test_dsn.py"
+      ],
+      "tolerances": {
+        "moon_elevation_deg": 0.1
+      },
+      "value": {
+        "comparison_count": 45,
+        "max_moon_elevation_error_deg": 0.080130259755272
+      }
+    },
+    {
+      "artifact_paths": [
+        "pipeline/tests/gowri/test_golden_synthetic.py"
+      ],
+      "criterion": "elevation < 0.005 deg; events +/-1 min; dt +/-5%; metrics +/-1%",
+      "description": "TypeScript versus Python golden vectors",
+      "id": "G4",
+      "reason": "Python synthetic vectors exist, but no browser-engine parity result is available.",
+      "status": "PENDING"
+    },
+    {
+      "criterion": "within a few percent; differences explained",
+      "description": "Multi-year averages versus independent PGDA map pixels",
+      "id": "G5",
+      "reason": "Independent documented PGDA map-pixel references have not been supplied.",
+      "required_artifacts": [
+        "pipeline/data/validation/pgda_reference.json"
+      ],
+      "status": "BLOCKED"
+    },
+    {
+      "criterion": "within a few degrees",
+      "description": "Pad slope versus PGDA slope rasters",
+      "id": "G6",
+      "reason": "No independent PGDA slope-raster comparison artifact is available.",
+      "status": "PENDING"
+    },
+    {
+      "artifact_paths": [
+        "pipeline/reports/g7_cy3.json"
+      ],
+      "calculation_status": "PASS",
+      "description": "Chandrayaan-3 touchdown Sun elevation and timeline",
+      "id": "G7",
+      "numerical_result": "PASS",
+      "provenance": {
+        "document_title": null,
+        "page_or_section": null,
+        "publication_date": null,
+        "quoted_numerical_claim": null,
+        "reported_sun_elevation_deg": 8.75,
+        "reported_uncertainty_deg": 0.25,
+        "research_note": "No ISRO mission document or primary mission publication located during the R3 source review states a Chandrayaan-3 landing Sun elevation of 8.75 degrees, an uncertainty of +/-0.25 degrees, or its limb convention.",
+        "source_url": null,
+        "sources_examined": [
+          {
+            "document_title": "Chandrayaan-3",
+            "page_or_section": "August 23, 2023 update",
+            "publication_date": "not stated; dated mission updates span 2023-07-06 to 2023-09-22",
+            "quoted_claim": "Chandrayaan-3 has successfully soft-landed on the moon.",
+            "supports_8_75_degree_claim": false,
+            "url": "https://www.isro.gov.in/Chandrayaan3.html"
+          },
+          {
+            "document_title": "Chandrayaan-3 Details",
+            "page_or_section": "Overall specifications, Landing Site (Prime)",
+            "publication_date": "not stated",
+            "quoted_claim": "4 km x 2.4 km 69.367621 S, 32.348126 E",
+            "supports_8_75_degree_claim": false,
+            "url": "https://www.isro.gov.in/Chandrayaan3_Details.html"
+          }
+        ],
+        "status": "SOURCE_UNVERIFIED"
+      },
+      "source_provenance_result": "SOURCE_UNVERIFIED",
+      "status": "SOURCE_UNVERIFIED",
+      "test_commands": [
+        "pytest tests/gowri/test_g7.py"
+      ],
+      "timestamp_utc": "2023-08-23T12:33:00Z",
+      "tolerances": {
+        "sun_elevation_deg": 0.25
+      },
+      "value": {
+        "absolute_error_deg": 0.13785994964322157,
+        "computed_sun_elevation_deg": 8.612140050356778,
+        "reference_sun_elevation_deg": 8.75,
+        "timeline_status": "PASS"
+      }
+    },
+    {
+      "criterion": "site <100 ms; slip <16 ms/frame; hover <4 ms; Scan <300 ms; Quick Answer <150 ms",
+      "description": "Performance on the demo laptop",
+      "id": "G8",
+      "reason": "No measured demo-laptop performance artifact is available.",
+      "status": "PENDING"
+    },
+    {
+      "criterion": "visual agreement",
+      "description": "Tier-2 predicted shadows versus LROC image",
+      "id": "G9",
+      "reason": "Tier-2 shadow prediction and LROC-image comparison have not been produced.",
+      "status": "PENDING"
+    },
+    {
+      "criterion": "at least about 68 percent inside reported delta-t or inflate sigma",
+      "description": "Tier-B uncertainty calibration against Tier-A event times",
+      "id": "G10",
+      "reason": "Requires Shivha's Monte Carlo sigma artifacts and Tier-B calibration inputs.",
+      "required_artifacts": [
+        "web/public/data/terrain/sigma/",
+        "web/public/data/terrain/tierb/"
+      ],
+      "status": "BLOCKED"
+    },
+    {
+      "criterion": "100 percent match and CSV round-trip",
+      "description": "Windows Table, barcode, and CSV integrity",
+      "id": "G11",
+      "reason": "No cross-frontend Windows Table/barcode/CSV round-trip artifact is available.",
+      "status": "PENDING"
+    }
+  ],
+  "limitations": [
+    "No gate is promoted to PASS solely because a unit test exists or passes.",
+    "G5 requires independent PGDA map-pixel references, not synthetic records.",
+    "G7 numerical agreement does not establish the source provenance of the 8.75-degree claim.",
+    "G10 requires terrain-owner Monte Carlo sigma and Tier-B calibration artifacts."
+  ],
+  "non_pass_gates": [
+    "G0",
+    "G1",
+    "G4",
+    "G5",
+    "G6",
+    "G7",
+    "G8",
+    "G9",
+    "G10",
+    "G11"
+  ],
+  "open_issues": [
+    {
+      "description": "Terrain near-zone application clamps a negative distant DEM horizon to zero, while R3 D-9 requires negative m_dem to be preserved when the near-zone occluder is inactive.",
+      "evidence_paths": [
+        "pipeline/tests/terrain/test_s4_terrain.py",
+        "pipeline/tests/gowri/test_golden_near_zone_synthetic.py",
+        "plan/PLAN_FINAL_R3_DELTA.md"
+      ],
+      "id": "R3-NEAR-ZONE-TERRAIN-INCONSISTENCY",
+      "owner": "Shiva Shakthi",
+      "reporting_effect": "No terrain-side near-zone result is claimed R3-compliant.",
+      "status": "OPEN"
+    }
+  ],
+  "reference_engine_evidence": {
+    "coverage": [
+      "fast and exact event uncertainty",
+      "envelope-guarded sampling and disk-span extrema",
+      "ISRO Vikram 6-degree operations preset",
+      "three-pass bounds and disk event thresholds"
+    ],
+    "scope": "Python reference-engine component tests; this evidence does not establish browser parity or terrain compliance.",
+    "test_commands": [
+      "pytest tests/gowri/test_uncertainty.py tests/gowri/test_events_guarded.py tests/gowri/test_bounds.py tests/gowri/test_golden_synthetic.py",
+      "pytest tests/gowri/test_golden_near_zone_synthetic.py"
+    ]
+  },
+  "status": "NOT_READY",
+  "version": 1
+}

@@ -3,10 +3,10 @@ import json
 import numpy as np
 
 from lumen_pipeline.ephem.ephemeris import hermite_position
-from lumen_pipeline.reference.events import detect_events
+from lumen_pipeline.reference.events import Event, detect_events
 from lumen_pipeline.reference.interp import Ephemeris
 from lumen_pipeline.reference.visibility import Horizon, availability
-from lumen_pipeline.reference.windows import merge_windows
+from lumen_pipeline.reference.windows import merge_windows, windows_from_events
 from lumen_pipeline.validation.golden import build_golden_set, default_ephemeris_path
 
 
@@ -52,6 +52,91 @@ def test_event_refinement_and_window_merging_use_explicit_endpoints():
     assert events[0].type == "sunset"
     assert abs(events[0].et - 55.0) <= 10.0
     assert [(window.start_et, window.end_et, window.peak_elevation_deg) for window in windows] == [(10.0, 30.0, 2.0)]
+
+
+def test_refined_windows_use_start_and_end_transition_times():
+    windows = windows_from_events(
+        "sun",
+        0.0,
+        100.0,
+        False,
+        [Event("shadowExit", 0.0), Event("sunset", 100.0)],
+        down_event="sunset",
+        up_event="shadowExit",
+        peak_elevation_deg=lambda start, end: end - start,
+    )
+
+    assert [(window.start_et, window.end_et, window.duration_seconds, window.duration_hours) for window in windows] == [
+        (0.0, 100.0, 100.0, 100.0 / 3600.0)
+    ]
+    assert not windows[0].partial_start
+    assert not windows[0].partial_end
+
+
+def test_refined_windows_preserve_short_refined_windows():
+    windows = windows_from_events(
+        "earth",
+        0.0,
+        120.0,
+        False,
+        [Event("earthrise", 50.25), Event("earthset", 55.75)],
+        down_event="earthset",
+        up_event="earthrise",
+        peak_elevation_deg=lambda _start, _end: 1.5,
+    )
+
+    assert [(window.start_et, window.end_et, window.peak_elevation_deg) for window in windows] == [(50.25, 55.75, 1.5)]
+
+
+def test_refined_windows_keep_adjacent_windows_separate():
+    windows = windows_from_events(
+        "ops",
+        0.0,
+        40.0,
+        False,
+        [Event("ops_start", 10.0), Event("ops_end", 20.0), Event("ops_start", 20.0), Event("ops_end", 30.0)],
+        down_event="ops_end",
+        up_event="ops_start",
+        peak_elevation_deg=lambda _start, _end: 2.0,
+    )
+
+    assert [(window.start_et, window.end_et) for window in windows] == [(10.0, 20.0), (20.0, 30.0)]
+
+
+def test_refined_windows_flag_partial_range_boundaries():
+    windows = windows_from_events(
+        "sun",
+        0.0,
+        100.0,
+        True,
+        [Event("sunset", 30.0), Event("shadowExit", 70.0)],
+        down_event="sunset",
+        up_event="shadowExit",
+        peak_elevation_deg=lambda _start, _end: 3.0,
+    )
+
+    assert [(window.start_et, window.end_et, window.partial_start, window.partial_end) for window in windows] == [
+        (0.0, 30.0, True, False),
+        (70.0, 100.0, False, True),
+    ]
+
+
+def test_refined_link_windows_recover_while_earth_stays_visible():
+    windows = windows_from_events(
+        "link",
+        0.0,
+        120.0,
+        True,
+        [Event("link_down", 30.0), Event("link_recovery", 60.0)],
+        down_event="link_down",
+        up_event="link_recovery",
+        peak_elevation_deg=lambda _start, _end: 10.0,
+    )
+
+    assert [(window.start_et, window.end_et, window.partial_start, window.partial_end) for window in windows] == [
+        (0.0, 30.0, True, False),
+        (60.0, 120.0, False, True),
+    ]
 
 
 def test_golden_set_is_reproducible_and_declares_missing_dependencies(tmp_path):

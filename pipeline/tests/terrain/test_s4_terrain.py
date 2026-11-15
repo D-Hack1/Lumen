@@ -336,15 +336,23 @@ def test_mask_header_payload_metadata_and_summary(monkeypatch, tmp_path):
     assert metadata["azimuth_direction"] == "toward_site_frame_e"
     assert metadata["near_field_resolution_m"] == 5.0
     assert metadata["d_min_m"] == 15.0
-    assert metadata["median_filter_radius_m"] == 100.0
-    assert "median_filter_region_radius_m" not in metadata
+    # contracts/data_masks.md §5/§5.3 names this field
+    # "median_filter_region_radius_m"; see masks.py's sidecar-writing
+    # comment for why the internal NearFieldModel attribute keeps its
+    # unqualified name.
+    assert metadata["median_filter_region_radius_m"] == 100.0
+    assert "median_filter_radius_m" not in metadata
     assert metadata["median_filter_kernel_px"] == 3
     assert metadata["median_filter_status"] == "applied"
     assert metadata["provenance"]["median_filter_reason"] is None
     assert metadata["plane_fit_kernel_px"] == 7
     assert metadata["plane_fit_half_width_px"] == 3
-    assert metadata["global_max_deg"][0] == 0.0
-    assert metadata["global_min_deg"][0] == 0.0
+    # The synthetic far-field raycast returns elevation=-1.0 everywhere
+    # (one NaN cell) for every height, and the near-zone contribution here
+    # is zero (flat synthetic DEM): R3 D-9 requires the negative distant
+    # horizon to be preserved exactly rather than clamped to 0.
+    assert metadata["global_max_deg"][0] == -1.0
+    assert metadata["global_min_deg"][0] == -1.0
     assert metadata["dem_source"] == "site_specific_5m_lola_pgda_78"
     assert metadata["binary"] == {
         "magic": "LUMENMSK",
@@ -357,8 +365,12 @@ def test_mask_header_payload_metadata_and_summary(monkeypatch, tmp_path):
     payload = artifact.binary_path.read_bytes()
     elevation = np.frombuffer(payload, dtype="<f4", count=4 * 3600, offset=64)
     distance = np.frombuffer(payload, dtype="<f4", count=4 * 3600, offset=57664)
-    assert np.isfinite(elevation).all()
-    assert np.isfinite(distance).all()
+    # R3 D-9: the one cell the fake raycast left as NaN has a zero near-zone
+    # contribution here (flat synthetic DEM), so m_eff = m_dem must preserve
+    # that NaN rather than fabricate a value; every other cell is finite.
+    assert np.isnan(elevation).sum() == 1
+    assert np.isfinite(elevation[~np.isnan(elevation)]).all()
+    assert np.isnan(distance).sum() == 1
     assert np.all((np.isfinite(distance) & (distance > 0) & (distance <= 250)) | np.isnan(distance))
 
     old_manifest = {"version": "old", "artifacts": {"other": {"version": "1"}}}
@@ -428,10 +440,14 @@ def test_missing_or_invalid_commit_rejects_publication(monkeypatch, tmp_path, co
         )
 
 
-def test_near_zone_tie_preserves_dem_distance_and_negative_dem_is_clamped():
+def _zero_contribution_near_field_model():
+    """slope_deg=0 => N(az) is negative for every positive observer height,
+    so N+(az) clamps to exactly 0 everywhere: the R3 D-9 "contribution is
+    zero" case."""
+
     from lumen_pipeline.terrain.masks import NearFieldModel
 
-    near = NearFieldModel(
+    return NearFieldModel(
         z0_m=0.0,
         slope_deg=0.0,
         downhill_aspect_deg=180.0,
@@ -446,13 +462,104 @@ def test_near_zone_tie_preserves_dem_distance_and_negative_dem_is_clamped():
         plane_fit_half_width_m=15.0,
         filtered_elevation=np.zeros((1, 1)),
     )
+
+
+def _positive_contribution_near_field_model():
+    """R3 D-9's own worked example: uphill theta=10 deg, h=1 m, d_min=15 m
+    => N = atan(tan(10 deg) - 1/15) ~= 6.25 deg (strictly positive)."""
+
+    from lumen_pipeline.terrain.masks import NearFieldModel
+
+    return NearFieldModel(
+        z0_m=0.0,
+        slope_deg=10.0,
+        downhill_aspect_deg=180.0,
+        uphill_azimuth_deg=0.0,
+        d_min_m=15.0,
+        near_field_resolution_m=5.0,
+        median_filter_status="applied",
+        median_filter_reason=None,
+        median_filter_radius_m=100.0,
+        median_filter_kernel_px=(3, 3),
+        plane_fit_k=3,
+        plane_fit_half_width_m=15.0,
+        filtered_elevation=np.zeros((1, 1)),
+    )
+
+
+def test_near_zone_zero_contribution_preserves_zero_dem_elevation_and_distance():
+    """R3 D-9: m_eff = m_dem wherever N+ = 0; a zero distant horizon and its
+    distance must be left exactly as they were."""
+
+    near = _zero_contribution_near_field_model()
     elevation = np.zeros((4, 1), dtype=np.float32)
     distance = np.full((4, 1), 10.0, dtype=np.float32)
     _apply_near_zone(elevation, distance, near, (1.0, 2.0, 5.0, 10.0), np.array([0.0]))
+    assert np.all(elevation == 0.0)
     assert np.all(distance == 10.0)
 
-    elevation.fill(-1.0)
-    distance.fill(10.0)
+
+def test_near_zone_zero_contribution_preserves_positive_dem_elevation_and_distance():
+    """R3 D-9: a positive distant horizon must also be left exactly as it
+    was when the near-zone contribution is zero (not just the zero/negative
+    cases)."""
+
+    near = _zero_contribution_near_field_model()
+    elevation = np.full((4, 1), 3.0, dtype=np.float32)
+    distance = np.full((4, 1), 10.0, dtype=np.float32)
     _apply_near_zone(elevation, distance, near, (1.0, 2.0, 5.0, 10.0), np.array([0.0]))
-    assert np.all(elevation == 0.0)
-    assert np.all(distance == 0.015)
+    assert np.all(elevation == 3.0)
+    assert np.all(distance == 10.0)
+
+
+def test_near_zone_zero_contribution_preserves_negative_dem_elevation_and_distance():
+    """R3 regression: the clamp N+ = max(0, N) must never be applied to
+    m_dem itself. Previously, a zero near-zone contribution still replaced
+    a negative distant horizon with 0 deg (and its distance with d_min);
+    R3 D-9's golden case "negative m_dem downhill -> preserved exactly"
+    requires the original negative horizon and distance to survive
+    untouched."""
+
+    near = _zero_contribution_near_field_model()
+    elevation = np.full((4, 1), -1.0, dtype=np.float32)
+    distance = np.full((4, 1), 10.0, dtype=np.float32)
+    _apply_near_zone(elevation, distance, near, (1.0, 2.0, 5.0, 10.0), np.array([0.0]))
+    assert np.all(elevation == -1.0)
+    assert np.all(distance == 10.0)
+
+
+def test_near_zone_positive_contribution_replaces_negative_dem_per_r3():
+    """R3 D-9: otherwise (N+ > 0), m_eff = max(m_dem, N+). A strictly
+    positive near-zone contribution must still override a negative distant
+    horizon, and its distance becomes d_min."""
+
+    near = _positive_contribution_near_field_model()
+    elevation = np.full((4, 1), -1.0, dtype=np.float32)
+    distance = np.full((4, 1), 10.0, dtype=np.float32)
+    _apply_near_zone(elevation, distance, near, (1.0, 2.0, 5.0, 10.0), np.array([0.0]))
+    # height=1.0 m matches the plan's exact worked example (N ~= 6.25 deg);
+    # height=2.0 m is also strictly positive (N ~= 2.46 deg), so both
+    # override the negative distant horizon. height=5.0/10.0 m give a
+    # negative (clamped-to-zero) contribution, so the negative distant
+    # horizon and its distance must be preserved there instead.
+    assert elevation[0, 0] == pytest.approx(6.254, abs=0.01)
+    assert distance[0, 0] == pytest.approx(0.015)
+    assert elevation[1, 0] == pytest.approx(2.462, abs=0.01)
+    assert distance[1, 0] == pytest.approx(0.015)
+    assert elevation[2, 0] == -1.0
+    assert distance[2, 0] == 10.0
+    assert elevation[3, 0] == -1.0
+    assert distance[3, 0] == 10.0
+
+
+def test_near_zone_positive_contribution_does_not_lower_a_higher_dem_horizon():
+    """R3 D-9: otherwise m_eff = max(m_dem, N+); existing intended behavior
+    for a genuinely positive contribution that is still smaller than the
+    distant horizon must remain unchanged (m_dem wins, untouched)."""
+
+    near = _positive_contribution_near_field_model()
+    elevation = np.full((4, 1), 20.0, dtype=np.float32)
+    distance = np.full((4, 1), 10.0, dtype=np.float32)
+    _apply_near_zone(elevation, distance, near, (1.0, 2.0, 5.0, 10.0), np.array([0.0]))
+    assert np.all(elevation == 20.0)
+    assert np.all(distance == 10.0)

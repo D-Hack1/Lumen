@@ -4,6 +4,8 @@
 import * as Comlink from 'comlink';
 import { buildScenarioResult, type ScenarioRequest } from './core/buildResult';
 import { loadEphem } from './data/ephem';
+import { loadMaskOrNull, loadMasksFor } from './data/masks';
+import { loadDsnOrNull } from './data/dsn';
 import { dataMode } from './data/source';
 import { perf } from './perf';
 import type { EngineApi } from './worker';
@@ -31,7 +33,7 @@ export function evaluateScenario(req: ScenarioRequest): Promise<ScenarioResult> 
     const w = engine();
     if (w) return w.evaluateScenario(mode, req);
     const eph = await loadEphem();
-    return buildScenarioResult(eph, { ...req, dataVersions: { ...req.dataVersions, ephem: eph.mock ? 'mock' : 'real' } });
+    return buildScenarioResult(eph, { ...req, dataVersions: { ...req.dataVersions, ephem: eph.mock ? 'mock' : 'real' } }, await loadDsnOrNull(), await loadMaskOrNull(req.siteId));
   });
 }
 
@@ -48,17 +50,17 @@ export function latestWins<A extends unknown[], R>(fn: (...a: A) => Promise<R>):
 /** Scan stage 1 (fast nominal ranking of every candidate). */
 export async function runScanStage1(input: ScanInput): Promise<ScanCandidate[]> {
   const w = engine();
-  return w ? w.scanStage1(dataMode(), input) : scanStage1(await loadEphem(), input);
+  return w ? w.scanStage1(dataMode(), input) : scanStage1(await loadEphem(), input, await loadDsnOrNull(), await loadMasksFor(input.requests));
 }
 
 /** Scan stage 2 for one candidate (exact evaluation). */
 export async function runRefineCandidate(req: ScenarioRequest, candidate: ScanCandidate): Promise<ScanCandidate> {
   const w = engine();
-  return w ? w.refineCandidate(dataMode(), req, candidate) : refineCandidate(await loadEphem(), req, candidate);
+  return w ? w.refineCandidate(dataMode(), req, candidate) : refineCandidate(await loadEphem(), req, candidate, await loadDsnOrNull(), await loadMaskOrNull(req.siteId));
 }
 
 /** Stage 1 for one site at the given day offsets (the calendar asks for a chunk at a time). */
 export async function runStage1Offsets(req: ScenarioRequest, offsets: number[]): Promise<ScanCandidate[]> {
   const w = engine();
-  return w ? w.stage1Offsets(dataMode(), req, offsets) : stage1ForOffsets(await loadEphem(), req, offsets);
+  return w ? w.stage1Offsets(dataMode(), req, offsets) : stage1ForOffsets(await loadEphem(), req, offsets, await loadDsnOrNull(), await loadMaskOrNull(req.siteId));
 }

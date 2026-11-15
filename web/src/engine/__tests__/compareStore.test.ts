@@ -1,13 +1,14 @@
 // Owner: Nived
 // Seam: the shared Compare store (subscribeCompare / getCompare) driven by the scenario store's compareRows.
-// Oracle for the numbers: Gowri's golden set 1 (IM-2 sunlit 49.2963 %) and the Blue Ghost fact (Earth always up => link 100 %).
+// Oracle for the numbers: Gowri's golden set 1 (IM-2 sunlit 49.2963 %) and the Blue Ghost fact (Earth is always up there, so the link is exactly the
+// DSN rule: 97.7963 % over these 30 days, computed independently with numpy on dsn.bin: >= 1 complex above 10 deg, 2-minute grid, interval-weighted).
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { getCompare, subscribeCompare } from '../compareStore';
 import { setDataMode } from '../data/source';
 import { DEFAULT_SCENARIO, useScenario, type CompareRow } from '../../state/scenarioStore';
-import { PUBLIC, stubFetch } from './helpers';
+import { IM2_REFINED, PUBLIC, REFINED, stubFetch } from './helpers';
 
 const EPHEM_BIN = join(PUBLIC, 'data/ephem/ephem.bin');
 const GOLDEN = join(PUBLIC, 'data/golden/golden_set1.json');
@@ -59,9 +60,11 @@ describe.skipIf(!run)('compare store (real data)', () => {
     await until(() => getCompare().status === 'ready' && getCompare().rows.length === 2);
     const c = getCompare();
     expect(c.baselineId).toBe('A');
-    expect(c.rows[0].result.metrics!.sunlitPct.value!).toBeCloseTo(golden.sunlitPct.value, 4);
-    expect(c.rows[1].result.metrics!.linkPct.value).toBe(100);
-    expect(c.rows[1].deltaVsBaseline.linkPct!).toBeCloseTo(100 - golden.earthVisiblePct.value, 3);
+    expect(c.rows[0].result.metrics!.sunlitPct.value!).toBeCloseTo(IM2_REFINED.sunlitPct, 3);
+    const BLUE_GHOST_LINK = REFINED.blue_ghost_m1.linkPct;
+    expect(c.rows[1].result.metrics!.linkPct.value!).toBeCloseTo(BLUE_GHOST_LINK, 2);
+    expect(c.rows[0].result.metrics!.linkPct.value!).toBeLessThanOrEqual(golden.earthVisiblePct.value + 1e-9); // the DSN rule can only remove link time
+    expect(c.rows[1].deltaVsBaseline.linkPct!).toBeCloseTo(BLUE_GHOST_LINK - c.rows[0].result.metrics!.linkPct.value!, 2);
     expect(c.rows[0].deltaVsBaseline).toEqual({});
   });
 

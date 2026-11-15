@@ -32,9 +32,9 @@
     "dem_source": "MOCK-DEM"
   },
   "dispersion_slope_stats": {
-    "p50": 7.2,
-    "p95": 14.4,
-    "max": 18.0,
-    "pct_below_tolerance": 92.5
+    "p50": 8.9,
+    "p95": 10.6,
+    "max": 11.0,
+    "pct_below_tolerance": 84.298
   }
 }

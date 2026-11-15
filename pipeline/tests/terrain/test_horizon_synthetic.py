@@ -9,7 +9,7 @@ import pytest
 from pyproj import CRS
 from rasterio.transform import from_origin
 
-from lumen_pipeline.common.frames import site_position_km, site_rotation_matrix
+from lumen_pipeline.common.frames import site_position_km, site_rotation_matrix, site_up_vector
 from lumen_pipeline.terrain.dem_io import LUNAR_SPHERICAL_CRS, DemWindow
 from lumen_pipeline.terrain.horizon import (
     _bilinear_sample,
@@ -335,3 +335,232 @@ def test_invalid_inputs_and_projected_native_crs_are_explicit():
     result = _raycast(projected_dem)
     assert result.elevation_deg.shape == (3, 8)
     assert np.isfinite(result.elevation_deg).all()
+
+
+def test_adaptive_peak_refinement_matches_independent_dense_bilinear_reference():
+    """A narrow interpolated ridge must not be lost between ray samples."""
+
+    pixel_m = 2.0
+    size = 401
+    lat_step = math.degrees(pixel_m / 1_737_400.0)
+    lon_step = math.degrees(pixel_m / (1_737_400.0 * math.cos(math.radians(SITE_LAT))))
+    transform = from_origin(
+        SITE_LON - size * lon_step / 2.0,
+        SITE_LAT + size * lat_step / 2.0,
+        lon_step,
+        lat_step,
+    )
+    row_grid, col_grid = np.indices((size, size), dtype=np.float64)
+    longitudes, latitudes = transform @ (col_grid + 0.5, row_grid + 0.5)
+    radial_x = 1_737_400.0 * np.radians(longitudes) * math.cos(math.radians(SITE_LAT))
+    radial_y = 1_737_400.0 * np.radians(latitudes - SITE_LAT)
+    radius = np.hypot(radial_x, radial_y)
+    azimuth = np.degrees(np.arctan2(radial_x, radial_y)) % 360.0
+    ridge = 500.0 * np.exp(-0.5 * ((radius - 100.0) / 2.0) ** 2)
+    ridge *= np.exp(-0.5 * ((((azimuth - 22.5 + 180.0) % 360.0) - 180.0) / 0.15) ** 2)
+    dem = DemWindow(
+        elevation=ridge.astype(np.float32),
+        valid=np.ones(ridge.shape, dtype=bool),
+        transform=transform,
+        crs=LUNAR_SPHERICAL_CRS,
+        bounds=(0.0, 0.0, 0.0, 0.0),
+        resolution_m=(pixel_m, pixel_m),
+        source="independent-reference-ridge",
+        provenance={},
+    )
+
+    result = raycast_horizon(
+        dem,
+        latitude_deg=SITE_LAT,
+        longitude_deg_east=SITE_LON,
+        observer_heights_m=(1.0,),
+        bin_width_deg=45.0,
+        max_range_km=0.2,
+        near_field_pixel_size_m=pixel_m,
+        geometric_growth_factor=1.5,
+        site_elevation_m=0.0,
+    )
+
+    site = site_position_km(SITE_LAT, SITE_LON)
+    rotation = site_rotation_matrix(SITE_LAT, SITE_LON)
+    up = site_up_vector(SITE_LAT, SITE_LON)
+    tangent = rotation.T @ np.array(
+        [math.sin(math.radians(22.5)), math.cos(math.radians(22.5)), 0.0]
+    )
+    dense_max = -math.inf
+    for distance_m in np.arange(6.0, 200.0001, 0.005):
+        arc = distance_m / 1_737_400.0
+        point = up * math.cos(arc) + tangent * math.sin(arc)
+        longitude, latitude = (
+            math.degrees(math.atan2(point[1], point[0])),
+            math.degrees(math.asin(point[2])),
+        )
+        column, row = (~transform) @ (longitude, latitude)
+        left = math.floor(column - 0.5)
+        top = math.floor(row - 0.5)
+        fraction_column = column - (left + 0.5)
+        fraction_row = row - (top + 0.5)
+        elevation = (
+            ridge[top, left] * (1.0 - fraction_column) * (1.0 - fraction_row)
+            + ridge[top, left + 1] * fraction_column * (1.0 - fraction_row)
+            + ridge[top + 1, left] * (1.0 - fraction_column) * fraction_row
+            + ridge[top + 1, left + 1] * fraction_column * fraction_row
+        )
+        terrain = (1_737.4 + elevation / 1000.0) * point
+        local = rotation @ (terrain - (site + up * 0.001))
+        angle = math.degrees(math.atan2(local[2], math.hypot(local[0], local[1])))
+        dense_max = max(dense_max, angle)
+
+    assert abs(float(result.elevation_deg[0, 0]) - dense_max) < 0.01
+
+
+def test_bin_chunking_is_bit_identical_to_a_single_unchunked_pass(monkeypatch):
+    """Production-scale rays (fine near-field resolution, full 250 km range)
+    can need on the order of 1e5 distance samples per bin; materializing all
+    3600 bins of (bins, samples) float64 geometry arrays at once for that
+    case needs tens of GB (see horizon._CHUNK_TARGET_ELEMENTS). Bins carry no
+    cross-bin state anywhere in raycast_horizon or _raycast, so batching them
+    in chunks must not change a single output value -- only how much is held
+    in memory at once."""
+
+    import lumen_pipeline.terrain.horizon as horizon_module
+
+    dem = _synthetic_dem(np.zeros((ROWS, COLS), dtype=np.float32))
+    unchunked = _raycast(dem)
+
+    monkeypatch.setattr(horizon_module, "_CHUNK_TARGET_ELEMENTS", 1)
+    chunked = _raycast(dem)
+
+    assert chunked.elevation_deg.shape == unchunked.elevation_deg.shape
+    np.testing.assert_array_equal(chunked.elevation_deg, unchunked.elevation_deg)
+    np.testing.assert_array_equal(chunked.distance_km, unchunked.distance_km)
+
+
+def test_bin_chunking_handles_a_ragged_final_chunk(monkeypatch):
+    """bin_count (3600) is not always a multiple of the chunk size the
+    memory budget picks. Force a chunk size (1000 bins) that leaves a
+    short last chunk (bins 3000-3599, size 600) and check every chunk
+    boundary -- including the very first and very last bins -- lines up
+    exactly with the unchunked result, not just the bins away from a
+    boundary."""
+
+    import lumen_pipeline.terrain.horizon as horizon_module
+
+    dem = _synthetic_dem(np.zeros((ROWS, COLS), dtype=np.float32))
+    kwargs = {
+        "latitude_deg": SITE_LAT,
+        "longitude_deg_east": SITE_LON,
+        "observer_heights_m": (1.0, 2.0, 5.0, 10.0),
+        "bin_width_deg": 0.1,
+        "max_range_km": 0.08,
+        "near_field_pixel_size_m": PIXEL_M,
+        "geometric_growth_factor": 1.5,
+        "site_elevation_m": 0.0,
+    }
+    monkeypatch.setattr(horizon_module, "_CHUNK_TARGET_ELEMENTS", 2_000_000)
+    unchunked = raycast_horizon(dem, **kwargs)
+
+    # distance_samples.size is 38 for these march parameters, so
+    # 1000 * 38 = 38000 yields a 1000-bin chunk: chunks of
+    # [0:1000), [1000:2000), [2000:3000), [3000:3600) -- a ragged final
+    # chunk of 600 bins, not an exact divisor of 3600.
+    monkeypatch.setattr(horizon_module, "_CHUNK_TARGET_ELEMENTS", 38_000)
+    chunked = raycast_horizon(dem, **kwargs)
+
+    np.testing.assert_array_equal(chunked.elevation_deg, unchunked.elevation_deg)
+    np.testing.assert_array_equal(chunked.distance_km, unchunked.distance_km)
+    for boundary_bin in (0, 999, 1000, 2999, 3000, 3599):
+        assert np.array_equal(
+            chunked.elevation_deg[:, boundary_bin], unchunked.elevation_deg[:, boundary_bin]
+        )
+
+
+def _assert_chunked_matches_unchunked(monkeypatch, dem, **raycast_kwargs) -> None:
+    import lumen_pipeline.terrain.horizon as horizon_module
+
+    monkeypatch.setattr(horizon_module, "_CHUNK_TARGET_ELEMENTS", 2_000_000)
+    unchunked = raycast_horizon(dem, **raycast_kwargs)
+
+    # Force several chunk boundaries to fall inside the bin range being
+    # exercised (1 element per chunk -> as many chunks as there are bins
+    # that need more than one sample, i.e. the worst case for chunking).
+    monkeypatch.setattr(horizon_module, "_CHUNK_TARGET_ELEMENTS", 1)
+    chunked = raycast_horizon(dem, **raycast_kwargs)
+
+    assert chunked.elevation_deg.shape == unchunked.elevation_deg.shape
+    np.testing.assert_array_equal(chunked.elevation_deg, unchunked.elevation_deg)
+    np.testing.assert_array_equal(chunked.distance_km, unchunked.distance_km)
+    return unchunked
+
+
+def test_bin_chunking_matches_unchunked_with_nodata_negative_terrain_and_full_production_bins(
+    monkeypatch,
+):
+    """Exercises the chunking boundary at the full production azimuth
+    resolution (3600 bins, including the wrap-around bins 0 and 3599) over
+    terrain that mixes a below-datum crater (negative elevation angles),
+    an invalid/nodata annulus (NaN propagation), and four distinct observer
+    heights -- the same shape of inputs generate_tier_a_mask uses in
+    production."""
+
+    elevation = np.zeros((ROWS, COLS), dtype=np.float32)
+    dem = _synthetic_dem(elevation)
+    radius_m = _pixel_surface_distances(dem)
+
+    # A below-datum crater near the site: produces negative horizon angles
+    # for the near bins, not merely "no feature" (angle == 0).
+    elevation[radius_m < 20.0] = -100.0
+    # An invalid/nodata annulus further out: any ray whose only in-range
+    # terrain sample lands there must come back NaN, never a fabricated
+    # finite value or a silently-skipped sample.
+    nodata_ring = (radius_m >= 40.0) & (radius_m < 60.0)
+    dem.valid[nodata_ring] = False
+
+    unchunked = _assert_chunked_matches_unchunked(
+        monkeypatch,
+        dem,
+        latitude_deg=SITE_LAT,
+        longitude_deg_east=SITE_LON,
+        observer_heights_m=(1.0, 2.0, 5.0, 10.0),
+        bin_width_deg=0.1,
+        max_range_km=0.08,
+        near_field_pixel_size_m=PIXEL_M,
+        geometric_growth_factor=1.5,
+        site_elevation_m=0.0,
+    )
+
+    assert unchunked.elevation_deg.shape == (4, 3600)
+    # The wrap-around boundary bins (azimuth 0.05 deg and 359.95 deg) must
+    # have been raycast like every other bin, not dropped or left as a
+    # leftover/partial chunk.
+    assert np.isfinite(unchunked.elevation_deg[:, 0]).any()
+    assert np.isfinite(unchunked.elevation_deg[:, 3599]).any()
+    # The crater must produce a negative horizon for at least one height
+    # (R3 D-9 requires negative horizons to survive, not be clamped to 0).
+    assert np.nanmin(unchunked.elevation_deg) < 0.0
+
+
+def test_bin_chunking_matches_unchunked_when_every_sample_is_invalid(monkeypatch):
+    """All-nodata terrain (e.g. a crop whose only coverage falls outside the
+    verified DEM footprint) must raycast to all-NaN under chunking exactly
+    as it does unchunked -- chunk boundaries must not fabricate a finite
+    value out of missing data."""
+
+    elevation = np.zeros((ROWS, COLS), dtype=np.float32)
+    dem = _synthetic_dem(elevation)
+    dem.valid[:, :] = False
+
+    unchunked = _assert_chunked_matches_unchunked(
+        monkeypatch,
+        dem,
+        latitude_deg=SITE_LAT,
+        longitude_deg_east=SITE_LON,
+        observer_heights_m=(1.0, 2.0, 5.0, 10.0),
+        bin_width_deg=0.1,
+        max_range_km=0.08,
+        near_field_pixel_size_m=PIXEL_M,
+        geometric_growth_factor=1.5,
+        site_elevation_m=0.0,
+    )
+    assert np.isnan(unchunked.elevation_deg).all()
+    assert np.isnan(unchunked.distance_km).all()

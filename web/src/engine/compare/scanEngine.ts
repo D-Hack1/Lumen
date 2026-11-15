@@ -5,11 +5,14 @@
 //   Stage 2: full evaluation (2-minute grid, events refined) of a chosen candidate: exact values, no longer provisional.
 // Without a terrain mask every value is a smooth-Moon best case, so a stage-1/2 pass is PENDING at best (see verdict.ts).
 import { buildScenarioResult, type ScenarioRequest } from '../core/buildResult';
+import { horizonFromMask } from '../core/terrainHorizon';
+import type { Mask } from '../data/masks';
 import { stateAt, type Definitions } from '../core/evaluate';
 import { makeSite } from '../core/geometry';
 import { inEphemerisRange } from '../core/interp';
 import { evaluateVerdict } from '../core/verdict';
 import { Horizon } from '../core/visibility';
+import type { DsnSeries } from '../data/dsn';
 import type { Ephemeris } from '../data/ephem';
 import type { Bounded, MetricSet, ScanCandidate } from '../types';
 
@@ -48,7 +51,7 @@ function longestFalseRun(up: Uint8Array, from: number, to: number): number {
  * prefix sums for every window). Offsets whose window leaves the ephemeris are skipped. Result is in offsets order.
  * Shared by the Scan (offsets -N..N) and the Calendar (offsets 0..days-1).
  */
-export function stage1ForOffsets(eph: Ephemeris, r: ScenarioRequest, requestedOffsets: number[]): ScanCandidate[] {
+export function stage1ForOffsets(eph: Ephemeris, r: ScenarioRequest, requestedOffsets: number[], dsn: DsnSeries | null = null, mask: Mask | null = null): ScanCandidate[] {
   const windowMs = r.durationDays * DAY;
   const offsets = requestedOffsets.filter((d) => inEphemerisRange(eph, r.startMs + d * DAY) && inEphemerisRange(eph, r.startMs + d * DAY + windowMs));
   if (offsets.length === 0) return [];
@@ -60,16 +63,16 @@ export function stage1ForOffsets(eph: Ephemeris, r: ScenarioRequest, requestedOf
   const tLast = r.startMs + hi * DAY + windowMs;
   const n = Math.ceil((tLast - tFirst) / STAGE1_STEP_MS);
   const site = makeSite(r.latDeg, r.lonDegEast, r.heightM, r.rotation ?? undefined);
-  const horizon = new Horizon({ observerHeightM: r.heightM });
+  const horizon = horizonFromMask(mask, r.heightM) ?? new Horizon({ observerHeightM: r.heightM });
   const d: Definitions = r.definitions;
   const sun = new Uint8Array(n);
   const sunCum = new Int32Array(n + 1); // prefix sums: count of "up" samples before index i
   const earthCum = new Int32Array(n + 1);
   for (let i = 0; i < n; i++) {
-    const s = stateAt(eph, site, horizon, d, tFirst + i * STAGE1_STEP_MS);
+    const s = stateAt(eph, site, horizon, d, tFirst + i * STAGE1_STEP_MS, dsn);
     sun[i] = s.sun.up ? 1 : 0;
     sunCum[i + 1] = sunCum[i] + sun[i];
-    earthCum[i + 1] = earthCum[i] + (s.earth.up ? 1 : 0);
+    earthCum[i + 1] = earthCum[i] + (s.linkUp ? 1 : 0); // link = Earth visible AND, when applied, a DSN complex
   }
 
   const m = Math.round(windowMs / STAGE1_STEP_MS); // samples per candidate window
@@ -87,14 +90,14 @@ export function stage1ForOffsets(eph: Ephemeris, r: ScenarioRequest, requestedOf
   });
 }
 
-export function scanStage1(eph: Ephemeris, input: ScanInput): ScanCandidate[] {
+export function scanStage1(eph: Ephemeris, input: ScanInput, dsn: DsnSeries | null = null, masks: ReadonlyMap<string, Mask> = new Map()): ScanCandidate[] {
   const offsets = Array.from({ length: 2 * input.plusMinusDays + 1 }, (_, i) => i - input.plusMinusDays);
-  return input.requests.flatMap((r) => stage1ForOffsets(eph, r, offsets)).sort((a, b) => b.viabilityIndex - a.viabilityIndex);
+  return input.requests.flatMap((r) => stage1ForOffsets(eph, r, offsets, dsn, (r.siteId && masks.get(r.siteId)) || null)).sort((a, b) => b.viabilityIndex - a.viabilityIndex);
 }
 
 /** Stage 2: exact evaluation of one candidate (same engine as the Cockpit). */
-export function refineCandidate(eph: Ephemeris, request: ScenarioRequest, candidate: ScanCandidate): ScanCandidate {
-  const res = buildScenarioResult(eph, { ...request, startMs: candidate.landingUtc, tScrubMs: candidate.landingUtc });
+export function refineCandidate(eph: Ephemeris, request: ScenarioRequest, candidate: ScanCandidate, dsn: DsnSeries | null = null, mask: Mask | null = null): ScanCandidate {
+  const res = buildScenarioResult(eph, { ...request, startMs: candidate.landingUtc, tScrubMs: candidate.landingUtc }, dsn, mask);
   if (res.status !== 'ready' || !res.metrics) return candidate; // cannot refine: keep the provisional numbers
   const m = res.metrics;
   return {

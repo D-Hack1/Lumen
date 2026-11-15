@@ -54,3 +54,12 @@ async function doLoad(): Promise<DsnSeries> {
     elevDeg: (k, i) => raw[index(k, i)] * scale + offset,
   };
 }
+
+/** The DSN series, or null if it cannot be loaded (the engine then reports the link without the DSN rule and says so). */
+export async function loadDsnOrNull(): Promise<DsnSeries | null> {
+  try {
+    return await loadDsn();
+  } catch {
+    return null;
+  }
+}
