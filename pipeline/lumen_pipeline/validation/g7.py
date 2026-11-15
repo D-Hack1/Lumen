@@ -17,6 +17,7 @@ from lumen_pipeline.reference.interp import Ephemeris
 from lumen_pipeline.validation.golden import default_ephemeris_path
 
 SITE_ID = "cy3_shiv_shakti"
+IM2_SITE_ID = "im2_athena"
 REFERENCE_ELEVATION_DEG = 8.75
 TOLERANCE_DEG = 0.25
 OPS_ELEVATION_DEG = 6.0
@@ -58,6 +59,13 @@ REFERENCE_SOURCE = {
         },
     ],
 }
+IM2_TOUCHDOWN_SOURCE = {
+    "status": "SOURCE_UNVERIFIED",
+    "research_note": (
+        "The catalog records the documented IM-2 touchdown timestamp and landing coordinates, "
+        "but this report has no independent primary source for a touchdown Sun or Earth condition."
+    ),
+}
 
 
 def default_output_path() -> Path:
@@ -82,13 +90,21 @@ def build_g7_report(
     site_path = Path(sites_path) if sites_path is not None else default_sites_path()
     site_rows = yaml.safe_load(site_path.read_text(encoding="utf-8"))["sites"]
     site = next((row for row in site_rows if row["id"] == SITE_ID), None)
+    im2_site = next((row for row in site_rows if row["id"] == IM2_SITE_ID), None)
     if site is None:
         raise ValueError(f"G7 site {SITE_ID!r} is missing from {site_path}")
+    if im2_site is None:
+        raise ValueError(f"G7 site {IM2_SITE_ID!r} is missing from {site_path}")
     if site.get("touchdown_precision") != "minute":
         raise ValueError("G7 touchdown reference must retain its documented minute precision")
     landing = site.get("landing_coords")
     if landing is None:
         raise ValueError("G7 requires published landing coordinates, not target coordinates")
+    im2_landing = im2_site.get("landing_coords")
+    if im2_landing is None:
+        raise ValueError("G7 IM-2 evaluation requires landing coordinates")
+    if im2_site.get("touchdown_utc") != "2025-03-06T17:28:50Z":
+        raise ValueError("G7 IM-2 evaluation requires the documented touchdown timestamp")
 
     metadata_path = ephem_path.with_suffix(".json")
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
@@ -98,6 +114,9 @@ def build_g7_report(
     touchdown_utc = site["touchdown_utc"]
     latitude = float(landing["latitude_deg"])
     longitude = float(landing["longitude_deg_east"])
+    im2_latitude = float(im2_landing["latitude_deg"])
+    im2_longitude = float(im2_landing["longitude_deg_east"])
+    im2_touchdown_utc = str(im2_site["touchdown_utc"])
 
     with loaded_kernels() as kernel_paths:
         kernel_provenance = [
@@ -108,6 +127,9 @@ def build_g7_report(
         kernel_hashes_match = kernel_provenance == ephem_kernel_provenance
         touchdown_et = utc_to_et(touchdown_utc)
         sun = ephemeris.body_at("sun", touchdown_et, latitude, longitude, 0.0)
+        im2_touchdown_et = utc_to_et(im2_touchdown_utc)
+        im2_sun = ephemeris.body_at("sun", im2_touchdown_et, im2_latitude, im2_longitude, 0.0)
+        im2_earth = ephemeris.body_at("earth", im2_touchdown_et, im2_latitude, im2_longitude, 0.0)
         shutdown_start_et = utc_to_et(SHUTDOWN_WINDOW_START_UTC)
         shutdown_end_et = utc_to_et(SHUTDOWN_WINDOW_END_UTC)
         timeline_events = detect_events(
@@ -190,6 +212,26 @@ def build_g7_report(
             "expected_window_start_utc": SHUTDOWN_WINDOW_START_UTC,
             "expected_window_end_exclusive_utc": SHUTDOWN_WINDOW_END_UTC,
             "criterion": "The 6-degree crossing falls within the reported 2-4 September shutdown dates.",
+        },
+        "im2_touchdown_conditions": {
+            "status": IM2_TOUCHDOWN_SOURCE["status"],
+            "timestamp_utc": im2_touchdown_utc,
+            "timestamp_precision": im2_site["touchdown_precision"],
+            "coordinates": {
+                "latitude_deg": im2_latitude,
+                "longitude_deg_east": im2_longitude,
+                "source": im2_landing["source"],
+                "coordinate_frame": metadata["spice_frame"],
+                "height_m": 0.0,
+            },
+            "computed": {
+                "sun_elevation_deg": im2_sun.elevation_deg,
+                "sun_azimuth_deg": im2_sun.azimuth_deg,
+                "earth_elevation_deg": im2_earth.elevation_deg,
+                "earth_azimuth_deg": im2_earth.azimuth_deg,
+                "et_seconds": im2_touchdown_et,
+            },
+            "limitation": IM2_TOUCHDOWN_SOURCE["research_note"],
         },
         "calculation_assumptions": {
             "touchdown_time": {

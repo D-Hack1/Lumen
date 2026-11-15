@@ -8,10 +8,13 @@ import re
 from pathlib import Path
 from typing import Any
 
+from lumen_pipeline.ephem.dsn import default_output_path as default_dsn_path
 from lumen_pipeline.validation.frame_check import DIRECTION_TOLERANCE_RAD, MATRIX_TOLERANCE
 from lumen_pipeline.validation.horizons_client import (
     AZIMUTH_TOLERANCE_DEG,
+    DSN_ARTIFACT_TOLERANCE_PROPOSAL_DEG,
     DSN_ELEVATION_TOLERANCE_DEG,
+    DSN_QUANTIZATION_HALF_STEP_DEG,
     ELEVATION_TOLERANCE_DEG,
     RANGE_TOLERANCE_KM,
     SITE_CASES,
@@ -19,10 +22,12 @@ from lumen_pipeline.validation.horizons_client import (
     assert_g3_tolerances,
     assert_g3b_tolerances,
     default_fixture_dir,
+    default_sites_path,
     dsn_fixture_path,
     fixture_path,
     run_g3,
     run_g3b,
+    run_g3b_artifact,
 )
 
 REPORT_VERSION = 1
@@ -182,6 +187,7 @@ def _fixture_metadata(paths: list[Path]) -> list[dict[str, str]]:
 
 def _g3_gate(fixtures_dir: Path) -> dict[str, Any]:
     paths = [fixture_path(site, body, fixtures_dir) for site in SITE_CASES for body in ("sun", "earth")]
+    config_path = default_sites_path()
     try:
         comparisons = run_g3(fixtures_dir)
         assert_g3_tolerances(comparisons)
@@ -205,7 +211,7 @@ def _g3_gate(fixtures_dir: Path) -> dict[str, Any]:
                 "azimuth_deg": AZIMUTH_TOLERANCE_DEG,
                 "earth_range_km": RANGE_TOLERANCE_KM,
             },
-            artifact_paths=[_relative(path) for path in paths],
+            artifact_paths=[_relative(config_path), *[_relative(path) for path in paths]],
             provenance=_fixture_metadata(paths),
             test_commands=["pytest tests/gowri/test_horizons.py"],
         )
@@ -216,17 +222,21 @@ def _g3_gate(fixtures_dir: Path) -> dict[str, Any]:
             "BLOCKED",
             criterion="elevation/azimuth < 0.01 deg; Earth range < 1 km",
             reason=str(error),
-            artifact_paths=[_relative(path) for path in paths],
+            artifact_paths=[_relative(config_path), *[_relative(path) for path in paths]],
         )
 
 
 def _g3b_gate(fixtures_dir: Path) -> dict[str, Any]:
     paths = [dsn_fixture_path(station, fixtures_dir) for station in STATIONS]
+    artifact = default_dsn_path()
     try:
         comparisons = run_g3b(fixtures_dir)
+        artifact_comparisons = run_g3b_artifact(fixtures_dir)
         assert_g3b_tolerances(comparisons)
         if len(comparisons) != 45:
             raise ValueError(f"expected 45 comparisons, found {len(comparisons)}")
+        if len(artifact_comparisons) != 45:
+            raise ValueError(f"expected 45 decoded DSN comparisons, found {len(artifact_comparisons)}")
         return _gate(
             "G3b",
             "DSS Moon-centre elevation versus NASA/JPL Horizons",
@@ -235,9 +245,24 @@ def _g3b_gate(fixtures_dir: Path) -> dict[str, Any]:
             value={
                 "comparison_count": len(comparisons),
                 "max_moon_elevation_error_deg": max(item.elevation_error_deg for item in comparisons),
+                "decoded_artifact": {
+                    "comparison_count": len(artifact_comparisons),
+                    "max_direct_geometry_error_deg": max(
+                        item.direct_elevation_error_deg for item in artifact_comparisons
+                    ),
+                    "max_quantization_error_deg": max(
+                        item.quantization_error_deg for item in artifact_comparisons
+                    ),
+                    "max_decoded_elevation_error_deg": max(
+                        item.decoded_elevation_error_deg for item in artifact_comparisons
+                    ),
+                    "quantization_half_step_deg": DSN_QUANTIZATION_HALF_STEP_DEG,
+                    "proposed_artifact_tolerance_deg": DSN_ARTIFACT_TOLERANCE_PROPOSAL_DEG,
+                    "status": "PROPOSED_NOT_LOCKED",
+                },
             },
             tolerances={"moon_elevation_deg": DSN_ELEVATION_TOLERANCE_DEG},
-            artifact_paths=[_relative(path) for path in paths],
+            artifact_paths=[*[_relative(path) for path in paths], _relative(artifact), _relative(artifact.with_suffix(".json"))],
             provenance=_fixture_metadata(paths),
             test_commands=["pytest tests/gowri/test_horizons.py tests/gowri/test_dsn.py"],
         )
@@ -248,7 +273,7 @@ def _g3b_gate(fixtures_dir: Path) -> dict[str, Any]:
             "BLOCKED",
             criterion="Moon elevation < 0.1 deg",
             reason=str(error),
-            artifact_paths=[_relative(path) for path in paths],
+            artifact_paths=[*[_relative(path) for path in paths], _relative(artifact), _relative(artifact.with_suffix(".json"))],
         )
 
 
@@ -275,6 +300,7 @@ def _g7_gate(path: Path) -> dict[str, Any]:
                 "reference_sun_elevation_deg": report["reference"]["sun_elevation_deg"],
                 "absolute_error_deg": report["absolute_error_deg"],
                 "timeline_status": report["qualitative_timeline_check"]["status"],
+                "im2_touchdown_conditions": report["im2_touchdown_conditions"],
             },
             tolerances={"sun_elevation_deg": report["reference"]["tolerance_deg"]},
             timestamp_utc=report["timestamp_utc"],

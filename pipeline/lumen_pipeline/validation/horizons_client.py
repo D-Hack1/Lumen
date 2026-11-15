@@ -13,13 +13,17 @@ from typing import Any
 
 import numpy as np
 import requests
+import yaml
 
+from lumen_pipeline.common.binio import sidecar_path
 from lumen_pipeline.common.constants import AU_KM
 from lumen_pipeline.common.frames import site_position_km, site_up_vector, true_north_vector
 from lumen_pipeline.common.timeutil import utc_to_et
 from lumen_pipeline.ephem.dsn import STATIONS, Station, station_elevations_deg
+from lumen_pipeline.ephem.dsn import default_output_path as default_dsn_path
 from lumen_pipeline.ephem.ephemeris import ABERRATION_CORRECTION
 from lumen_pipeline.ephem.kernels import MOON_FRAME, loaded_kernels
+from lumen_pipeline.reference.dsn import DsnSeries
 
 HORIZONS_API_URL = "https://ssd.jpl.nasa.gov/api/horizons.api"
 START_TIME = "2023-01-01"
@@ -30,6 +34,10 @@ ELEVATION_TOLERANCE_DEG = 0.01
 AZIMUTH_TOLERANCE_DEG = 0.01
 RANGE_TOLERANCE_KM = 1.0
 DSN_ELEVATION_TOLERANCE_DEG = 0.1
+DSN_QUANTIZATION_HALF_STEP_DEG = 0.25
+# This applies only to decoded half-degree artifact samples, not the locked
+# direct-geometry G3b criterion above.
+DSN_ARTIFACT_TOLERANCE_PROPOSAL_DEG = DSN_ELEVATION_TOLERANCE_DEG + DSN_QUANTIZATION_HALF_STEP_DEG
 
 
 @dataclass(frozen=True)
@@ -46,6 +54,9 @@ SITE_CASES = (
     SiteCase("blue_ghost_m1", 18.56, 61.81),
     SiteCase("equator_zero", 0.0, 0.0),
 )
+SYNTHETIC_SITE_CASE_REASONS = {
+    "equator_zero": "synthetic longitude-sign sanity control; no catalog site is intended at this coordinate",
+}
 
 
 @dataclass(frozen=True)
@@ -90,9 +101,46 @@ class DsnComparison:
     elevation_error_deg: float
 
 
+@dataclass(frozen=True)
+class DsnArtifactComparison:
+    station_id: str
+    utc: str
+    direct_elevation_error_deg: float
+    decoded_elevation_error_deg: float
+    quantization_error_deg: float
+
+
 def default_fixture_dir() -> Path:
     """Return the checked-in, offline G3 fixture directory."""
     return Path(__file__).resolve().parents[2] / "tests" / "gowri" / "fixtures" / "horizons"
+
+
+def default_sites_path() -> Path:
+    return Path(__file__).resolve().parents[2] / "config" / "sites.yaml"
+
+
+def assert_site_cases_match_config(sites_path: str | Path | None = None) -> None:
+    """Ensure real Horizons cases retain the approved catalog coordinates."""
+    source = yaml.safe_load(Path(sites_path or default_sites_path()).read_text(encoding="utf-8"))
+    sites = source.get("sites") if isinstance(source, dict) else None
+    if not isinstance(sites, list):
+        raise TypeError("sites configuration must contain a sites list")
+    configured = {site.get("id"): site for site in sites if isinstance(site, dict)}
+    real_cases = [site for site in SITE_CASES if site.id not in SYNTHETIC_SITE_CASE_REASONS]
+    missing = [site.id for site in real_cases if site.id not in configured]
+    if missing:
+        raise ValueError(f"G3 site cases are missing from sites configuration: {missing}")
+    for site in real_cases:
+        configured_site = configured[site.id]
+        try:
+            latitude = float(configured_site["latitude_deg"])
+            longitude = float(configured_site["longitude_deg_east"])
+        except (KeyError, TypeError, ValueError) as error:
+            raise ValueError(f"G3 site {site.id} lacks numeric configured coordinates") from error
+        if not math.isclose(site.latitude_deg, latitude, rel_tol=0.0, abs_tol=1e-12) or not math.isclose(
+            site.longitude_deg_east, longitude, rel_tol=0.0, abs_tol=1e-12
+        ):
+            raise ValueError(f"G3 site coordinates differ from sites configuration: {site.id}")
 
 
 def horizons_parameters(site: SiteCase, body: str) -> dict[str, str]:
@@ -318,6 +366,7 @@ def _spice_observation(site: SiteCase, body: str, utc: str) -> tuple[float, floa
 def run_g3(fixtures_dir: str | Path | None = None) -> tuple[Comparison, ...]:
     """Compare cached Horizons data with DE421 LT+S smooth-sphere geometry offline."""
     directory = Path(fixtures_dir) if fixtures_dir is not None else default_fixture_dir()
+    assert_site_cases_match_config()
     comparisons: list[Comparison] = []
     with loaded_kernels():
         for site in SITE_CASES:
@@ -355,6 +404,44 @@ def run_g3b(fixtures_dir: str | Path | None = None) -> tuple[DsnComparison, ...]
                 DsnComparison(station.id, record.utc, abs(float(elevation) - record.elevation_deg))
                 for record, elevation in zip(records, elevations, strict=True)
             )
+    return tuple(comparisons)
+
+
+def run_g3b_artifact(
+    fixtures_dir: str | Path | None = None, dsn_path: str | Path | None = None
+) -> tuple[DsnArtifactComparison, ...]:
+    """Compare decoded published DSN samples with Horizons at fixture epochs.
+
+    The direct G3b comparison remains the locked sub-0.1-degree geometry gate.
+    This records the separately expected half-degree quantization effect of the
+    published artifact rather than treating it as a geometry regression.
+    """
+    directory = Path(fixtures_dir) if fixtures_dir is not None else default_fixture_dir()
+    binary = Path(dsn_path) if dsn_path is not None else default_dsn_path()
+    metadata = json.loads(sidecar_path(binary).read_text(encoding="utf-8"))
+    start_utc = metadata.get("start_utc")
+    if not isinstance(start_utc, str):
+        raise TypeError("DSN sidecar lacks start_utc")
+    comparisons: list[DsnArtifactComparison] = []
+    with loaded_kernels():
+        series = DsnSeries.from_file(binary, start_et=utc_to_et(start_utc))
+        for station in STATIONS:
+            fixture_station, records = load_dsn_fixture(dsn_fixture_path(station, directory))
+            if fixture_station != station:
+                raise ValueError(f"fixture identity mismatch for {station.id}")
+            ets = np.asarray([utc_to_et(record.utc) for record in records])
+            direct = station_elevations_deg(ets, station)
+            for record, et, direct_elevation in zip(records, ets, direct, strict=True):
+                decoded = series.elevation_at(station.id, float(et), interpolation="linear")
+                comparisons.append(
+                    DsnArtifactComparison(
+                        station.id,
+                        record.utc,
+                        abs(float(direct_elevation) - record.elevation_deg),
+                        abs(decoded - record.elevation_deg),
+                        abs(decoded - float(direct_elevation)),
+                    )
+                )
     return tuple(comparisons)
 
 

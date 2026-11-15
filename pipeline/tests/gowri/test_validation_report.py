@@ -4,7 +4,9 @@ import math
 from lumen_pipeline.validation.frame_check import default_output_path as default_g1_evidence_path
 from lumen_pipeline.validation.horizons_client import (
     AZIMUTH_TOLERANCE_DEG,
+    DSN_ARTIFACT_TOLERANCE_PROPOSAL_DEG,
     DSN_ELEVATION_TOLERANCE_DEG,
+    DSN_QUANTIZATION_HALF_STEP_DEG,
     ELEVATION_TOLERANCE_DEG,
     RANGE_TOLERANCE_KM,
 )
@@ -49,10 +51,17 @@ def test_validation_report_uses_actual_horizons_and_g7_evidence(tmp_path):
     moon_elevation_error = g3b["value"]["max_moon_elevation_error_deg"]
     assert math.isfinite(moon_elevation_error)
     assert 0.0 <= moon_elevation_error < DSN_ELEVATION_TOLERANCE_DEG
+    artifact = g3b["value"]["decoded_artifact"]
+    assert artifact["comparison_count"] == 45
+    assert artifact["max_direct_geometry_error_deg"] < DSN_ELEVATION_TOLERANCE_DEG
+    assert artifact["max_quantization_error_deg"] <= DSN_QUANTIZATION_HALF_STEP_DEG
+    assert artifact["max_decoded_elevation_error_deg"] < DSN_ARTIFACT_TOLERANCE_PROPOSAL_DEG
+    assert artifact["status"] == "PROPOSED_NOT_LOCKED"
     g7 = _gate(report, "G7")
     assert g7["status"] == "SOURCE_UNVERIFIED"
     assert g7["numerical_result"] == "PASS"
     assert g7["calculation_status"] == "PASS"
+    assert g7["value"]["im2_touchdown_conditions"]["status"] == "SOURCE_UNVERIFIED"
 
 
 def test_validation_report_truthfully_aggregates_pending_blocked_and_open_evidence():
