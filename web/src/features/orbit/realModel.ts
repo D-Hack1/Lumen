@@ -34,6 +34,7 @@ const SHORT: Record<string, string> = {
   apollo_17: 'Apollo 17',
   slim_shioli: 'SLIM',
   change6_apollo_basin: "Chang'e-6",
+  shackleton_rim_ridge: 'Rim ridge',
 };
 const GROUP: Record<string, string> = {
   historical_landing: 'Historical landing',

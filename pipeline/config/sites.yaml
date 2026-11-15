@@ -221,3 +221,21 @@ sites:
     verification_status: verified
     verified_by: Ebin (read from the cited LROC page on 2026-11-15)
     tier: C
+  - id: shackleton_rim_ridge
+    name: Shackleton-de Gerlache ridge (Shackleton-rim end)
+    category: published_target
+    agency: NASA
+    program: Shackleton-de Gerlache ridge (LROC-mapped location)
+    latitude_deg: -89.684
+    longitude_deg_east: 196.739
+    landing_coords: null
+    target_coords:
+      latitude_deg: -89.684
+      longitude_deg_east: 196.739
+      source: LROC image 1247 "Traversing the Shackleton de Gerlache Ridge" (Robinson, 1 Apr 2022; NASA/GSFC/Arizona State University) - centre of the 750 m wide NAC mosaic at the ridge/Shackleton-rim intersection
+    coord_note: A mapped location where the ridge meets the Shackleton rim, not a landing target; no landing has occurred and NASA has not published a centre coordinate for the "Shackleton connecting ridge". NASA's average-illumination map reads about 78 percent at this point (pipeline/scripts/check_site_illumination.py), unlike the 0 percent at the older catalogue coordinates of shackleton_ridge.
+    source_url: https://lroc.im-ldi.com/images/1247
+    source_type: agency
+    verification_status: verified
+    verified_by: Ebin (read from the cited LROC page on 2026-11-15)
+    tier: A

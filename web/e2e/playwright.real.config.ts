@@ -8,6 +8,8 @@ const PORT = 5178;
 export default defineConfig({
   testDir: '.',
   testMatch: '**/*.real.spec.ts',
+  // legacy/ = specs for the old cockpit shell (Answer Strip, Definitions bar), which is no longer mounted in the live app.
+  testIgnore: ['**/legacy/**'],
   outputDir: '../test-results',
   reporter: [['list']],
   timeout: 90_000,

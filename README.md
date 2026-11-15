@@ -36,7 +36,7 @@ npm run dev            # http://localhost:5173 (mock data by default: VITE_LUMEN
 npm test               # Vitest unit tests
 npm run e2e:install    # once: Playwright Chromium
 npm run e2e            # live app smoke: the four pages × 5 viewports (loads, no errors, no horizontal scroll) + routing, theme, slip
-npm run e2e:real       # LEGACY shell only (web/e2e/legacy/): checks that need real data (CY-3 + ISRO preset → Answer Strip ops state)
+npm run e2e:real       # real-data checks on the live pages (Stand here Details, Ask LUMEN, Start date); the old cockpit's specs in web/e2e/legacy/ are not run
 npm run lint && npm run typecheck
 ```
 

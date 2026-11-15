@@ -25,6 +25,7 @@ EXPECTED_SITE_IDS = (
     "apollo_17",
     "slim_shioli",
     "change6_apollo_basin",
+    "shackleton_rim_ridge",
 )
 CATALOG_VERSION = 1
 

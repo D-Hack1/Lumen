@@ -80,6 +80,7 @@ def test_g6_rotation_matrices_are_frame_consistent_and_right_handed(tmp_path):
         "im2_athena": "+X_ME",
         "cy3_shiv_shakti": "+X_ME",
         "shackleton_ridge": "+X_ME",
+        "shackleton_rim_ridge": "+X_ME",
         "blue_ghost_m1": "+Z_ME",
     }
     for site in catalog["sites"]:
