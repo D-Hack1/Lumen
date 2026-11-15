@@ -1,7 +1,7 @@
 {
   "artifacts": {
     "cy3_shiv_shakti": {
-      "created_utc": "2026-11-15T05:40:11.299032Z",
+      "created_utc": "2026-11-15T16:17:01.690111Z",
       "files": {
         "mask_bin": {
           "path": "terrain/masks/cy3_shiv_shakti.bin",
@@ -15,16 +15,16 @@
         },
         "pad_json": {
           "path": "terrain/pad/cy3_shiv_shakti.json",
-          "sha256": "cf63d32c02238b42803510d0d0f5799cfd3bb6904d7768734ee4ac0a0df1bf33",
+          "sha256": "b9fd567ff3ec55aa00b78832dbff9e102ab67dce7513223eec4ed90a17a7c72f",
           "version": "0.1.0"
         }
       },
-      "git_commit": "fc3a7d3f5ae1d57a01cedd778cba64eb709d152d",
+      "git_commit": "f14aa632d1d0d51615538d36f3eeb2bc39f45b96",
       "site_id": "cy3_shiv_shakti",
       "sources": {
         "far": {
-          "cache_key": "b80b627a6449613466b466f0c8577753e071b9972fbff063b0d041d707c2eba6",
-          "cache_sha256": "8434a53fd05783587fdca092e9f17973ec84d8485b51a7f5bb087112b5e0dd60",
+          "cache_key": "1200c1c6c41ef507c78236175dd691fc03f540cb77ced2904ebb905f95c53236",
+          "cache_sha256": "59d72b440e5e2ce6dec85e7e949f060fad9b62b81744989cfb79cb3ffecac6cb",
           "crs": "PROJCS[\"Moon (2015) - Sphere / Ocentric / South Polar\",GEOGCS[\"Moon (2015) - Sphere / Ocentric\",DATUM[\"Moon (2015) - Sphere\",SPHEROID[\"Moon (2015) - Sphere\",1737400,0,AUTHORITY[\"IAU\",\"30100\"]],AUTHORITY[\"IAU\",\"30100\"]],PRIMEM[\"Reference Meridian\",0,AUTHORITY[\"IAU\",\"30100\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"IAU\",\"30100\"]],PROJECTION[\"Polar_Stereographic\"],PARAMETER[\"latitude_of_origin\",-90],PARAMETER[\"central_meridian\",0],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",NORTH],AXIS[\"Northing\",NORTH],AUTHORITY[\"IAU\",\"30135\"]]",
           "datum_reference": "1737400 m reference sphere",
           "frame": "MOON_ME / DE421",
@@ -37,12 +37,12 @@
             2085
           ],
           "source_key": "regional_240m_lola_pgda_90",
-          "source_url": "/tmp/LDEM_60S_240MPP_ADJ.TIF",
+          "source_url": "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDEM_60S_240MPP_ADJ.TIF",
           "vertical_reference": "height_relative"
         },
         "mid": {
-          "cache_key": "5e9feae7014244d71493805d7b15e71e13b1ac66b6dfec7798ca1d43e91da9ad",
-          "cache_sha256": "49f66dc472d2073c931e42ab1e929286023d6e836f0b100b9709d74ba8e840dc",
+          "cache_key": "b24af0adbe5b7d57a0551d9675be70d74cf1177bf941989ba05d657c0ebe6681",
+          "cache_sha256": "5768542cbb1ffbd0f930fe1dcd0707589f8afffc32f7a02fc701d0b6b0be8566",
           "crs": "PROJCS[\"Moon (2015) - Sphere / Ocentric / South Polar\",GEOGCS[\"Moon (2015) - Sphere / Ocentric\",DATUM[\"Moon (2015) - Sphere\",SPHEROID[\"Moon (2015) - Sphere\",1737400,0,AUTHORITY[\"IAU\",\"30100\"]],AUTHORITY[\"IAU\",\"30100\"]],PRIMEM[\"Reference Meridian\",0,AUTHORITY[\"IAU\",\"30100\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"IAU\",\"30100\"]],PROJECTION[\"Polar_Stereographic\"],PARAMETER[\"latitude_of_origin\",-90],PARAMETER[\"central_meridian\",0],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",NORTH],AXIS[\"Northing\",NORTH],AUTHORITY[\"IAU\",\"30135\"]]",
           "datum_reference": "1737400 m reference sphere",
           "frame": "MOON_ME / DE421",
@@ -55,12 +55,12 @@
             2667
           ],
           "source_key": "polar_60m_lola_pgda_90",
-          "source_url": "/tmp/LDEM_60S_60MPP_ADJ.TIF",
+          "source_url": "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDEM_60S_60MPP_ADJ.TIF",
           "vertical_reference": "height_relative"
         },
         "near": {
-          "cache_key": "f0a765e26621d358517205696bf3d9a6f5fb69730200ec4288e758c82545bf01",
-          "cache_sha256": "a0e70e20b5155a20278e525dd4d7ceae7fd6dbb01b51a50505c93778e06cae57",
+          "cache_key": "697ae8b2eee12186e7947b997aadc5913007ea64fc0da4fa58d5409bbe64fa39",
+          "cache_sha256": "49710f596fbbdfd77a0a6b3bd7ef51b60c05dbe9aee2f1fadc4533ee73bfe307",
           "crs": "PROJCS[\"Moon (2015) - Sphere / Ocentric / South Polar\",GEOGCS[\"Moon (2015) - Sphere / Ocentric\",DATUM[\"Moon (2015) - Sphere\",SPHEROID[\"Moon (2015) - Sphere\",1737400,0,AUTHORITY[\"IAU\",\"30100\"]],AUTHORITY[\"IAU\",\"30100\"]],PRIMEM[\"Reference Meridian\",0,AUTHORITY[\"IAU\",\"30100\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"IAU\",\"30100\"]],PROJECTION[\"Polar_Stereographic\"],PARAMETER[\"latitude_of_origin\",-90],PARAMETER[\"central_meridian\",0],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",NORTH],AXIS[\"Northing\",NORTH],AUTHORITY[\"IAU\",\"30135\"]]",
           "datum_reference": "1737400 m reference sphere",
           "frame": "MOON_ME / DE421",
@@ -73,14 +73,14 @@
             167
           ],
           "source_key": "polar_60m_lola_pgda_90",
-          "source_url": "/tmp/LDEM_60S_60MPP_ADJ.TIF",
+          "source_url": "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDEM_60S_60MPP_ADJ.TIF",
           "vertical_reference": "height_relative"
         }
       },
       "version": "1.0.0"
     },
     "im2_athena": {
-      "created_utc": "2026-11-15T04:47:28.309716Z",
+      "created_utc": "2026-11-15T16:14:50.466953Z",
       "files": {
         "mask_bin": {
           "path": "terrain/masks/im2_athena.bin",
@@ -94,16 +94,16 @@
         },
         "pad_json": {
           "path": "terrain/pad/im2_athena.json",
-          "sha256": "d821432fcfda85d9ffffc202db33eaddbf57c0ace7fdaeb3afdd25e21f6ea39e",
+          "sha256": "568f344e3264060b90ee73c376b949daa043365eec0b21646656c12361265e39",
           "version": "0.1.0"
         }
       },
-      "git_commit": "fc3a7d3f5ae1d57a01cedd778cba64eb709d152d",
+      "git_commit": "f14aa632d1d0d51615538d36f3eeb2bc39f45b96",
       "site_id": "im2_athena",
       "sources": {
         "far": {
-          "cache_key": "e619d1b656242fe4cd64bf572a8d48524511454c8301f88b3102e06f696e3029",
-          "cache_sha256": "dbfd3da2c8c3a3a773808cc9b30192dcd43ba781c346f6ce1395efc171105098",
+          "cache_key": "15d0694f0951c890564057fe61a3363af84f509315cd368c9c9b2b5ad0093cde",
+          "cache_sha256": "a3ceec93068a28c63278e5097c74d865ef73d101908dc585ad069b2adc99c6ea",
           "crs": "PROJCS[\"Moon (2015) - Sphere / Ocentric / South Polar\",GEOGCS[\"Moon (2015) - Sphere / Ocentric\",DATUM[\"Moon (2015) - Sphere\",SPHEROID[\"Moon (2015) - Sphere\",1737400,0,AUTHORITY[\"IAU\",\"30100\"]],AUTHORITY[\"IAU\",\"30100\"]],PRIMEM[\"Reference Meridian\",0,AUTHORITY[\"IAU\",\"30100\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"IAU\",\"30100\"]],PROJECTION[\"Polar_Stereographic\"],PARAMETER[\"latitude_of_origin\",-90],PARAMETER[\"central_meridian\",0],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",NORTH],AXIS[\"Northing\",NORTH],AUTHORITY[\"IAU\",\"30135\"]]",
           "datum_reference": "1737400 m reference sphere",
           "frame": "MOON_ME / DE421",
@@ -116,30 +116,12 @@
             2084
           ],
           "source_key": "regional_240m_lola_pgda_90",
-          "source_url": "/tmp/LDEM_60S_240MPP_ADJ.TIF",
-          "vertical_reference": "height_relative"
-        },
-        "mid": {
-          "cache_key": "de5889196f87cbdc124db7f0544d1f08d7d3da5d18c9c3fcf62efc2f377eb8c8",
-          "cache_sha256": "92295163d35f254d7560b1cf4d5586ea635b8ce808e705c85cf9235b07b0eba6",
-          "crs": "PROJCS[\"Moon (2015) - Sphere / Ocentric / South Polar\",GEOGCS[\"Moon (2015) - Sphere / Ocentric\",DATUM[\"Moon (2015) - Sphere\",SPHEROID[\"Moon (2015) - Sphere\",1737400,0,AUTHORITY[\"IAU\",\"30100\"]],AUTHORITY[\"IAU\",\"30100\"]],PRIMEM[\"Reference Meridian\",0,AUTHORITY[\"IAU\",\"30100\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"IAU\",\"30100\"]],PROJECTION[\"Polar_Stereographic\"],PARAMETER[\"latitude_of_origin\",-90],PARAMETER[\"central_meridian\",0],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",NORTH],AXIS[\"Northing\",NORTH],AUTHORITY[\"IAU\",\"30135\"]]",
-          "datum_reference": "1737400 m reference sphere",
-          "frame": "MOON_ME / DE421",
-          "resolution_m": [
-            20.0,
-            20.0
-          ],
-          "shape": [
-            8001,
-            8001
-          ],
-          "source_key": "polar_20m_lola_pgda_90",
-          "source_url": "/tmp/LDEM_80S_20MPP_ADJ.TIF",
+          "source_url": "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDEM_60S_240MPP_ADJ.TIF",
           "vertical_reference": "height_relative"
         },
         "near": {
           "cache_key": "b00604a09cfeba5a7382126a6d103bb7eb186207117eb16e4256ccb0ca261ce6",
-          "cache_sha256": "3133d2f2db9062c1b3ed7167ba310e9ee850b4ce53ece8133990900d97174a1a",
+          "cache_sha256": "ae17ca6a30b423c30a76b792bcce029e4e2031298d7a8871302cbf3a5f97c976",
           "crs": "PROJCS[\"Moon (2015) - Sphere / Ocentric / South Polar\",GEOGCS[\"Moon (2015) - Sphere / Ocentric\",DATUM[\"Moon (2015) - Sphere\",SPHEROID[\"Moon (2015) - Sphere\",1737400,0,AUTHORITY[\"IAU\",\"30100\"]],AUTHORITY[\"IAU\",\"30100\"]],PRIMEM[\"Reference Meridian\",0,AUTHORITY[\"IAU\",\"30100\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"IAU\",\"30100\"]],PROJECTION[\"Polar_Stereographic\"],PARAMETER[\"latitude_of_origin\",-90],PARAMETER[\"central_meridian\",0],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",NORTH],AXIS[\"Northing\",NORTH],AUTHORITY[\"IAU\",\"30135\"]]",
           "datum_reference": "1737400 m reference sphere",
           "frame": "MOON_ME / DE421",
@@ -233,7 +215,7 @@
       "version": "1.0.0"
     },
     "shackleton_rim_ridge": {
-      "created_utc": "2026-11-15T15:58:46.019258Z",
+      "created_utc": "2026-11-15T16:17:08.099513Z",
       "files": {
         "mask_bin": {
           "path": "terrain/masks/shackleton_rim_ridge.bin",
@@ -247,11 +229,11 @@
         },
         "pad_json": {
           "path": "terrain/pad/shackleton_rim_ridge.json",
-          "sha256": "865a03d2d973ea14e16527eaacdc48a5e4b15fd4a91bf7597a220d9113d82645",
+          "sha256": "be79de47ae3107d8173e578315993f2aae040b6f03b34749bcba1a1b6dceb386",
           "version": "0.1.0"
         }
       },
-      "git_commit": "6d0e8b9d5ab97a97992dc7202715e69537131419",
+      "git_commit": "f14aa632d1d0d51615538d36f3eeb2bc39f45b96",
       "site_id": "shackleton_rim_ridge",
       "sources": {
         "far": {

@@ -78,6 +78,10 @@ def test_validation_report_truthfully_aggregates_pending_blocked_and_open_eviden
     }
     assert _gate(report, "G5")["status"] == "BLOCKED"
     assert _gate(report, "G10")["status"] == "BLOCKED"
+    assert _gate(report, "G0")["status"] == "PASS"
+    g8 = _gate(report, "G8")
+    assert g8["status"] == "PENDING"  # partly measured: reported, never promoted
+    assert "site switch" in g8["reason"] and "demo laptop" in g8["reason"]
     assert _gate(report, "G4")["status"] == "PASS"
     assert _gate(report, "G11")["status"] == "PASS"
     assert report["open_issues"] == []
@@ -91,10 +95,12 @@ def test_validation_report_marks_missing_evidence_blocked_or_pending(tmp_path):
         g7_report_path=missing / "g7.json",
         validation_doc_path=missing / "validation.md",
         g1_report_path=missing / "g1.json",
+        g0_report_path=missing / "g0.json",
         g4_report_path=missing / "g4.json",
         g11_report_path=missing / "g11.json",
     )
 
+    assert _gate(report, "G0")["status"] == "PENDING"
     assert _gate(report, "G4")["status"] == "PENDING"
     assert _gate(report, "G11")["status"] == "PENDING"
     assert _gate(report, "G1")["status"] == "BLOCKED"
@@ -135,3 +141,20 @@ def test_g11_is_not_a_pass_unless_every_compared_item_matches(tmp_path):
     nothing_compared = _tamper(src, tmp_path / "c.json", lambda d: d["tally"].update(windows=0, windowsMatched=0))
     for path in (one_window_off, one_cell_off, nothing_compared):
         assert _gate(build_validation_report(g11_report_path=path), "G11")["status"] == "FAIL"
+
+
+def test_g0_is_not_a_pass_when_a_required_test_did_not_pass_or_the_tolerance_is_loose(tmp_path):
+    from lumen_pipeline.validation.report import default_g0_report_path
+
+    src = default_g0_report_path()
+
+    def fail_one(d):
+        d["tests"][0]["outcome"] = "failed"
+        d["totals"].update(passed=d["totals"]["passed"] - 1, not_passed=1)
+
+    failed = _tamper(src, tmp_path / "a.json", fail_one)
+    loose = _tamper(src, tmp_path / "b.json", lambda d: d.update(criterion_deg=0.05))
+    missing_required = _tamper(src, tmp_path / "c.json", lambda d: d.update(required_tests=["no_such_test", "x", "y"]))
+    broken = _tamper(src, tmp_path / "d.json", lambda d: d.pop("tests"))
+    for path, expected in ((failed, "FAIL"), (loose, "FAIL"), (missing_required, "FAIL"), (broken, "BLOCKED")):
+        assert _gate(build_validation_report(g0_report_path=path), "G0")["status"] == expected

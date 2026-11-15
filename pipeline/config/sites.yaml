@@ -93,8 +93,8 @@ sites:
     landing_coords:
       latitude_deg: 0.67416
       longitude_deg_east: 23.47314
-      source: NASA NSSDC Apollo landing site coordinates (planetocentric Mean Earth/Polar Axis, DE421), Lunar Module row
-    coord_note: Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one.
+      source: NASA NSSDC Apollo landing site coordinates (planetocentric Mean Earth/Polar Axis, DE421), Lunar Module row; identical to the LROC 2016 table of coordinates of human features (Lunar Module row)
+    coord_note: Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one. Stated uncertainty in the LROC table is 0.3 m.
     source_url: https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_sites.html
     source_type: agency
     verification_status: verified
@@ -110,8 +110,8 @@ sites:
     landing_coords:
       latitude_deg: -3.0128
       longitude_deg_east: -23.4219
-      source: NASA NSSDC Apollo landing site coordinates (planetocentric Mean Earth/Polar Axis, DE421), Lunar Module row
-    coord_note: Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one.
+      source: NASA NSSDC Apollo landing site coordinates (planetocentric Mean Earth/Polar Axis, DE421), Lunar Module row; identical to the LROC 2016 table of coordinates of human features (Lunar Module row)
+    coord_note: Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one. Stated uncertainty in the LROC table is 2.2 m.
     source_url: https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_sites.html
     source_type: agency
     verification_status: verified
@@ -127,8 +127,8 @@ sites:
     landing_coords:
       latitude_deg: -3.64589
       longitude_deg_east: -17.47194
-      source: NASA NSSDC Apollo landing site coordinates (planetocentric Mean Earth/Polar Axis, DE421), Lunar Module row
-    coord_note: Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one.
+      source: NASA NSSDC Apollo landing site coordinates (planetocentric Mean Earth/Polar Axis, DE421), Lunar Module row; identical to the LROC 2016 table of coordinates of human features (Lunar Module row)
+    coord_note: Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one. Stated uncertainty in the LROC table is 0.4 m.
     source_url: https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_sites.html
     source_type: agency
     verification_status: verified
@@ -144,8 +144,8 @@ sites:
     landing_coords:
       latitude_deg: 26.13239
       longitude_deg_east: 3.6333
-      source: NASA NSSDC Apollo landing site coordinates (planetocentric Mean Earth/Polar Axis, DE421), Lunar Module row
-    coord_note: Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one.
+      source: NASA NSSDC Apollo landing site coordinates (planetocentric Mean Earth/Polar Axis, DE421), Lunar Module row; identical to the LROC 2016 table of coordinates of human features (Lunar Module row)
+    coord_note: Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one. Stated uncertainty in the LROC table is 1.0 m.
     source_url: https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_sites.html
     source_type: agency
     verification_status: verified
@@ -161,8 +161,8 @@ sites:
     landing_coords:
       latitude_deg: -8.9734
       longitude_deg_east: 15.5011
-      source: NASA NSSDC Apollo landing site coordinates (planetocentric Mean Earth/Polar Axis, DE421), Lunar Module row
-    coord_note: Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one.
+      source: NASA NSSDC Apollo landing site coordinates (planetocentric Mean Earth/Polar Axis, DE421), Lunar Module row; identical to the LROC 2016 table of coordinates of human features (Lunar Module row)
+    coord_note: Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one. Stated uncertainty in the LROC table is 3.0 m.
     source_url: https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_sites.html
     source_type: agency
     verification_status: verified
@@ -178,8 +178,8 @@ sites:
     landing_coords:
       latitude_deg: 20.1911
       longitude_deg_east: 30.7723
-      source: NASA NSSDC Apollo landing site coordinates (planetocentric Mean Earth/Polar Axis, DE421), Lunar Module row
-    coord_note: Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one.
+      source: NASA NSSDC Apollo landing site coordinates (planetocentric Mean Earth/Polar Axis, DE421), Lunar Module row; identical to the LROC 2016 table of coordinates of human features (Lunar Module row)
+    coord_note: Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one. Stated uncertainty in the LROC table is 3.5 m.
     source_url: https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_sites.html
     source_type: agency
     verification_status: verified

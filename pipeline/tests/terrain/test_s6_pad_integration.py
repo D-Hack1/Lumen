@@ -90,7 +90,9 @@ class _Reader:
         )
 
 
-def test_run_site_publishes_pad_statistics_for_im2_without_inventing_dispersion(tmp_path):
+def test_run_site_publishes_pad_statistics_for_im2_without_inventing_dispersion(tmp_path, monkeypatch):
+    # With no configured defaults the dispersion statistics must stay explicitly unavailable.
+    monkeypatch.setattr(run_pad, "_pad_defaults", lambda: {})
     products = {
         "site_specific_5m_lola_pgda_78": _product("site_specific_5m_lola_pgda_78", 5.0, "80S-90S"),
     }
@@ -200,3 +202,18 @@ def test_run_site_publishes_cy3_pad_statistics_from_the_finest_verified_lola_fal
     assert summary["pad_available"] is True
     assert summary["dem_source"] == "polar_60m_lola_pgda_90"
     assert "near" not in summary["unavailable"]
+
+
+def test_run_site_uses_the_configured_pad_defaults_when_they_are_set(tmp_path):
+    products = {
+        "site_specific_5m_lola_pgda_78": _product("site_specific_5m_lola_pgda_78", 5.0, "80S-90S"),
+    }
+    defaults = run_pad._pad_defaults()
+    assert defaults == {"dispersion_radius_m": 250.0, "slope_tolerance_deg": 10.0, "footprint_m": 5.5}
+    run_pad.run_site("im2_athena", reader=_Reader(IM2_LATITUDE, IM2_LONGITUDE), products=products, output_root=tmp_path / "terrain")
+    record = json.loads((tmp_path / "terrain" / "pad" / "im2_athena.json").read_text(encoding="utf-8"))
+    stats = record["dispersion_slope_stats"]
+    assert "available" not in stats  # present: the statistics themselves, not the "unavailable" marker
+    assert stats["radius_m"] == 250.0
+    assert stats["slope_tolerance_deg"] == 10.0
+    assert {"p50", "p95", "max", "pct_below_tolerance", "sample_count"} <= set(stats)

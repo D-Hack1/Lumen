@@ -162,6 +162,8 @@ uncertainty:
       - "PGDA-provided clones"
 
 pad_statistics:
-  nominal_lander_footprint_m: null # Approximately 5-6 m; distinct from plane baseline.
-  slope_tolerance_deg: null # Unresolved; no confirmed numeric default.
-  dispersion_radius_m: null # Unresolved; no authoritative numeric default.
+  # DEMO DEFAULTS decided on 2026-11-15 (PLAN_FINAL section 16 left "slope tolerance, dispersion radius" open) by the team lead's delegation.
+  # They are project assumptions, not mission requirements: a vehicle-specific limit belongs to the vehicle, and the app labels these as defaults.
+  nominal_lander_footprint_m: 5.5 # PLAN_FINAL: footprint baseline "approximately 5-6 m"; midpoint.
+  slope_tolerance_deg: 10.0 # A common round-number landing-slope limit for small landers; shown as a default hazard tolerance only.
+  dispersion_radius_m: 250.0 # Half-width of the plan's 11 x 11 micro-grid at 50 m spacing (5 steps of 50 m each side of the site).

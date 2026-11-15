@@ -221,19 +221,19 @@
     {
       "agency": "NASA",
       "category": "historical_landing",
-      "coord_note": "Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one.",
+      "coord_note": "Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one. Stated uncertainty in the LROC table is 0.3 m.",
       "coordinate_frame": "MOON_ME_DE421",
       "id": "apollo_11",
       "landing_coords": {
         "lat": 0.67416,
         "lon": 23.47314,
-        "source": "NASA NSSDC Apollo landing site coordinates (planetocentric Mean Earth/Polar Axis, DE421), Lunar Module row"
+        "source": "NASA NSSDC Apollo landing site coordinates (planetocentric Mean Earth/Polar Axis, DE421), Lunar Module row; identical to the LROC 2016 table of coordinates of human features (Lunar Module row)"
       },
       "last_contact_utc": null,
       "latitude_deg": 0.67416,
       "longitude_deg_east": 23.47314,
       "name": "Apollo 11 (Tranquility Base)",
-      "notes": "Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one.",
+      "notes": "Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one. Stated uncertainty in the LROC table is 0.3 m.",
       "program": "Apollo 11",
       "reference_axis": "+Z_ME",
       "rotation_matrix": [
@@ -274,19 +274,19 @@
     {
       "agency": "NASA",
       "category": "historical_landing",
-      "coord_note": "Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one.",
+      "coord_note": "Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one. Stated uncertainty in the LROC table is 2.2 m.",
       "coordinate_frame": "MOON_ME_DE421",
       "id": "apollo_12",
       "landing_coords": {
         "lat": -3.0128,
         "lon": -23.4219,
-        "source": "NASA NSSDC Apollo landing site coordinates (planetocentric Mean Earth/Polar Axis, DE421), Lunar Module row"
+        "source": "NASA NSSDC Apollo landing site coordinates (planetocentric Mean Earth/Polar Axis, DE421), Lunar Module row; identical to the LROC 2016 table of coordinates of human features (Lunar Module row)"
       },
       "last_contact_utc": null,
       "latitude_deg": -3.0128,
       "longitude_deg_east": -23.4219,
       "name": "Apollo 12 (Ocean of Storms)",
-      "notes": "Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one.",
+      "notes": "Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one. Stated uncertainty in the LROC table is 2.2 m.",
       "program": "Apollo 12",
       "reference_axis": "+Z_ME",
       "rotation_matrix": [
@@ -327,19 +327,19 @@
     {
       "agency": "NASA",
       "category": "historical_landing",
-      "coord_note": "Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one.",
+      "coord_note": "Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one. Stated uncertainty in the LROC table is 0.4 m.",
       "coordinate_frame": "MOON_ME_DE421",
       "id": "apollo_14",
       "landing_coords": {
         "lat": -3.64589,
         "lon": -17.47194,
-        "source": "NASA NSSDC Apollo landing site coordinates (planetocentric Mean Earth/Polar Axis, DE421), Lunar Module row"
+        "source": "NASA NSSDC Apollo landing site coordinates (planetocentric Mean Earth/Polar Axis, DE421), Lunar Module row; identical to the LROC 2016 table of coordinates of human features (Lunar Module row)"
       },
       "last_contact_utc": null,
       "latitude_deg": -3.64589,
       "longitude_deg_east": -17.47194,
       "name": "Apollo 14 (Fra Mauro)",
-      "notes": "Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one.",
+      "notes": "Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one. Stated uncertainty in the LROC table is 0.4 m.",
       "program": "Apollo 14",
       "reference_axis": "+Z_ME",
       "rotation_matrix": [
@@ -380,19 +380,19 @@
     {
       "agency": "NASA",
       "category": "historical_landing",
-      "coord_note": "Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one.",
+      "coord_note": "Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one. Stated uncertainty in the LROC table is 1.0 m.",
       "coordinate_frame": "MOON_ME_DE421",
       "id": "apollo_15",
       "landing_coords": {
         "lat": 26.13239,
         "lon": 3.6333,
-        "source": "NASA NSSDC Apollo landing site coordinates (planetocentric Mean Earth/Polar Axis, DE421), Lunar Module row"
+        "source": "NASA NSSDC Apollo landing site coordinates (planetocentric Mean Earth/Polar Axis, DE421), Lunar Module row; identical to the LROC 2016 table of coordinates of human features (Lunar Module row)"
       },
       "last_contact_utc": null,
       "latitude_deg": 26.13239,
       "longitude_deg_east": 3.6333,
       "name": "Apollo 15 (Hadley-Apennine)",
-      "notes": "Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one.",
+      "notes": "Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one. Stated uncertainty in the LROC table is 1.0 m.",
       "program": "Apollo 15",
       "reference_axis": "+Z_ME",
       "rotation_matrix": [
@@ -433,19 +433,19 @@
     {
       "agency": "NASA",
       "category": "historical_landing",
-      "coord_note": "Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one.",
+      "coord_note": "Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one. Stated uncertainty in the LROC table is 3.0 m.",
       "coordinate_frame": "MOON_ME_DE421",
       "id": "apollo_16",
       "landing_coords": {
         "lat": -8.9734,
         "lon": 15.5011,
-        "source": "NASA NSSDC Apollo landing site coordinates (planetocentric Mean Earth/Polar Axis, DE421), Lunar Module row"
+        "source": "NASA NSSDC Apollo landing site coordinates (planetocentric Mean Earth/Polar Axis, DE421), Lunar Module row; identical to the LROC 2016 table of coordinates of human features (Lunar Module row)"
       },
       "last_contact_utc": null,
       "latitude_deg": -8.9734,
       "longitude_deg_east": 15.5011,
       "name": "Apollo 16 (Descartes)",
-      "notes": "Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one.",
+      "notes": "Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one. Stated uncertainty in the LROC table is 3.0 m.",
       "program": "Apollo 16",
       "reference_axis": "+Z_ME",
       "rotation_matrix": [
@@ -486,19 +486,19 @@
     {
       "agency": "NASA",
       "category": "historical_landing",
-      "coord_note": "Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one.",
+      "coord_note": "Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one. Stated uncertainty in the LROC table is 3.5 m.",
       "coordinate_frame": "MOON_ME_DE421",
       "id": "apollo_17",
       "landing_coords": {
         "lat": 20.1911,
         "lon": 30.7723,
-        "source": "NASA NSSDC Apollo landing site coordinates (planetocentric Mean Earth/Polar Axis, DE421), Lunar Module row"
+        "source": "NASA NSSDC Apollo landing site coordinates (planetocentric Mean Earth/Polar Axis, DE421), Lunar Module row; identical to the LROC 2016 table of coordinates of human features (Lunar Module row)"
       },
       "last_contact_utc": null,
       "latitude_deg": 20.1911,
       "longitude_deg_east": 30.7723,
       "name": "Apollo 17 (Taurus-Littrow)",
-      "notes": "Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one.",
+      "notes": "Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one. Stated uncertainty in the LROC table is 3.5 m.",
       "program": "Apollo 17",
       "reference_axis": "+Z_ME",
       "rotation_matrix": [

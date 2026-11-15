@@ -44,6 +44,16 @@ def default_g7_report_path() -> Path:
     return Path(__file__).resolve().parents[2] / "reports" / "g7_cy3.json"
 
 
+def default_g0_report_path() -> Path:
+    """Return the checked-in G0 (raycaster on synthetic terrain) artifact."""
+    return Path(__file__).resolve().parents[2] / "reports" / "g0_raycaster_synthetic.json"
+
+
+def default_g8_report_path() -> Path:
+    """Return the checked-in G8 (live-app performance) measurements."""
+    return Path(__file__).resolve().parents[2] / "reports" / "g8_live_measurements.json"
+
+
 def default_g4_report_path() -> Path:
     """Return the checked-in G4 (TypeScript versus Python golden vectors) artifact."""
     return Path(__file__).resolve().parents[2] / "reports" / "g4_ts_python_parity.json"
@@ -79,14 +89,6 @@ def _gate(identifier: str, description: str, status: str, **fields: Any) -> dict
 def _pending_gates() -> list[dict[str, Any]]:
     return [
         _gate(
-            "G0",
-            "Raycaster on synthetic cone/crater DEM",
-            "PENDING",
-            criterion="< 0.01 deg",
-            reason="No persisted terrain-owner G0 measurement artifact is available to this reporter.",
-            artifact_paths=["pipeline/tests/terrain/test_horizon_synthetic.py"],
-        ),
-        _gate(
             "G5",
             "Multi-year averages versus independent PGDA map pixels",
             "BLOCKED",
@@ -100,13 +102,6 @@ def _pending_gates() -> list[dict[str, Any]]:
             "PENDING",
             criterion="within a few degrees",
             reason="No independent PGDA slope-raster comparison artifact is available.",
-        ),
-        _gate(
-            "G8",
-            "Performance on the demo laptop",
-            "PENDING",
-            criterion="site <100 ms; slip <16 ms/frame; hover <4 ms; Scan <300 ms; Quick Answer <150 ms",
-            reason="No measured demo-laptop performance artifact is available.",
         ),
         _gate(
             "G9",
@@ -397,6 +392,77 @@ def _g1_gate(path: Path) -> dict[str, Any]:
         )
 
 
+G0_DESCRIPTION = "Raycaster on synthetic cone/crater DEM"
+G0_CRITERION = "< 0.01 deg"
+
+
+def _g0_gate(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return _gate(
+            "G0", G0_DESCRIPTION, "PENDING", criterion=G0_CRITERION,
+            reason="No persisted G0 measurement artifact is available; run pipeline/scripts/record_ts_evidence.py g0.",
+            artifact_paths=[_relative(path)],
+        )
+    try:
+        report = json.loads(path.read_text(encoding="utf-8"))
+        outcomes = {c["test"]: c["outcome"] for c in report["tests"]}
+        required_ok = all(outcomes.get(name) == "passed" for name in report["required_tests"]) and len(report["required_tests"]) >= 3
+        clean = report["totals"]["not_passed"] == 0 and report["totals"]["tests"] > 0
+        strict_enough = report["criterion_deg"] <= 0.01 and report["asserted_tolerance_count"] >= 4
+        return _gate(
+            "G0", G0_DESCRIPTION, "PASS" if required_ok and clean and strict_enough else "FAIL", criterion=G0_CRITERION,
+            value={"tests": report["totals"]["tests"], "passed": report["totals"]["passed"], "required_tests": report["required_tests"],
+                   "asserted_tolerances_below_criterion": report["asserted_tolerance_count"]},
+            artifact_paths=[_relative(path), "pipeline/tests/terrain/test_horizon_synthetic.py"],
+            provenance=f"Recorded {report['recorded_utc']} at commit {report['git_commit'][:10]}: {report['method']}",
+            test_commands=["python pipeline/scripts/record_ts_evidence.py g0"],
+        )
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+        return _gate("G0", G0_DESCRIPTION, "BLOCKED", reason=f"Invalid G0 artifact: {error}", artifact_paths=[_relative(path)])
+
+
+G8_DESCRIPTION = "Performance on the demo laptop"
+G8_CRITERION = "site <100 ms; slip <16 ms/frame; hover <4 ms; Scan <300 ms; Quick Answer <150 ms"
+
+
+def _g8_gate(path: Path) -> dict[str, Any]:
+    """G8 is PASS only when every budget is measured and met on the demo laptop. A partial or over-budget measurement is reported, never promoted."""
+    if not path.exists():
+        return _gate(
+            "G8", G8_DESCRIPTION, "PENDING", criterion=G8_CRITERION,
+            reason="No measured demo-laptop performance artifact is available.", artifact_paths=[_relative(path)],
+        )
+    try:
+        report = json.loads(path.read_text(encoding="utf-8"))
+        measured = report["measured"]
+        budgets = report["budgets_ms"]
+        not_measurable = report["not_measurable_in_live_app"]
+        site_p95 = float(measured["siteSwitchMs"]["p95"])
+        site_p50 = float(measured["siteSwitchMs"]["p50"])
+        slip_p95 = float(measured["slipDragFrameMs"]["p95"])
+        over = []
+        if site_p95 > budgets["siteSwitch"]:
+            over.append(f"site switch p95 {site_p95:.0f} ms (budget {budgets['siteSwitch']} ms)")
+        if slip_p95 > budgets["slipFrame"] + 0.5:
+            over.append(f"slip drag frame p95 {slip_p95:.1f} ms (budget {budgets['slipFrame']} ms)")
+        reasons = list(over)
+        if not_measurable:
+            reasons.append("not measurable in the live app: " + ", ".join(not_measurable))
+        reasons.append("hover is measured to the next frame, not to overlay-drawn")
+        reasons.append("the measuring machine is not confirmed to be the demo laptop")
+        return _gate(
+            "G8", G8_DESCRIPTION, "PENDING", criterion=G8_CRITERION,
+            reason="Partly measured on " + str(report["machine"].get("cpu")) + "; not promoted: " + "; ".join(reasons) + ".",
+            value={"site_switch_ms": measured["siteSwitchMs"], "slip_drag_frame_ms": measured["slipDragFrameMs"],
+                   "hover_to_next_frame_ms": measured["hoverToFrameMs"], "site_switch_p50_over_budget": site_p50 > budgets["siteSwitch"]},
+            artifact_paths=[_relative(path)],
+            provenance=f"Recorded {report['recorded_utc']} at commit {report['git_commit'][:10]}; " + " ".join(report["notes"]),
+            test_commands=["LUMEN_G8_OUT=<file> npx playwright test -c e2e/playwright.real.config.ts livePerf"],
+        )
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+        return _gate("G8", G8_DESCRIPTION, "BLOCKED", reason=f"Invalid G8 artifact: {error}", artifact_paths=[_relative(path)])
+
+
 G4_CRITERION = "elevation < 0.005 deg; events +/-1 min; dt +/-5%; metrics +/-1%"
 G4_DESCRIPTION = "TypeScript versus Python golden vectors"
 G11_DESCRIPTION = "Windows Table, barcode, and CSV integrity"
@@ -490,11 +556,14 @@ def build_validation_report(
     *, fixtures_dir: str | Path | None = None, g7_report_path: str | Path | None = None,
     validation_doc_path: str | Path | None = None, g1_report_path: str | Path | None = None,
     g4_report_path: str | Path | None = None, g11_report_path: str | Path | None = None,
+    g0_report_path: str | Path | None = None, g8_report_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """Assemble report data from checked-in artifacts without network access."""
     fixture_directory = Path(fixtures_dir) if fixtures_dir is not None else default_fixture_dir()
     g7_path = Path(g7_report_path) if g7_report_path is not None else default_g7_report_path()
     g1_path = Path(g1_report_path) if g1_report_path is not None else default_g1_report_path()
+    g0_path = Path(g0_report_path) if g0_report_path is not None else default_g0_report_path()
+    g8_path = Path(g8_report_path) if g8_report_path is not None else default_g8_report_path()
     g4_path = Path(g4_report_path) if g4_report_path is not None else default_g4_report_path()
     g11_path = Path(g11_report_path) if g11_report_path is not None else default_g11_report_path()
     g2_path = Path(validation_doc_path) if validation_doc_path is not None else default_validation_doc_path()
@@ -504,7 +573,9 @@ def build_validation_report(
         _g3_gate(fixture_directory),
         _g3b_gate(fixture_directory),
         _g7_gate(g7_path),
+        _g0_gate(g0_path),
         _g4_gate(g4_path),
+        _g8_gate(g8_path),
         _g11_gate(g11_path),
     ]
     gates.sort(key=lambda gate: (int(gate["id"][1:]) if gate["id"] != "G3b" else 3, gate["id"]))

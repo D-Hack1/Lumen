@@ -3,13 +3,27 @@
   "gates": [
     {
       "artifact_paths": [
+        "pipeline/reports/g0_raycaster_synthetic.json",
         "pipeline/tests/terrain/test_horizon_synthetic.py"
       ],
       "criterion": "< 0.01 deg",
       "description": "Raycaster on synthetic cone/crater DEM",
       "id": "G0",
-      "reason": "No persisted terrain-owner G0 measurement artifact is available to this reporter.",
-      "status": "PENDING"
+      "provenance": "Recorded 2026-11-15T16:06:13Z at commit f14aa632d1: Each required test compares the raycaster with an independent analytic or dense-sampled reference and asserts the maximum error is below 0.01 deg.",
+      "status": "PASS",
+      "test_commands": [
+        "python pipeline/scripts/record_ts_evidence.py g0"
+      ],
+      "value": {
+        "asserted_tolerances_below_criterion": 5,
+        "passed": 13,
+        "required_tests": [
+          "test_g0_flat_spherical_dem_matches_curvature_and_height_effects",
+          "test_cone_and_crater_have_expected_horizon_behavior",
+          "test_adaptive_peak_refinement_matches_independent_dense_bilinear_reference"
+        ],
+        "tests": 13
+      }
     },
     {
       "artifact_paths": [
@@ -413,11 +427,39 @@
       }
     },
     {
+      "artifact_paths": [
+        "pipeline/reports/g8_live_measurements.json"
+      ],
       "criterion": "site <100 ms; slip <16 ms/frame; hover <4 ms; Scan <300 ms; Quick Answer <150 ms",
       "description": "Performance on the demo laptop",
       "id": "G8",
-      "reason": "No measured demo-laptop performance artifact is available.",
-      "status": "PENDING"
+      "provenance": "Recorded 2026-11-15T16:09:40Z at commit f14aa632d1; siteSwitchMs is click to the engine's new numbers on screen, end to end (worker evaluation included), headless Chromium. hoverToFrameMs is pointer event to the next animation frame; it is dominated by the 60 Hz frame wait and is NOT the 4 ms pointer-to-overlay-drawn measurement of the old harness. slipDragFrameMs is the frame time while dragging the slip slider; 16.7 ms is one 60 Hz frame (no dropped frames). Scan and Quick Answer are not part of the live pages, so they cannot be timed there. This machine is not confirmed to be the demo laptop.",
+      "reason": "Partly measured on 13th Gen Intel(R) Core(TM) i5-13420H; not promoted: site switch p95 194 ms (budget 100 ms); not measurable in the live app: scanStage1, scanFirstStage2, quickAnswer; hover is measured to the next frame, not to overlay-drawn; the measuring machine is not confirmed to be the demo laptop.",
+      "status": "PENDING",
+      "test_commands": [
+        "LUMEN_G8_OUT=<file> npx playwright test -c e2e/playwright.real.config.ts livePerf"
+      ],
+      "value": {
+        "hover_to_next_frame_ms": {
+          "max": 31.63,
+          "n": 300,
+          "p50": 14.2,
+          "p95": 15
+        },
+        "site_switch_ms": {
+          "max": 193.5,
+          "n": 8,
+          "p50": 137.8,
+          "p95": 193.5
+        },
+        "site_switch_p50_over_budget": true,
+        "slip_drag_frame_ms": {
+          "max": 16.8,
+          "n": 217,
+          "p50": 16.7,
+          "p95": 16.7
+        }
+      }
     },
     {
       "criterion": "visual agreement",
@@ -468,7 +510,6 @@
     "G10 requires terrain-owner Monte Carlo sigma and Tier-B calibration artifacts."
   ],
   "non_pass_gates": [
-    "G0",
     "G5",
     "G6",
     "G7",

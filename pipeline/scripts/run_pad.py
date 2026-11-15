@@ -21,6 +21,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import yaml
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from lumen_pipeline.terrain.crops import build_crops
@@ -34,6 +36,14 @@ from lumen_pipeline.terrain.pad import (
 from lumen_pipeline.terrain.summaries import write_terrain_summary
 
 DEFAULT_SITE_IDS = ("im2_athena", "cy3_shiv_shakti")
+
+
+def _pad_defaults() -> dict[str, float]:
+    """The project-wide pad defaults from terrain.yaml; a missing value stays missing (never invented)."""
+    config = yaml.safe_load((Path(__file__).resolve().parents[1] / "config" / "terrain.yaml").read_text(encoding="utf-8")) or {}
+    section = config.get("pad_statistics") or {}
+    names = {"dispersion_radius_m": "dispersion_radius_m", "slope_tolerance_deg": "slope_tolerance_deg", "footprint_m": "nominal_lander_footprint_m"}
+    return {arg: float(section[key]) for arg, key in names.items() if isinstance(section.get(key), (int, float))}
 
 
 def _pad_headline(statistics) -> dict[str, object]:
@@ -77,6 +87,7 @@ def run_site(
             crops,
             latitude_deg=latitude_deg,
             longitude_deg_east=longitude_deg_east,
+            **_pad_defaults(),
         )
     except PadStatisticsUnavailable as exc:
         print(f"[{site_id}] S-6 BLOCKED: {exc}")

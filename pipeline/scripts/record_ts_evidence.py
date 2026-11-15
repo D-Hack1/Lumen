@@ -96,6 +96,45 @@ def record_g4() -> Path:
     return path
 
 
+G0_TEST_FILE = "pipeline/tests/terrain/test_horizon_synthetic.py"
+G0_REQUIRED_TESTS = (
+    "test_g0_flat_spherical_dem_matches_curvature_and_height_effects",
+    "test_cone_and_crater_have_expected_horizon_behavior",
+    "test_adaptive_peak_refinement_matches_independent_dense_bilinear_reference",
+)
+
+
+def record_g0() -> Path:
+    """G0: the raycaster against analytic cone / crater / flat-sphere references (< 0.01 deg). Runs the Python tests and records the outcome."""
+    import xml.etree.ElementTree as ET
+
+    with tempfile.TemporaryDirectory() as tmp:
+        xml = Path(tmp) / "junit.xml"
+        subprocess.run([sys.executable, "-m", "pytest", str(ROOT / G0_TEST_FILE), "-q", f"--junitxml={xml}"], cwd=ROOT / "pipeline", capture_output=True, text=True)
+        if not xml.exists():
+            raise SystemExit("pytest produced no JUnit report for G0")
+        cases = []
+        for case in ET.parse(xml).getroot().iter("testcase"):
+            outcome = "failed" if case.find("failure") is not None or case.find("error") is not None else "skipped" if case.find("skipped") is not None else "passed"
+            cases.append({"test": case.get("name"), "outcome": outcome})
+    source = (ROOT / G0_TEST_FILE).read_text(encoding="utf-8")
+    report = {
+        "gate": "G0",
+        "description": "Raycaster on synthetic cone/crater DEM",
+        "command": "pytest " + G0_TEST_FILE,
+        **_common(),
+        "criterion_deg": 0.01,
+        "asserted_tolerance_count": source.count("< 0.01") + source.count("abs=0.01"),
+        "required_tests": list(G0_REQUIRED_TESTS),
+        "tests": cases,
+        "totals": {"tests": len(cases), "passed": sum(c["outcome"] == "passed" for c in cases), "not_passed": sum(c["outcome"] != "passed" for c in cases)},
+        "method": "Each required test compares the raycaster with an independent analytic or dense-sampled reference and asserts the maximum error is below 0.01 deg.",
+    }
+    path = REPORTS / "g0_raycaster_synthetic.json"
+    path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    return path
+
+
 def record_g11() -> Path:
     with tempfile.TemporaryDirectory() as tmp:
         out = Path(tmp) / "g11.json"
@@ -119,7 +158,7 @@ def record_g11() -> Path:
 
 
 if __name__ == "__main__":
-    which = {a.lower() for a in sys.argv[1:]} or {"g4", "g11"}
-    for name, fn in (("g4", record_g4), ("g11", record_g11)):
+    which = {a.lower() for a in sys.argv[1:]} or {"g0", "g4", "g11"}
+    for name, fn in (("g0", record_g0), ("g4", record_g4), ("g11", record_g11)):
         if name in which:
             print("wrote", fn())
