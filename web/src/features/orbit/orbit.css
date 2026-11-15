@@ -275,6 +275,14 @@
   padding: 22px 18px;
   gap: 22px;
 }
+/* With all three columns on one row the left column must not set the row's height: the curated-site list is now long, and it was stretching the whole page
+   (and the Moon stage with it). Size the row from the stage, and let the left column scroll inside it. Narrower screens wrap the columns, where it is left alone. */
+@media (min-width: 1280px) {
+  .lm-side--left {
+    contain: size;
+    overflow-y: auto;
+  }
+}
 .lm-side--right {
   flex: 1 1 320px;
   max-width: 360px;
