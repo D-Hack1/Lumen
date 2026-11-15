@@ -78,8 +78,8 @@ def test_validation_report_truthfully_aggregates_pending_blocked_and_open_eviden
     }
     assert _gate(report, "G5")["status"] == "BLOCKED"
     assert _gate(report, "G10")["status"] == "BLOCKED"
-    assert _gate(report, "G4")["status"] == "PENDING"
-    assert _gate(report, "G11")["status"] == "PENDING"
+    assert _gate(report, "G4")["status"] == "PASS"
+    assert _gate(report, "G11")["status"] == "PASS"
     assert report["open_issues"] == []
     assert report["status"] == "NOT_READY"
 
@@ -91,11 +91,47 @@ def test_validation_report_marks_missing_evidence_blocked_or_pending(tmp_path):
         g7_report_path=missing / "g7.json",
         validation_doc_path=missing / "validation.md",
         g1_report_path=missing / "g1.json",
+        g4_report_path=missing / "g4.json",
+        g11_report_path=missing / "g11.json",
     )
 
+    assert _gate(report, "G4")["status"] == "PENDING"
+    assert _gate(report, "G11")["status"] == "PENDING"
     assert _gate(report, "G1")["status"] == "BLOCKED"
     assert _gate(report, "G2")["status"] == "PENDING"
     assert _gate(report, "G3")["status"] == "BLOCKED"
     assert _gate(report, "G3b")["status"] == "BLOCKED"
     assert _gate(report, "G7")["status"] == "BLOCKED"
     assert report["status"] == "NOT_READY"
+
+
+def _tamper(source, target, edit):
+    import json
+
+    data = json.loads(source.read_text(encoding="utf-8"))
+    edit(data)
+    target.write_text(json.dumps(data), encoding="utf-8")
+    return target
+
+
+def test_g4_is_not_a_pass_when_a_test_failed_was_skipped_or_the_tolerance_is_looser_than_the_criterion(tmp_path):
+    from lumen_pipeline.validation.report import default_g4_report_path
+
+    src = default_g4_report_path()
+    failed = _tamper(src, tmp_path / "a.json", lambda d: d["totals"].update(failed=1, passed=d["totals"]["tests"] - 1))
+    skipped = _tamper(src, tmp_path / "b.json", lambda d: d["totals"].update(skipped_or_todo=2))
+    loose = _tamper(src, tmp_path / "c.json", lambda d: d["golden_sets"]["golden_set1"]["tolerances"].update(elevation_deg=0.05))
+    broken = _tamper(src, tmp_path / "d.json", lambda d: d.pop("totals"))
+    for path, expected in ((failed, "FAIL"), (skipped, "FAIL"), (loose, "FAIL"), (broken, "BLOCKED")):
+        assert _gate(build_validation_report(g4_report_path=path), "G4")["status"] == expected
+
+
+def test_g11_is_not_a_pass_unless_every_compared_item_matches(tmp_path):
+    from lumen_pipeline.validation.report import default_g11_report_path
+
+    src = default_g11_report_path()
+    one_window_off = _tamper(src, tmp_path / "a.json", lambda d: d["tally"].update(windowsMatched=d["tally"]["windows"] - 1))
+    one_cell_off = _tamper(src, tmp_path / "b.json", lambda d: d["tally"].update(barcodeAgree=d["tally"]["barcodeCells"] - 1))
+    nothing_compared = _tamper(src, tmp_path / "c.json", lambda d: d["tally"].update(windows=0, windowsMatched=0))
+    for path in (one_window_off, one_cell_off, nothing_compared):
+        assert _gate(build_validation_report(g11_report_path=path), "G11")["status"] == "FAIL"

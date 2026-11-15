@@ -291,13 +291,35 @@
     },
     {
       "artifact_paths": [
-        "pipeline/tests/gowri/test_golden_synthetic.py"
+        "pipeline/reports/g4_ts_python_parity.json"
       ],
       "criterion": "elevation < 0.005 deg; events +/-1 min; dt +/-5%; metrics +/-1%",
       "description": "TypeScript versus Python golden vectors",
       "id": "G4",
-      "reason": "Python synthetic vectors exist, but no browser-engine parity result is available.",
-      "status": "PENDING"
+      "provenance": "Recorded 2026-11-15T15:18:17Z at commit 19e4cf35b1 (vitest, real ephemeris and golden files). The Shackleton golden set holds preliminary Python references and is reported separately.",
+      "status": "PASS",
+      "test_commands": [
+        "python pipeline/scripts/record_ts_evidence.py g4"
+      ],
+      "tolerances": {
+        "golden_set1": {
+          "azimuth_deg": 0.005,
+          "elevation_deg": 0.005,
+          "event_time_s": 60,
+          "metric_percent": 1.0
+        },
+        "golden_set2_synthetic": {
+          "angle_deg": 0.005,
+          "delta_t_percent": 5.0,
+          "event_time_s": 10.0
+        }
+      },
+      "value": {
+        "golden_set1_cases": 1,
+        "golden_set2_synthetic_cases": 19,
+        "passed": 37,
+        "tests": 37
+      }
     },
     {
       "criterion": "within a few percent; differences explained",
@@ -416,11 +438,27 @@
       "status": "BLOCKED"
     },
     {
+      "artifact_paths": [
+        "pipeline/reports/g11_integrity.json"
+      ],
       "criterion": "100 percent match and CSV round-trip",
       "description": "Windows Table, barcode, and CSV integrity",
       "id": "G11",
-      "reason": "No cross-frontend Windows Table/barcode/CSV round-trip artifact is available.",
-      "status": "PENDING"
+      "provenance": "Recorded 2026-11-15T15:18:25Z at commit 19e4cf35b1: CSV and JSON exports are parsed back and compared with the engine result field by field; barcode cells (hourly series) are compared with the Windows Table (strictly inside a window = up, outside every window = down; cells within one step of a window edge are skipped and counted). Sites: cy3_shiv_shakti, im2_athena, shackleton_ridge; 30 days from 2027-02-08.",
+      "status": "PASS",
+      "test_commands": [
+        "python pipeline/scripts/record_ts_evidence.py g11"
+      ],
+      "value": {
+        "barcode_cells_agreeing": 388330,
+        "barcode_cells_compared": 388330,
+        "barcode_cells_skipped_at_window_edges": 488,
+        "cases": 6,
+        "metric_rows_compared": 70,
+        "metric_rows_matched": 70,
+        "windows_compared": 182,
+        "windows_matched": 182
+      }
     }
   ],
   "limitations": [
@@ -431,14 +469,12 @@
   ],
   "non_pass_gates": [
     "G0",
-    "G4",
     "G5",
     "G6",
     "G7",
     "G8",
     "G9",
-    "G10",
-    "G11"
+    "G10"
   ],
   "open_issues": [],
   "reference_engine_evidence": {

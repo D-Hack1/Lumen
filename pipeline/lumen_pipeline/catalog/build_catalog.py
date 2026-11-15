@@ -12,7 +12,20 @@ import yaml
 from lumen_pipeline.common.frames import reference_axis, site_rotation_matrix
 from lumen_pipeline.ephem.kernels import MOON_FRAME
 
-EXPECTED_SITE_IDS = ("im2_athena", "cy3_shiv_shakti", "shackleton_ridge", "blue_ghost_m1")
+EXPECTED_SITE_IDS = (
+    "im2_athena",
+    "cy3_shiv_shakti",
+    "shackleton_ridge",
+    "blue_ghost_m1",
+    "apollo_11",
+    "apollo_12",
+    "apollo_14",
+    "apollo_15",
+    "apollo_16",
+    "apollo_17",
+    "slim_shioli",
+    "change6_apollo_basin",
+)
 CATALOG_VERSION = 1
 
 

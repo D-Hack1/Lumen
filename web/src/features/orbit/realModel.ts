@@ -20,10 +20,25 @@ import { getBaseUtc } from './windowStart';
 
 /** Hours-since-epoch of the design's t = 0 (2027-02-08 00:00 UTC); duplicated from orbitModel to avoid a runtime import cycle. */
 
-
 /** Short labels for the site tabs (catalog ids). Unknown ids fall back to the catalog name. */
-const SHORT: Record<string, string> = { im2_athena: 'IM-2', shackleton_ridge: 'Ridge', cy3_shiv_shakti: 'CY-3', blue_ghost_m1: 'Blue Ghost' };
-const GROUP: Record<string, string> = { historical_landing: 'Historical landing', published_target: 'Published target' };
+const SHORT: Record<string, string> = {
+  im2_athena: 'IM-2',
+  shackleton_ridge: 'Ridge',
+  cy3_shiv_shakti: 'CY-3',
+  blue_ghost_m1: 'Blue Ghost',
+  apollo_11: 'Apollo 11',
+  apollo_12: 'Apollo 12',
+  apollo_14: 'Apollo 14',
+  apollo_15: 'Apollo 15',
+  apollo_16: 'Apollo 16',
+  apollo_17: 'Apollo 17',
+  slim_shioli: 'SLIM',
+  change6_apollo_basin: "Chang'e-6",
+};
+const GROUP: Record<string, string> = {
+  historical_landing: 'Historical landing',
+  published_target: 'Published target',
+};
 
 /** The pages' site list, read from the real catalog (landing coordinates drive computation; see sites.yaml). */
 function siteFromRecord(r: SiteRecord): Site {
@@ -100,7 +115,11 @@ function prepare(site: Site, mast: number): Prepared {
     // A terrain mask is only valid at the point it was computed for (the catalog coordinates), so evaluate there when it applies.
     const at = terrainHorizon && rec ? { lat: rec.lat, lon: rec.lon } : { lat: site.lat, lon: site.lon };
     const engineSite = makeSite(at.lat, at.lon, mast, rotation);
-    p = { site: engineSite, horizon: terrainHorizon ?? new Horizon({ observerHeightM: mast }), terrain: terrainHorizon !== null };
+    p = {
+      site: engineSite,
+      horizon: terrainHorizon ?? new Horizon({ observerHeightM: mast }),
+      terrain: terrainHorizon !== null,
+    };
     prepared.set(key, p);
   }
   return p;
@@ -163,7 +182,12 @@ export function realSiteTag(site: Site, mast: number): SiteTag {
     const slope = L.records.get(site.id)?.padSlopeDeg ?? null;
     const b = (v: number | null) => ({ value: v, lo: null, hi: null });
     const r = evaluateVerdict({
-      metrics: { sunlitPct: b(w.sun), linkPct: b(w.dsn), longestNightH: b(w.dark), padSlopeDeg: slope === null ? null : b(slope) } as never,
+      metrics: {
+        sunlitPct: b(w.sun),
+        linkPct: b(w.dsn),
+        longestNightH: b(w.dark),
+        padSlopeDeg: slope === null ? null : b(slope),
+      } as never,
       windowHours: WINDOW_H,
       profile: getScenario().profile,
       weights: getScenario().weights,

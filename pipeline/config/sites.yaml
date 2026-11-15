@@ -83,3 +83,141 @@ sites:
     verification_status: verified
     verified_by: Gowri
     tier: C
+  - id: apollo_11
+    name: Apollo 11 (Tranquility Base)
+    category: historical_landing
+    agency: NASA
+    program: Apollo 11
+    latitude_deg: 0.67416
+    longitude_deg_east: 23.47314
+    landing_coords:
+      latitude_deg: 0.67416
+      longitude_deg_east: 23.47314
+      source: NASA NSSDC Apollo landing site coordinates (planetocentric Mean Earth/Polar Axis, DE421), Lunar Module row
+    coord_note: Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one.
+    source_url: https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_sites.html
+    source_type: agency
+    verification_status: verified
+    verified_by: Ebin (read from the cited NASA table on 2026-11-15)
+    tier: C
+  - id: apollo_12
+    name: Apollo 12 (Ocean of Storms)
+    category: historical_landing
+    agency: NASA
+    program: Apollo 12
+    latitude_deg: -3.0128
+    longitude_deg_east: -23.4219
+    landing_coords:
+      latitude_deg: -3.0128
+      longitude_deg_east: -23.4219
+      source: NASA NSSDC Apollo landing site coordinates (planetocentric Mean Earth/Polar Axis, DE421), Lunar Module row
+    coord_note: Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one.
+    source_url: https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_sites.html
+    source_type: agency
+    verification_status: verified
+    verified_by: Ebin (read from the cited NASA table on 2026-11-15)
+    tier: C
+  - id: apollo_14
+    name: Apollo 14 (Fra Mauro)
+    category: historical_landing
+    agency: NASA
+    program: Apollo 14
+    latitude_deg: -3.64589
+    longitude_deg_east: -17.47194
+    landing_coords:
+      latitude_deg: -3.64589
+      longitude_deg_east: -17.47194
+      source: NASA NSSDC Apollo landing site coordinates (planetocentric Mean Earth/Polar Axis, DE421), Lunar Module row
+    coord_note: Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one.
+    source_url: https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_sites.html
+    source_type: agency
+    verification_status: verified
+    verified_by: Ebin (read from the cited NASA table on 2026-11-15)
+    tier: C
+  - id: apollo_15
+    name: Apollo 15 (Hadley-Apennine)
+    category: historical_landing
+    agency: NASA
+    program: Apollo 15
+    latitude_deg: 26.13239
+    longitude_deg_east: 3.6333
+    landing_coords:
+      latitude_deg: 26.13239
+      longitude_deg_east: 3.6333
+      source: NASA NSSDC Apollo landing site coordinates (planetocentric Mean Earth/Polar Axis, DE421), Lunar Module row
+    coord_note: Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one.
+    source_url: https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_sites.html
+    source_type: agency
+    verification_status: verified
+    verified_by: Ebin (read from the cited NASA table on 2026-11-15)
+    tier: C
+  - id: apollo_16
+    name: Apollo 16 (Descartes)
+    category: historical_landing
+    agency: NASA
+    program: Apollo 16
+    latitude_deg: -8.9734
+    longitude_deg_east: 15.5011
+    landing_coords:
+      latitude_deg: -8.9734
+      longitude_deg_east: 15.5011
+      source: NASA NSSDC Apollo landing site coordinates (planetocentric Mean Earth/Polar Axis, DE421), Lunar Module row
+    coord_note: Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one.
+    source_url: https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_sites.html
+    source_type: agency
+    verification_status: verified
+    verified_by: Ebin (read from the cited NASA table on 2026-11-15)
+    tier: C
+  - id: apollo_17
+    name: Apollo 17 (Taurus-Littrow)
+    category: historical_landing
+    agency: NASA
+    program: Apollo 17
+    latitude_deg: 20.1911
+    longitude_deg_east: 30.7723
+    landing_coords:
+      latitude_deg: 20.1911
+      longitude_deg_east: 30.7723
+      source: NASA NSSDC Apollo landing site coordinates (planetocentric Mean Earth/Polar Axis, DE421), Lunar Module row
+    coord_note: Published landing coordinate (east-positive longitude); no touchdown time is recorded here because the cited table does not give one.
+    source_url: https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_sites.html
+    source_type: agency
+    verification_status: verified
+    verified_by: Ebin (read from the cited NASA table on 2026-11-15)
+    tier: C
+  - id: slim_shioli
+    name: SLIM (Shioli crater)
+    category: historical_landing
+    agency: JAXA
+    program: SLIM
+    latitude_deg: -13.316
+    longitude_deg_east: 25.251
+    landing_coords:
+      latitude_deg: -13.316
+      longitude_deg_east: 25.251
+      source: LROC image 1358, lander located in LROC NAC M1460739214L (NASA/GSFC/Arizona State University)
+    coord_note: Touchdown location from the LROC image caption; the lander came to rest on its side. Time is to the minute as stated by LROC.
+    touchdown_utc: "2024-01-19T15:20:00Z"
+    touchdown_precision: minute
+    source_url: https://lroc.im-ldi.com/images/1358
+    source_type: agency
+    verification_status: verified
+    verified_by: Ebin (read from the cited LROC page on 2026-11-15)
+    tier: C
+  - id: change6_apollo_basin
+    name: Chang'e-6 (Apollo basin, far side)
+    category: historical_landing
+    agency: CNSA
+    program: Chang'e-6
+    latitude_deg: -41.6385
+    longitude_deg_east: 206.0148
+    landing_coords:
+      latitude_deg: -41.6385
+      longitude_deg_east: 206.0148
+      source: LROC image 1374 (LROC NAC M1472410644L, NASA/GSFC/Arizona State University); stated horizontal accuracy +/-30 m
+    coord_note: Landed 1 June 2024; the LROC page gives the date but no time of day, so no touchdown time is recorded. Far side - no direct line of sight to Earth.
+    source_url: https://lroc.im-ldi.com/images/1374
+    source_type: agency
+    verification_status: verified
+    verified_by: Ebin (read from the cited LROC page on 2026-11-15)
+    tier: C

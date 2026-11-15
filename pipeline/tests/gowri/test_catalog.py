@@ -75,12 +75,15 @@ def test_g6_rotation_matrices_are_frame_consistent_and_right_handed(tmp_path):
         np.testing.assert_allclose(matrix, expected, atol=1e-15)
         np.testing.assert_allclose(matrix @ matrix.T, np.eye(3), atol=1e-12)
         assert np.linalg.det(matrix) > 0.0
-    assert [site["reference_axis"] for site in catalog["sites"]] == [
-        "+X_ME",
-        "+X_ME",
-        "+X_ME",
-        "+Z_ME",
-    ]
+    # The reference axis follows the latitude: +X_ME near the poles, +Z_ME elsewhere.
+    expected_axes = {
+        "im2_athena": "+X_ME",
+        "cy3_shiv_shakti": "+X_ME",
+        "shackleton_ridge": "+X_ME",
+        "blue_ghost_m1": "+Z_ME",
+    }
+    for site in catalog["sites"]:
+        assert site["reference_axis"] == expected_axes.get(site["id"], "+Z_ME"), site["id"]
 
 
 def test_g6_catalog_is_deterministic(tmp_path):
@@ -124,3 +127,20 @@ def test_g6_catalog_rejects_missing_or_unknown_site_rows(tmp_path):
     sites_path.write_text(yaml.safe_dump(source), encoding="utf-8")
     with pytest.raises(ValueError, match="requires exactly these sites"):
         build_catalog(sites_path=sites_path, output_path=tmp_path / "sites.json")
+
+
+def test_expanded_sites_are_source_verified_with_no_invented_times(tmp_path):
+    catalog = build_catalog(output_path=tmp_path / "sites.json")
+    by_id = {site["id"]: site for site in catalog["sites"]}
+    # Values as printed on the cited NASA / LROC pages.
+    assert (by_id["apollo_11"]["latitude_deg"], by_id["apollo_11"]["longitude_deg_east"]) == (0.67416, 23.47314)
+    assert (by_id["apollo_12"]["latitude_deg"], by_id["apollo_12"]["longitude_deg_east"]) == (-3.0128, -23.4219)
+    assert (by_id["apollo_17"]["latitude_deg"], by_id["apollo_17"]["longitude_deg_east"]) == (20.1911, 30.7723)
+    assert (by_id["slim_shioli"]["latitude_deg"], by_id["slim_shioli"]["longitude_deg_east"]) == (-13.316, 25.251)
+    assert (by_id["change6_apollo_basin"]["latitude_deg"], by_id["change6_apollo_basin"]["longitude_deg_east"]) == (-41.6385, 206.0148)
+    assert by_id["slim_shioli"]["touchdown_utc"] == "2024-01-19T15:20:00Z"
+    for site_id in ("apollo_11", "apollo_12", "apollo_14", "apollo_15", "apollo_16", "apollo_17", "change6_apollo_basin"):
+        assert by_id[site_id]["touchdown_utc"] is None, site_id
+    for site in catalog["sites"]:
+        assert -180.0 <= site["longitude_deg_east"] <= 360.0
+        assert site["source_url"].startswith("https://")

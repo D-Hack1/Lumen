@@ -44,6 +44,16 @@ def default_g7_report_path() -> Path:
     return Path(__file__).resolve().parents[2] / "reports" / "g7_cy3.json"
 
 
+def default_g4_report_path() -> Path:
+    """Return the checked-in G4 (TypeScript versus Python golden vectors) artifact."""
+    return Path(__file__).resolve().parents[2] / "reports" / "g4_ts_python_parity.json"
+
+
+def default_g11_report_path() -> Path:
+    """Return the checked-in G11 (Windows Table / barcode / CSV integrity) artifact."""
+    return Path(__file__).resolve().parents[2] / "reports" / "g11_integrity.json"
+
+
 def default_g1_report_path() -> Path:
     """Return the checked-in G1 frame-validation artifact."""
     return Path(__file__).resolve().parents[2] / "reports" / "g1_lunar_frames.json"
@@ -75,14 +85,6 @@ def _pending_gates() -> list[dict[str, Any]]:
             criterion="< 0.01 deg",
             reason="No persisted terrain-owner G0 measurement artifact is available to this reporter.",
             artifact_paths=["pipeline/tests/terrain/test_horizon_synthetic.py"],
-        ),
-        _gate(
-            "G4",
-            "TypeScript versus Python golden vectors",
-            "PENDING",
-            criterion="elevation < 0.005 deg; events +/-1 min; dt +/-5%; metrics +/-1%",
-            reason="Python synthetic vectors exist, but no browser-engine parity result is available.",
-            artifact_paths=["pipeline/tests/gowri/test_golden_synthetic.py"],
         ),
         _gate(
             "G5",
@@ -120,13 +122,6 @@ def _pending_gates() -> list[dict[str, Any]]:
             criterion="at least about 68 percent inside reported delta-t or inflate sigma",
             reason="Requires Shivha's Monte Carlo sigma artifacts and Tier-B calibration inputs.",
             required_artifacts=["web/public/data/terrain/sigma/", "web/public/data/terrain/tierb/"],
-        ),
-        _gate(
-            "G11",
-            "Windows Table, barcode, and CSV integrity",
-            "PENDING",
-            criterion="100 percent match and CSV round-trip",
-            reason="No cross-frontend Windows Table/barcode/CSV round-trip artifact is available.",
         ),
     ]
 
@@ -402,14 +397,106 @@ def _g1_gate(path: Path) -> dict[str, Any]:
         )
 
 
+G4_CRITERION = "elevation < 0.005 deg; events +/-1 min; dt +/-5%; metrics +/-1%"
+G4_DESCRIPTION = "TypeScript versus Python golden vectors"
+G11_DESCRIPTION = "Windows Table, barcode, and CSV integrity"
+
+
+def _g4_gate(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return _gate(
+            "G4", G4_DESCRIPTION, "PENDING", criterion=G4_CRITERION,
+            reason="No browser-engine parity artifact is available; run pipeline/scripts/record_ts_evidence.py.",
+            artifact_paths=[_relative(path)],
+        )
+    try:
+        report = json.loads(path.read_text(encoding="utf-8"))
+        totals = report["totals"]
+        sets = report["golden_sets"]
+        tol1 = sets["golden_set1"]["tolerances"]
+        tol2 = sets["golden_set2_synthetic"]["tolerances"]
+        # The recorded tolerances must be at least as strict as the gate's criterion, or the pass would not mean anything.
+        within_criterion = (
+            tol1["elevation_deg"] <= 0.005
+            and tol1["azimuth_deg"] <= 0.005
+            and tol1["event_time_s"] <= 60
+            and tol1["metric_percent"] <= 1.0
+            and tol2["delta_t_percent"] <= 5.0
+            and tol2["angle_deg"] <= 0.005
+        )
+        all_ran = (
+            totals["tests"] > 0
+            and totals["passed"] == totals["tests"]
+            and totals["failed"] == 0
+            and totals["skipped_or_todo"] == 0
+            and sets["golden_set1"]["cases"] >= 1
+            and sets["golden_set2_synthetic"]["cases"] >= 1
+        )
+        status = "PASS" if within_criterion and all_ran else "FAIL"
+        return _gate(
+            "G4", G4_DESCRIPTION, status, criterion=G4_CRITERION,
+            value={"tests": totals["tests"], "passed": totals["passed"], "golden_set1_cases": sets["golden_set1"]["cases"],
+                   "golden_set2_synthetic_cases": sets["golden_set2_synthetic"]["cases"]},
+            tolerances={"golden_set1": tol1, "golden_set2_synthetic": tol2},
+            artifact_paths=[_relative(path)],
+            provenance=f"Recorded {report['recorded_utc']} at commit {report['git_commit'][:10]} (vitest, real ephemeris and golden files). "
+            "The Shackleton golden set holds preliminary Python references and is reported separately.",
+            test_commands=["python pipeline/scripts/record_ts_evidence.py g4"],
+        )
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+        return _gate("G4", G4_DESCRIPTION, "BLOCKED", reason=f"Invalid G4 artifact: {error}", artifact_paths=[_relative(path)])
+
+
+def _g11_gate(path: Path) -> dict[str, Any]:
+    criterion = "100 percent match and CSV round-trip"
+    if not path.exists():
+        return _gate(
+            "G11", G11_DESCRIPTION, "PENDING", criterion=criterion,
+            reason="No cross-frontend Windows Table/barcode/CSV round-trip artifact is available; run pipeline/scripts/record_ts_evidence.py.",
+            artifact_paths=[_relative(path)],
+        )
+    try:
+        report = json.loads(path.read_text(encoding="utf-8"))
+        t = report["tally"]
+        totals = report["totals"]
+        complete = (
+            t["cases"] > 0 and t["windows"] > 0 and t["barcodeCells"] > 0 and t["metricsRows"] > 0
+            and totals["failed"] == 0 and totals["passed"] == totals["tests"] == t["cases"]
+        )
+        exact = (
+            t["windowsMatched"] == t["windows"]
+            and t["metricsMatched"] == t["metricsRows"]
+            and t["barcodeAgree"] == t["barcodeCells"]
+            and t["jsonLossless"] == t["cases"]
+        )
+        return _gate(
+            "G11", G11_DESCRIPTION, "PASS" if complete and exact else "FAIL", criterion=criterion,
+            value={
+                "cases": t["cases"], "windows_compared": t["windows"], "windows_matched": t["windowsMatched"],
+                "metric_rows_compared": t["metricsRows"], "metric_rows_matched": t["metricsMatched"],
+                "barcode_cells_compared": t["barcodeCells"], "barcode_cells_agreeing": t["barcodeAgree"],
+                "barcode_cells_skipped_at_window_edges": t["barcodeSkippedAtEdges"],
+            },
+            artifact_paths=[_relative(path)],
+            provenance=f"Recorded {report['recorded_utc']} at commit {report['git_commit'][:10]}: {report['method']} "
+            "Sites: " + ", ".join(sorted({d['site'] for d in report['detail']})) + "; 30 days from " + report["window_start_utc"][:10] + ".",
+            test_commands=["python pipeline/scripts/record_ts_evidence.py g11"],
+        )
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+        return _gate("G11", G11_DESCRIPTION, "BLOCKED", reason=f"Invalid G11 artifact: {error}", artifact_paths=[_relative(path)])
+
+
 def build_validation_report(
     *, fixtures_dir: str | Path | None = None, g7_report_path: str | Path | None = None,
     validation_doc_path: str | Path | None = None, g1_report_path: str | Path | None = None,
+    g4_report_path: str | Path | None = None, g11_report_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """Assemble report data from checked-in artifacts without network access."""
     fixture_directory = Path(fixtures_dir) if fixtures_dir is not None else default_fixture_dir()
     g7_path = Path(g7_report_path) if g7_report_path is not None else default_g7_report_path()
     g1_path = Path(g1_report_path) if g1_report_path is not None else default_g1_report_path()
+    g4_path = Path(g4_report_path) if g4_report_path is not None else default_g4_report_path()
+    g11_path = Path(g11_report_path) if g11_report_path is not None else default_g11_report_path()
     g2_path = Path(validation_doc_path) if validation_doc_path is not None else default_validation_doc_path()
     gates = _pending_gates() + [
         _g1_gate(g1_path),
@@ -417,6 +504,8 @@ def build_validation_report(
         _g3_gate(fixture_directory),
         _g3b_gate(fixture_directory),
         _g7_gate(g7_path),
+        _g4_gate(g4_path),
+        _g11_gate(g11_path),
     ]
     gates.sort(key=lambda gate: (int(gate["id"][1:]) if gate["id"] != "G3b" else 3, gate["id"]))
     non_pass = [gate["id"] for gate in gates if gate["status"] != "PASS"]
