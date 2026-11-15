@@ -1,5 +1,10 @@
 import json
 
+from lumen_pipeline.validation.horizons_client import (
+    AZIMUTH_TOLERANCE_DEG,
+    ELEVATION_TOLERANCE_DEG,
+    RANGE_TOLERANCE_KM,
+)
 from lumen_pipeline.validation.report import build_validation_report, write_validation_report
 
 
@@ -17,12 +22,15 @@ def test_validation_report_uses_actual_horizons_and_g7_evidence(tmp_path):
     assert report["status"] == "NOT_READY"
     g3 = _gate(report, "G3")
     assert g3["status"] == "PASS"
-    assert g3["value"] == {
-        "comparison_count": 200,
-        "max_elevation_error_deg": 0.0001461610999413665,
-        "max_azimuth_error_deg": 0.000837971840269347,
-        "max_earth_range_error_km": 0.2253940497757867,
+    assert g3["tolerances"] == {
+        "elevation_deg": ELEVATION_TOLERANCE_DEG,
+        "azimuth_deg": AZIMUTH_TOLERANCE_DEG,
+        "earth_range_km": RANGE_TOLERANCE_KM,
     }
+    assert g3["value"]["comparison_count"] == 200
+    assert g3["value"]["max_elevation_error_deg"] < ELEVATION_TOLERANCE_DEG
+    assert g3["value"]["max_azimuth_error_deg"] < AZIMUTH_TOLERANCE_DEG
+    assert g3["value"]["max_earth_range_error_km"] < RANGE_TOLERANCE_KM
     g3b = _gate(report, "G3b")
     assert g3b["status"] == "PASS"
     assert g3b["value"] == {

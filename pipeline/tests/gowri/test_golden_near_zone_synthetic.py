@@ -26,7 +26,8 @@ def test_near_zone_synthetic_fixture_is_deterministic_and_committed(tmp_path):
     build_synthetic_near_zone_golden_set(second)
 
     assert first.read_bytes() == second.read_bytes()
-    assert first.read_bytes() == default_synthetic_output_path().read_bytes()
+    committed = default_synthetic_output_path().read_bytes().replace(b"\r\n", b"\n")
+    assert first.read_bytes() == committed
     assert json.loads(first.read_text(encoding="utf-8")) == payload == synthetic_near_zone_payload()
     assert payload["array_initialization"] == {
         "shape": [4, 3600],
