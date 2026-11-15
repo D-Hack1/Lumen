@@ -59,6 +59,11 @@ def default_g6_report_path() -> Path:
     return Path(__file__).resolve().parents[2] / "reports" / "g6_pad_slope_vs_pgda.json"
 
 
+def default_g5_report_path() -> Path:
+    """Return the checked-in G5 (multi-year average versus PGDA map pixels) artifact."""
+    return Path(__file__).resolve().parents[2] / "reports" / "g5_multiyear_vs_pgda.json"
+
+
 def default_g4_report_path() -> Path:
     """Return the checked-in G4 (TypeScript versus Python golden vectors) artifact."""
     return Path(__file__).resolve().parents[2] / "reports" / "g4_ts_python_parity.json"
@@ -93,14 +98,6 @@ def _gate(identifier: str, description: str, status: str, **fields: Any) -> dict
 
 def _pending_gates() -> list[dict[str, Any]]:
     return [
-        _gate(
-            "G5",
-            "Multi-year averages versus independent PGDA map pixels",
-            "BLOCKED",
-            criterion="within a few percent; differences explained",
-            reason="Independent documented PGDA map-pixel references have not been supplied.",
-            required_artifacts=["pipeline/data/validation/pgda_reference.json"],
-        ),
         _gate(
             "G9",
             "Tier-2 predicted shadows versus LROC image",
@@ -496,6 +493,55 @@ def _g6_gate(path: Path) -> dict[str, Any]:
         return _gate("G6", G6_DESCRIPTION, "BLOCKED", reason=f"Invalid G6 artifact: {error}", artifact_paths=[_relative(path)])
 
 
+G5_DESCRIPTION = "Multi-year averages versus independent PGDA map pixels"
+G5_CRITERION = "within a few percent; differences explained"
+G5_TOLERANCE_POINTS = 5.0
+
+
+def _g5_gate(path: Path) -> dict[str, Any]:
+    """PASS only if every compared site is within the tolerance; a site outside it makes the gate FAIL and is named, with the facts that bear on why."""
+    if not path.exists():
+        return _gate(
+            "G5", G5_DESCRIPTION, "BLOCKED", criterion=G5_CRITERION,
+            reason="Independent documented PGDA map-pixel references have not been supplied; run pipeline/scripts/run_g5.py.",
+            required_artifacts=[_relative(path)],
+        )
+    try:
+        report = json.loads(path.read_text(encoding="utf-8"))
+        rows = report["sites"]
+        diffs = {r["site_id"]: float(r["abs_difference_vs_centre_pct_points"]) for r in rows}
+        finite = len(rows) >= 3 and all(math.isfinite(d) for d in diffs.values())
+        tolerance = float(report["criterion_pct_points"])
+        outside = sorted(site for site, d in diffs.items() if not d <= tolerance)
+        meets = finite and tolerance <= G5_TOLERANCE_POINTS and not outside
+        per_site = {
+            r["site_id"]: {
+                "lumen_pct": round(r["lumen_multi_year_sunlit_pct"], 1), "pgda_centre_pct": round(r["pgda"]["centre_pct"], 1),
+                "pgda_3x3_range_pct": [round(r["pgda"]["min_3x3_pct"], 1), round(r["pgda"]["max_3x3_pct"], 1)],
+                "difference_points": round(r["abs_difference_vs_centre_pct_points"], 1), "lumen_yearly_spread_points": round(r["lumen_yearly_spread_pct_points"], 1),
+                "lumen_by_observer_height_pct": {k: round(v, 1) for k, v in r.get("lumen_by_observer_height_pct", {}).items()},
+            }
+            for r in rows
+        }
+        extra: dict[str, Any] = {}
+        if outside:
+            extra["reason"] = (
+                "Outside the " + f"{tolerance:g}-point tolerance: " + ", ".join(f"{site} ({diffs[site]:.1f} points)" for site in outside)
+                + ". Not explained away: the neighbouring map pixels there span a wide range and the result moves with observer height (see value), "
+                "but no reading of those facts brings the mask within tolerance."
+            )
+        return _gate(
+            "G5", G5_DESCRIPTION, "PASS" if meets else "FAIL", criterion=G5_CRITERION + f" (read as <= {G5_TOLERANCE_POINTS:g} percentage points)",
+            value={"sites_compared": len(rows), "max_difference_points": round(max(diffs.values()), 1) if diffs else None, "per_site": per_site},
+            artifact_paths=[_relative(path)],
+            provenance=f"Recorded {report['recorded_utc']} at commit {report['git_commit'][:10]}. {report['method']}",
+            test_commands=["python pipeline/scripts/run_g5.py"],
+            **extra,
+        )
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+        return _gate("G5", G5_DESCRIPTION, "BLOCKED", reason=f"Invalid G5 artifact: {error}", artifact_paths=[_relative(path)])
+
+
 G4_CRITERION = "elevation < 0.005 deg; events +/-1 min; dt +/-5%; metrics +/-1%"
 G4_DESCRIPTION = "TypeScript versus Python golden vectors"
 G11_DESCRIPTION = "Windows Table, barcode, and CSV integrity"
@@ -590,7 +636,7 @@ def build_validation_report(
     validation_doc_path: str | Path | None = None, g1_report_path: str | Path | None = None,
     g4_report_path: str | Path | None = None, g11_report_path: str | Path | None = None,
     g0_report_path: str | Path | None = None, g8_report_path: str | Path | None = None,
-    g6_report_path: str | Path | None = None,
+    g6_report_path: str | Path | None = None, g5_report_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """Assemble report data from checked-in artifacts without network access."""
     fixture_directory = Path(fixtures_dir) if fixtures_dir is not None else default_fixture_dir()
@@ -599,6 +645,7 @@ def build_validation_report(
     g0_path = Path(g0_report_path) if g0_report_path is not None else default_g0_report_path()
     g8_path = Path(g8_report_path) if g8_report_path is not None else default_g8_report_path()
     g6_path = Path(g6_report_path) if g6_report_path is not None else default_g6_report_path()
+    g5_path = Path(g5_report_path) if g5_report_path is not None else default_g5_report_path()
     g4_path = Path(g4_report_path) if g4_report_path is not None else default_g4_report_path()
     g11_path = Path(g11_report_path) if g11_report_path is not None else default_g11_report_path()
     g2_path = Path(validation_doc_path) if validation_doc_path is not None else default_validation_doc_path()
@@ -610,6 +657,7 @@ def build_validation_report(
         _g7_gate(g7_path),
         _g0_gate(g0_path),
         _g4_gate(g4_path),
+        _g5_gate(g5_path),
         _g6_gate(g6_path),
         _g8_gate(g8_path),
         _g11_gate(g11_path),

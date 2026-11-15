@@ -35,7 +35,7 @@ interface GlossaryEntry {
   learn_more_anchor?: string;
 }
 
-const GLYPH: Record<string, string> = { PASS: '●', PENDING: '○', BLOCKED: '✕' };
+const GLYPH: Record<string, string> = { PASS: '●', PENDING: '○', BLOCKED: '✕', FAIL: '✕' };
 
 const asText = (x: unknown): string => {
   if (x == null) return '';

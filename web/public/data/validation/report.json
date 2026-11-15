@@ -336,14 +336,88 @@
       }
     },
     {
-      "criterion": "within a few percent; differences explained",
+      "artifact_paths": [
+        "pipeline/reports/g5_multiyear_vs_pgda.json"
+      ],
+      "criterion": "within a few percent; differences explained (read as <= 5 percentage points)",
       "description": "Multi-year averages versus independent PGDA map pixels",
       "id": "G5",
-      "reason": "Independent documented PGDA map-pixel references have not been supplied.",
-      "required_artifacts": [
-        "pipeline/data/validation/pgda_reference.json"
+      "provenance": "Recorded 2026-11-15T16:46:03Z at commit 776577ad18. LUMEN: Python reference engine over 2023-01-01..2030-12-29, every UTC day, 2-minute samples, 2 m terrain mask, Sun available at >=50% disk. PGDA: average-illumination raster read at the site (fraction of time illuminated, hourly over an 18.6-year nutation cycle). The spans differ (8 of ~18.6 years) and PGDA's disk treatment is not spelled out, so yearly spread and an any-part-of-disk variant are recorded as the explanation of differences.",
+      "reason": "Outside the 5-point tolerance: shackleton_rim_ridge (38.5 points). Not explained away: the neighbouring map pixels there span a wide range and the result moves with observer height (see value), but no reading of those facts brings the mask within tolerance.",
+      "status": "FAIL",
+      "test_commands": [
+        "python pipeline/scripts/run_g5.py"
       ],
-      "status": "BLOCKED"
+      "value": {
+        "max_difference_points": 38.5,
+        "per_site": {
+          "cy3_shiv_shakti": {
+            "difference_points": 0.5,
+            "lumen_by_observer_height_pct": {
+              "1.0": 47.6,
+              "10.0": 48.2,
+              "2.0": 47.7,
+              "5.0": 47.9
+            },
+            "lumen_pct": 47.8,
+            "lumen_yearly_spread_points": 3.0,
+            "pgda_3x3_range_pct": [
+              47.5,
+              48.5
+            ],
+            "pgda_centre_pct": 48.3
+          },
+          "im2_athena": {
+            "difference_points": 0.6,
+            "lumen_by_observer_height_pct": {
+              "1.0": 44.5,
+              "10.0": 44.7,
+              "2.0": 44.6,
+              "5.0": 44.6
+            },
+            "lumen_pct": 44.4,
+            "lumen_yearly_spread_points": 3.0,
+            "pgda_3x3_range_pct": [
+              42.6,
+              46.7
+            ],
+            "pgda_centre_pct": 45.0
+          },
+          "shackleton_ridge": {
+            "difference_points": 0.0,
+            "lumen_by_observer_height_pct": {
+              "1.0": 0.0,
+              "10.0": 0.0,
+              "2.0": 0.0,
+              "5.0": 0.0
+            },
+            "lumen_pct": 0.0,
+            "lumen_yearly_spread_points": 0.0,
+            "pgda_3x3_range_pct": [
+              0.0,
+              0.0
+            ],
+            "pgda_centre_pct": 0.0
+          },
+          "shackleton_rim_ridge": {
+            "difference_points": 38.5,
+            "lumen_by_observer_height_pct": {
+              "1.0": 33.2,
+              "10.0": 50.2,
+              "2.0": 39.1,
+              "5.0": 50.1
+            },
+            "lumen_pct": 39.2,
+            "lumen_yearly_spread_points": 5.5,
+            "pgda_3x3_range_pct": [
+              46.3,
+              87.1
+            ],
+            "pgda_centre_pct": 77.7
+          }
+        },
+        "sites_compared": 4
+      }
     },
     {
       "artifact_paths": [

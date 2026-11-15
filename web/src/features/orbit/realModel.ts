@@ -128,6 +128,10 @@ function prepare(site: Site, mast: number): Prepared {
 }
 
 /** Whether this site / array height is evaluated on a real terrain mask (otherwise the smooth-sphere estimate). */
+/** Metres per pixel of the terrain behind a site's mask (the polar masks are 5-60 m; masks from the global elevation model are ~237 m); null when it has no mask. */
+export const terrainResolutionM = (site: Site): number | null =>
+  loaded?.masks.get(site.id)?.meta.nearFieldResolutionM ?? null;
+
 export const usesTerrain = (site: Site, mast: number): boolean => (loaded ? prepare(site, mast).terrain : false);
 
 export function realSnapshot(t: number, site: Site, mast: number): Snapshot {

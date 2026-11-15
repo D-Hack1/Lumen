@@ -36,7 +36,7 @@ import { PolarStage, type PolarStats } from './PolarStage';
 import { usePolarTerrain } from './polarAssets';
 import { polarPinAt, polarUntil } from './polarPin';
 import { keyRows, layerDescription, lightDirection, LAYER_LABELS } from './polarCopy';
-import { realSiteTag, showsSampleValues, useEngineTagVersion, usesTerrain } from './realModel';
+import { realSiteTag, showsSampleValues, terrainResolutionM, useEngineTagVersion, usesTerrain } from './realModel';
 import { phaseAt, polarSunAzimuthDeg } from './ephemeris';
 import type { PolarLayer } from './polarTerrain';
 import './orbit.css';
@@ -518,7 +518,9 @@ export function OrbitPage({ onStandHere, onAddToCompare }: OrbitPageProps) {
                   ? 'Estimated from a simplified terrain model. Sample values.'
                   : 'Sample values for design preview.'
                 : usesTerrain(site, mast)
-                  ? 'Real ephemeris and published terrain mask.'
+                  ? (terrainResolutionM(site) ?? 0) >= 100
+                    ? 'Real ephemeris and a coarse terrain mask from NASA’s global elevation model (about 237 m per pixel), so sunrise and sunset are approximate.'
+                    : 'Real ephemeris and published terrain mask.'
                   : pm
                     ? 'Real ephemeris. No terrain mask here, so lit or shadow, the horizon and Earth’s visibility come from NASA’s 80 m polar map (coarse, about 0.8 km per pixel).'
                     : 'Real ephemeris. No terrain mask for this site or array height, so results use a smooth-sphere estimate (terrain unavailable).'}

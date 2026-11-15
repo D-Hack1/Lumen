@@ -83,6 +83,7 @@
   color: var(--amberT);
   white-space: nowrap;
 }
+.lm-meth__table td[data-status='FAIL'],
 .lm-meth__table td[data-status='BLOCKED'] {
   color: var(--badT);
   white-space: nowrap;

@@ -72,11 +72,14 @@ def test_validation_report_truthfully_aggregates_pending_blocked_and_open_eviden
     assert report["gate_count"] == 13
     assert {gate["status"] for gate in report["gates"]} <= {
         "PASS",
+        "FAIL",
         "PENDING",
         "BLOCKED",
         "SOURCE_UNVERIFIED",
     }
-    assert _gate(report, "G5")["status"] == "BLOCKED"
+    g5 = _gate(report, "G5")
+    assert g5["status"] == "FAIL"  # measured: the new ridge site is far from the PGDA map, and the gate says so
+    assert "shackleton_rim_ridge" in g5["reason"]
     assert _gate(report, "G10")["status"] == "BLOCKED"
     assert _gate(report, "G0")["status"] == "PASS"
     assert _gate(report, "G6")["status"] == "PASS"
@@ -98,12 +101,14 @@ def test_validation_report_marks_missing_evidence_blocked_or_pending(tmp_path):
         g1_report_path=missing / "g1.json",
         g0_report_path=missing / "g0.json",
         g6_report_path=missing / "g6.json",
+        g5_report_path=missing / "g5.json",
         g4_report_path=missing / "g4.json",
         g11_report_path=missing / "g11.json",
     )
 
     assert _gate(report, "G0")["status"] == "PENDING"
     assert _gate(report, "G6")["status"] == "PENDING"
+    assert _gate(report, "G5")["status"] == "BLOCKED"
     assert _gate(report, "G4")["status"] == "PENDING"
     assert _gate(report, "G11")["status"] == "PENDING"
     assert _gate(report, "G1")["status"] == "BLOCKED"
@@ -174,3 +179,38 @@ def test_g6_is_not_a_pass_when_any_site_differs_by_more_than_the_tolerance(tmp_p
     broken = _tamper(src, tmp_path / "e.json", lambda d: d.pop("sites"))
     for path, expected in ((far, "FAIL"), (loose, "FAIL"), (too_few, "FAIL"), (nan, "FAIL"), (broken, "BLOCKED")):
         assert _gate(build_validation_report(g6_report_path=path), "G6")["status"] == expected
+
+
+def test_g5_passes_only_when_every_site_is_within_tolerance_and_names_the_sites_that_are_not(tmp_path):
+    from lumen_pipeline.validation.report import default_g5_report_path
+
+    src = default_g5_report_path()
+
+    def all_close(d):
+        for row in d["sites"]:
+            row["abs_difference_vs_centre_pct_points"] = 1.0
+
+    close = _tamper(src, tmp_path / "a.json", all_close)
+    assert _gate(build_validation_report(g5_report_path=close), "G5")["status"] == "PASS"
+
+    def one_far(d):
+        all_close(d)
+        d["sites"][0]["abs_difference_vs_centre_pct_points"] = 12.0
+
+    far = _tamper(src, tmp_path / "b.json", one_far)
+    gate = _gate(build_validation_report(g5_report_path=far), "G5")
+    assert gate["status"] == "FAIL"
+    assert d_site(far, 0) in gate["reason"]
+
+    loose = _tamper(src, tmp_path / "c.json", lambda d: (all_close(d), d.update(criterion_pct_points=40.0)))
+    nan = _tamper(src, tmp_path / "d.json", lambda d: d["sites"][0].update(abs_difference_vs_centre_pct_points=float("nan")))
+    too_few = _tamper(src, tmp_path / "e.json", lambda d: d.update(sites=d["sites"][:2]))
+    broken = _tamper(src, tmp_path / "f.json", lambda d: d.pop("sites"))
+    for path, expected in ((loose, "FAIL"), (nan, "FAIL"), (too_few, "FAIL"), (broken, "BLOCKED")):
+        assert _gate(build_validation_report(g5_report_path=path), "G5")["status"] == expected
+
+
+def d_site(path, index):
+    import json
+
+    return json.loads(path.read_text(encoding="utf-8"))["sites"][index]["site_id"]

@@ -33,7 +33,7 @@ test.describe('Methodology', () => {
     expect(await rows.count()).toBeGreaterThanOrEqual(12);
     await expect(page.locator('#m-validation')).toContainText(/\d+ of \d+ gates pass/);
     const statuses = await page.locator('#m-validation tbody td[data-status]').allInnerTexts();
-    for (const s of statuses) expect(s).toMatch(/PASS|PENDING|BLOCKED/);
+    for (const s of statuses) expect(s).toMatch(/PASS|PENDING|BLOCKED|FAIL/);
   });
 
   test('the glossary lists the terms and the page has no horizontal scroll at 1280 px', async ({ page }) => {

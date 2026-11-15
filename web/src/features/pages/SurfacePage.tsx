@@ -143,7 +143,9 @@ export function SurfacePage() {
         <div className="lm-overlay lm-overlay--tl lm-overlay--soft">
           {v
             ? v.source === 'terrain'
-              ? 'Real engine · terrain mask'
+              ? eng?.meta?.tierBadge.startsWith('Coarse')
+                ? 'Real engine · coarse terrain mask (NASA global elevation model)'
+                : 'Real engine · terrain mask'
               : 'Real engine · smooth Moon, no terrain data for this site / array height'
             : 'Design preview · sample values'}
         </div>
