@@ -98,3 +98,5 @@ CLAUDE.md
 web/e2e/screens/
 skills-lock.json
 docs/ai_usage
+# Downloaded DEM windows cached by the terrain pipeline (large, re-creatable)
+pipeline/cache/
