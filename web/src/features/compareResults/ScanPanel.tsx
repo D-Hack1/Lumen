@@ -10,6 +10,7 @@ import { useCatalog } from '../../engine/hooks';
 import type { ScanCandidate, ScanResult } from '../../engine/types';
 import { WORST_CASE_SCAN } from '../../mocks/forced';
 import { useCopyFn } from '../../state/copy';
+import { reportScanStage, type ScanStage } from '../../state/scanStatus';
 import { getScenario, useScenario } from '../../state/scenarioStore';
 import { Badge, type BadgeTone } from '../../ui/Badge';
 import { Segmented } from '../../ui/Segmented';
@@ -44,6 +45,12 @@ export function ScanPanel() {
 
   const rows = worst ? WORST_CASE_SCAN : (res?.candidates ?? []);
   const stage = worst ? 2 : (res?.stage ?? 0);
+  // Report the stage (and done) at stage-boundary rate for the verdict popover (state/scanStatus). Reset when the panel goes away.
+  const done = worst || res?.done === true;
+  useEffect(() => {
+    reportScanStage(stage as ScanStage, done);
+  }, [stage, done]);
+  useEffect(() => () => reportScanStage(0), []);
   const tbody = useRef<HTMLTableSectionElement>(null);
   useFlipReorder(tbody, rows.map((c) => `${c.siteId}-${c.landingUtc}`), stage as 0 | 1 | 2);
   const nameOf = (id: string) => sites.find((s) => s.id === id)?.name ?? id;

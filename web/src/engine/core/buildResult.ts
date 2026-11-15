@@ -140,6 +140,7 @@ export function buildScenarioResult(eph: Ephemeris, req: ScenarioRequest, dsn: D
     },
     verdict: verdict.verdict,
     verdictReasons: verdict.reasons,
+    verdictRequirements: verdict.requirements,
     viability: { index: verdict.viabilityIndex, components: verdict.components },
     answer, events, windows: ev.refined.windows.map(toWindowRecord), series, metrics,
   };
