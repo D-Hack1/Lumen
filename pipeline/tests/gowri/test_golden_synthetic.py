@@ -1,3 +1,4 @@
+import hashlib
 import json
 import math
 
@@ -30,12 +31,46 @@ from lumen_pipeline.reference.windows import (
 )
 from lumen_pipeline.validation.golden_synthetic import (
     build_synthetic_golden_set,
+    default_synthetic_output_path,
     synthetic_golden_payload,
 )
+
+EXPECTED_CASE_IDS = (
+    "synthetic_flat_visibility_boundaries",
+    "synthetic_terrain_mask_boundary",
+    "synthetic_disk_limb_conventions",
+    "synthetic_disk_span_extrema",
+    "synthetic_nan_wraparound_extrema",
+    "synthetic_event_at_window_start",
+    "synthetic_refined_visibility_window",
+    "synthetic_total_clearance_rate",
+    "synthetic_three_pass_bounds",
+    "synthetic_exact_event_uncertainty",
+    "synthetic_disk_event_thresholds",
+    "synthetic_grazing_rate",
+    "synthetic_near_zone_slope_edges",
+    "synthetic_guarded_span_spike",
+    "synthetic_tier_c_smooth_moon",
+    "synthetic_min_sun_elevation_ops",
+    "synthetic_power_eclipse_soc",
+    "synthetic_dsn_link_modes",
+    "synthetic_dsn_out_of_coverage",
+)
+NEW_CASE_IDS = {
+    "synthetic_disk_span_extrema",
+    "synthetic_nan_wraparound_extrema",
+    "synthetic_disk_event_thresholds",
+}
+EXISTING_CASE_IDS = tuple(case_id for case_id in EXPECTED_CASE_IDS if case_id not in NEW_CASE_IDS)
+EXISTING_CASES_SHA256 = "54444f429f91259813f7bcc128a88cf287b388eceb1d1d6ad7fd6c5b8ee22154"
 
 
 def _case(payload, case_id):
     return next(case for case in payload["cases"] if case["id"] == case_id)
+
+
+def _reject_json_constant(value):
+    raise ValueError(f"non-standard JSON constant: {value}")
 
 
 def _pair_nearest(event, candidates):
@@ -50,12 +85,31 @@ def test_synthetic_golden_set_schema_and_determinism(tmp_path):
     build_synthetic_golden_set(second)
 
     assert first.read_bytes() == second.read_bytes()
-    assert json.loads(first.read_text(encoding="utf-8")) == payload
+    assert json.loads(first.read_bytes(), parse_constant=_reject_json_constant) == payload
+    committed = default_synthetic_output_path()
+    assert first.read_bytes() == committed.read_bytes()
+    assert json.loads(committed.read_bytes(), parse_constant=_reject_json_constant) == payload
     assert payload["set"] == 2
     assert payload["provenance"]["synthetic"] is True
     assert payload["provenance"]["terrain_artifacts"] == "none"
+    assert tuple(case["id"] for case in payload["cases"]) == EXPECTED_CASE_IDS
+    assert json.dumps(payload, allow_nan=False)
     assert all(set(payload["case_schema"]["required"]) <= set(case) for case in payload["cases"])
     assert len({case["id"] for case in payload["cases"]}) == len(payload["cases"])
+
+
+def test_existing_golden_set2_cases_have_no_drift_and_all_set2_fixtures_are_strict():
+    payload = synthetic_golden_payload()
+    existing_cases = [case for case in payload["cases"] if case["id"] in EXISTING_CASE_IDS]
+    assert tuple(case["id"] for case in existing_cases) == EXISTING_CASE_IDS
+    digest = hashlib.sha256(
+        json.dumps(existing_cases, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+    ).hexdigest()
+    assert digest == EXISTING_CASES_SHA256
+
+    fixture_dir = default_synthetic_output_path().parent
+    for path in fixture_dir.glob("golden_set2*.json"):
+        json.loads(path.read_bytes(), parse_constant=_reject_json_constant)
 
 
 def test_synthetic_golden_vectors_match_reference_primitives():

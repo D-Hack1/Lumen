@@ -1,3 +1,4 @@
+import hashlib
 import json
 import math
 
@@ -16,11 +17,24 @@ from lumen_pipeline.validation.golden_near_zone_synthetic import (
 
 
 def _fixture() -> dict[str, object]:
-    return json.loads(default_synthetic_output_path().read_text(encoding="utf-8"))
+    return _strict_json_loads(default_synthetic_output_path().read_bytes())
 
 
-def _json_normalized(payload):
-    return json.loads(json.dumps(payload), parse_constant=lambda _: None)
+def _strict_json_loads(payload):
+    def reject_constant(value):
+        raise ValueError(f"non-standard JSON constant: {value}")
+
+    return json.loads(payload, parse_constant=reject_constant)
+
+
+def _finite_projection(payload):
+    return [
+        [case["id"], item["azimuth_bin"], item["observer_height_m"], key, item[key]]
+        for case in payload["cases"]
+        for item in case["selected_bins"]
+        for key in ("expected_elevation_deg", "expected_distance_km")
+        if item[key] is not None
+    ]
 
 
 def test_near_zone_synthetic_fixture_is_deterministic_and_committed(tmp_path):
@@ -47,27 +61,24 @@ def test_near_zone_synthetic_fixture_is_deterministic_and_committed(tmp_path):
             synthetic_near_zone_payload(),
             sort_keys=True,
             separators=(",", ":"),
+            allow_nan=False,
         )
         + "\n"
     ).encode("utf-8")
 
     assert generated_bytes == expected_bytes
 
-    # Compare decoded payloads safely, treating NaN as null.
-    generated = json.loads(first.read_text(encoding="utf-8"))
-
-    assert (
-        _json_normalized(generated)
-        == _json_normalized(payload)
-        == _json_normalized(synthetic_near_zone_payload())
-    )
+    generated = _strict_json_loads(first.read_bytes())
+    committed = _strict_json_loads(committed_bytes)
+    assert generated == committed == payload == synthetic_near_zone_payload()
+    assert json.dumps(payload, allow_nan=False)
 
     assert payload["array_initialization"] == {
         "shape": [4, 3600],
         "order": "height_major",
         "unselected_elevation_deg": "NaN",
         "unselected_distance_km": "NaN",
-        "json_null": "NaN",
+        "json_null": "null",
         "selected_bins": "override defaults with distant inputs",
     }
 
@@ -75,6 +86,40 @@ def test_near_zone_synthetic_fixture_is_deterministic_and_committed(tmp_path):
         "(azimuth_bin + 0.5) * 0.1"
     )
     assert payload["observer_heights_m"] == list(HEIGHTS_M)
+
+
+def test_near_zone_synthetic_fixture_preserves_null_positions_and_finite_values():
+    payload = _fixture()
+    expected_nulls = {
+        (case_id, bin_index, height_m, key)
+        for case_id, bin_index, heights in (
+            ("flat_retention_nan_and_negative_replacement", 1800, HEIGHTS_M),
+            ("twenty_degree_cardinal_and_wraparound", 900, (5.0,)),
+            ("twenty_degree_cardinal_and_wraparound", 2700, (5.0,)),
+        )
+        for height_m in heights
+        for key in ("expected_elevation_deg", "expected_distance_km")
+    }
+    actual_nulls = {
+        (case["id"], item["azimuth_bin"], item["observer_height_m"], key)
+        for case in payload["cases"]
+        for item in case["selected_bins"]
+        for key in ("expected_elevation_deg", "expected_distance_km")
+        if item[key] is None
+    }
+    finite_values = _finite_projection(payload)
+    digest = hashlib.sha256(
+        json.dumps(
+            finite_values,
+            sort_keys=True,
+            separators=(",", ":"),
+            allow_nan=False,
+        ).encode()
+    ).hexdigest()
+
+    assert actual_nulls == expected_nulls
+    assert len(finite_values) == 52
+    assert digest == "1a52507de71a594ac1747138966858ad169936ffc9df1b3d7ac87a61ca0d0458"
 
 
 def test_near_zone_synthetic_fixture_replays_production_helper():
@@ -180,7 +225,7 @@ def test_near_zone_synthetic_fixture_matches_independent_plane_analytic():
             )
 
             if expected_elevation is None:
-                assert math.isnan(item["expected_elevation_deg"])
+                assert item["expected_elevation_deg"] is None
             else:
                 assert item["expected_elevation_deg"] == pytest.approx(
                     expected_elevation,
@@ -188,7 +233,7 @@ def test_near_zone_synthetic_fixture_matches_independent_plane_analytic():
                 )
 
             if expected_distance is None:
-                assert math.isnan(item["expected_distance_km"])
+                assert item["expected_distance_km"] is None
             else:
                 assert item["expected_distance_km"] == pytest.approx(
                     expected_distance,

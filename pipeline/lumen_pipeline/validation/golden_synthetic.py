@@ -155,5 +155,8 @@ def build_synthetic_golden_set(output_path: str | Path | None = None) -> dict[st
     output = Path(output_path) if output_path is not None else default_synthetic_output_path()
     payload = synthetic_golden_payload()
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    output.write_text(
+        json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n",
+        encoding="utf-8",
+    )
     return payload
