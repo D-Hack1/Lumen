@@ -1,0 +1,431 @@
+{
+ "version": "1",
+ "generated": "by web/scripts/build-knowledge.mjs",
+ "count": 38,
+ "entries": [
+  {
+   "id": "term:sun-elevation",
+   "kind": "term",
+   "title": "Sun elevation",
+   "summary": "The angle of the Sun's centre above the local horizontal plane.",
+   "body": "The angle of the Sun's centre above the local horizontal plane. It shows how high the Sun is above the local horizon. Formula: elevation = angle(Sun direction, local horizontal) Uncertainty: Terrain timing uncertainty is reported separately through clearance and event bounds.",
+   "source": "PLAN_FINAL.md §8.10",
+   "anchor": "sun-elevation",
+   "metrics": [
+    "sunElevationDeg"
+   ]
+  },
+  {
+   "id": "term:sun-clearance-disk",
+   "kind": "term",
+   "title": "Sun clearance / disk fraction",
+   "summary": "Clearance is the Sun-centre elevation relative to the effective horizon; disk fraction is the visible fraction of the solar disk.",
+   "body": "Clearance is the Sun-centre elevation relative to the effective horizon; disk fraction is the visible fraction of the solar disk. It shows how far above a ridge the Sun is and how much of its disk is visible. Formula: C = el - m_eff(az); disk fraction from chord quadrature Uncertainty: Mask uncertainty affects both clearance and the timing of disk-fraction events.",
+   "source": "PLAN_FINAL_R3_DELTA.md D-7, D-8",
+   "anchor": "sun-clearance",
+   "metrics": [
+    "sunClearanceDeg",
+    "sunDiskPct"
+   ]
+  },
+  {
+   "id": "term:libration",
+   "kind": "term",
+   "title": "Libration",
+   "summary": "The apparent oscillation of the Moon's orientation that moves the sub-Earth point in lunar latitude and longitude.",
+   "body": "The apparent oscillation of the Moon's orientation that moves the sub-Earth point in lunar latitude and longitude. It changes Earth direction at a site and can produce Earth rises and sets near the pole. Formula: sub-Earth point oscillation, approximately +/-6.7 deg latitude and +/-7.9 deg longitude Uncertainty: Computed from the selected lunar ephemeris and frame; it is not a terrain uncertainty.",
+   "source": "PLAN_FINAL.md §8.10",
+   "anchor": "libration",
+   "metrics": [
+    "earthElevationDeg",
+    "dteMarginDeg"
+   ]
+  },
+  {
+   "id": "term:vertical-array-cosine-loss",
+   "kind": "term",
+   "title": "Vertical Array Cosine Loss",
+   "summary": "The reduction in a panel's received solar flux when its normal is not aligned with the Sun direction.",
+   "body": "The reduction in a panel's received solar flux when its normal is not aligned with the Sun direction. A vertical array produces less power when it faces away from the Sun. Formula: cos(i) = n_panel dot s_hat; upright panel = cos(el) cos(az - heading); loss = 1 - cos(i) Uncertainty: This generic model uses configured panel geometry and efficiency; it is not vehicle-specific performance data.",
+   "source": "PLAN_FINAL.md §5.6, §8.10",
+   "anchor": "vertical-array-cosine-loss",
+   "metrics": [
+    "powerW",
+    "energyPerDayWh"
+   ]
+  },
+  {
+   "id": "term:dte-margin",
+   "kind": "term",
+   "title": "DTE Margin",
+   "summary": "The Earth-centre elevation above the effective horizon at Earth's azimuth.",
+   "body": "The Earth-centre elevation above the effective horizon at Earth's azimuth. It measures how much terrain-clear sky is available in the Earth direction. Formula: DTE margin = Earth elevation - m_eff(Earth azimuth) Uncertainty: Terrain-mask uncertainty affects the horizon term and Earth-event timing.",
+   "source": "PLAN_FINAL.md §8.10",
+   "anchor": "dte-margin",
+   "metrics": [
+    "dteMarginDeg",
+    "earthElevationDeg"
+   ]
+  },
+  {
+   "id": "term:dsn-visibility",
+   "kind": "term",
+   "title": "DSN visibility",
+   "summary": "Geometric visibility of the Moon from a DSN complex when the Moon elevation meets that complex's configured mask.",
+   "body": "Geometric visibility of the Moon from a DSN complex when the Moon elevation meets that complex's configured mask. A ground station must be geometrically able to see the Moon to receive a link. Formula: Moon elevation at Goldstone, Canberra, or Madrid >= configured mask Uncertainty: This is geometric visibility only; it is not a link budget, data-rate, or signal-margin calculation.",
+   "source": "PLAN_FINAL.md §5.5, §8.10; contracts/data_dsn.md",
+   "anchor": "dsn-visibility",
+   "metrics": [
+    "linkPct"
+   ]
+  },
+  {
+   "id": "term:range-light-time",
+   "kind": "term",
+   "title": "Range and light time",
+   "summary": "Range is the topocentric Earth-to-site distance; one-way light time is that range divided by the speed of light.",
+   "body": "Range is the topocentric Earth-to-site distance; one-way light time is that range divided by the speed of light. It gives the distance and signal travel time between the site and Earth. Formula: range = norm(Earth - site); light time = range / c Uncertainty: The result follows the selected apparent ephemeris geometry; it does not represent communications-system delay.",
+   "source": "PLAN_FINAL.md §5.5, §8.10",
+   "anchor": "range-light-time",
+   "metrics": []
+  },
+  {
+   "id": "term:fidelity-tier",
+   "kind": "term",
+   "title": "Fidelity Tier A/B/C",
+   "summary": "A label for the terrain-data fidelity available at a site: curated terrain, regional snapped terrain, or smooth-Moon geometry without terrain.",
+   "body": "A label for the terrain-data fidelity available at a site: curated terrain, regional snapped terrain, or smooth-Moon geometry without terrain. It indicates how strongly terrain timing and horizon conclusions can be relied upon. Formula: Tier A/B/C as defined by the terrain coverage and evaluator path Uncertainty: Tier C has no terrain-mask uncertainty; its times are labelled as smooth-Moon bounds rather than terrain predictions.",
+   "source": "PLAN_FINAL.md §4.2, §8.10",
+   "anchor": "fidelity-tier",
+   "metrics": []
+  },
+  {
+   "id": "term:uncertainty",
+   "kind": "term",
+   "title": "Uncertainty (+/-)",
+   "summary": "A timing half-width derived from horizon-mask uncertainty, or from re-solving the event on shifted masks when available.",
+   "body": "A timing half-width derived from horizon-mask uncertainty, or from re-solving the event on shifted masks when available. It shows how far an event time may move when the local horizon is uncertain. Formula: fast: delta t = sigma_m(az_event) / abs(dC/dt); exact: half-spread of mask - sigma, nominal, and mask + sigma event times Uncertainty: Mask errors are treated as fully correlated in azimuth for shifted-mask passes; no sigma value is implied by this definition.",
+   "source": "PLAN_FINAL_R3_DELTA.md D-8",
+   "anchor": "uncertainty",
+   "metrics": [
+    "sunlitPct",
+    "linkPct",
+    "longestNightH"
+   ]
+  },
+  {
+   "id": "term:grazing-event",
+   "kind": "term",
+   "title": "Grazing event",
+   "summary": "An event where the body skims the effective horizon and its timing is poorly constrained.",
+   "body": "An event where the body skims the effective horizon and its timing is poorly constrained. A single timestamp is less useful than the reported timing range. Formula: grazing when abs(dC/dt) < 0.005 deg/h, delta t > 12 h, or an event disappears in a shifted-mask pass Uncertainty: The grazing status is itself an uncertainty warning, not an additional sigma value.",
+   "source": "PLAN_FINAL_R3_DELTA.md D-8",
+   "anchor": "grazing-event",
+   "metrics": []
+  },
+  {
+   "id": "term:shadow-exit",
+   "kind": "term",
+   "title": "Shadow exit",
+   "summary": "The next transition to a visible Sun disk after the Sun has been blocked by the effective horizon.",
+   "body": "The next transition to a visible Sun disk after the Sun has been blocked by the effective horizon. It marks when direct sunlight becomes available again under the selected definition. Formula: next time Sun disk fraction >= configured Sun threshold after a blocked state Uncertainty: Its time carries terrain-mask uncertainty when terrain sigma is available.",
+   "source": "PLAN_FINAL.md §8.10; contracts/frontend_state_api.md",
+   "anchor": "shadow-exit",
+   "metrics": [
+    "sunlitPct"
+   ]
+  },
+  {
+   "id": "term:longest-night",
+   "kind": "term",
+   "title": "Longest night",
+   "summary": "The longest continuous interval in which generated power is below the mission-profile minimum.",
+   "body": "The longest continuous interval in which generated power is below the mission-profile minimum. It is the longest interval the battery must support under the selected profile. Formula: maximum duration of a run with power below the profile minimum Uncertainty: Terrain and power-model inputs can change the interval; no battery endurance value is implied.",
+   "source": "PLAN_FINAL.md §8.10",
+   "anchor": "longest-night",
+   "metrics": [
+    "longestNightH",
+    "energyPerDayWh"
+   ]
+  },
+  {
+   "id": "term:ops-hours",
+   "kind": "term",
+   "title": "Ops hours",
+   "summary": "Time for which generated power is positive and the selected link condition is available.",
+   "body": "Time for which generated power is positive and the selected link condition is available. It identifies periods when power and communications are available together. Formula: power-positive AND link Uncertainty: It inherits the uncertainty and availability assumptions of the power and link inputs.",
+   "source": "PLAN_FINAL.md §8.10",
+   "anchor": "ops-hours",
+   "metrics": [
+    "opsHours",
+    "linkPct",
+    "energyPerDayWh"
+   ]
+  },
+  {
+   "id": "term:earth-referenced-azimuth",
+   "kind": "term",
+   "title": "Earth-referenced azimuth",
+   "summary": "At polar sites, azimuth measured in the site tangent frame from the projected +X_MOON_ME reference axis rather than from singular geographic north.",
+   "body": "At polar sites, azimuth measured in the site tangent frame from the projected +X_MOON_ME reference axis rather than from singular geographic north. It provides a stable direction convention where geographic north is not unique. Formula: azimuth = atan2(dot(v, e), dot(v, n_ref)); n_ref = normalize(a - (a dot u)u), a = +X_MOON_ME at abs(latitude) >= 60 deg Uncertainty: This is a coordinate convention, not an angular-accuracy claim.",
+   "source": "PLAN_FINAL.md §5.1, §8.10; contracts/data_masks.md",
+   "anchor": "earth-referenced-azimuth",
+   "metrics": []
+  },
+  {
+   "id": "term:slope-aspect-uphill",
+   "kind": "term",
+   "title": "Slope, aspect, and uphill azimuth",
+   "summary": "Slope is the angle between the fitted ground normal and local up; uphill azimuth is the direction of steepest ascent.",
+   "body": "Slope is the angle between the fitted ground normal and local up; uphill azimuth is the direction of steepest ascent. They describe how steep the local pad is and how its orientation can affect panels and nearby occlusion. Formula: slope = angle(g, u); uphill_az = (downhill_aspect + 180 deg) mod 360 deg Uncertainty: Values depend on the fitted DEM plane and its stated fit baseline.",
+   "source": "PLAN_FINAL_R3_DELTA.md D-9; contracts/data_tierb.md",
+   "anchor": "slope-aspect-uphill",
+   "metrics": [
+    "padSlopeDeg"
+   ]
+  },
+  {
+   "id": "term:slope-plane-occluder",
+   "kind": "term",
+   "title": "Slope-plane occluder",
+   "summary": "The fitted local plane is used only inside the DEM raycast start distance to model nearby rising ground.",
+   "body": "The fitted local plane is used only inside the DEM raycast start distance to model nearby rising ground. Nearby uphill ground can hide a low Sun without changing negative or downhill DEM horizons. Formula: N(az) = atan(tan(theta) cos(az - uphill_az) - h / d_min); N_plus = max(0, N); m_eff = max(m_dem, N_plus) only when N_plus > 0 Uncertainty: It uses the fitted pad plane and d_min metadata; it is not affected by off-nominal lander tilt.",
+   "source": "PLAN_FINAL_R3_DELTA.md D-9; contracts/data_masks.md",
+   "anchor": "slope-plane-occluder",
+   "metrics": [
+    "sunClearanceDeg",
+    "dteMarginDeg"
+   ]
+  },
+  {
+   "id": "term:mast-height",
+   "kind": "term",
+   "title": "Mast height",
+   "summary": "The observer or panel height above the local ground reference used when evaluating the horizon.",
+   "body": "The observer or panel height above the local ground reference used when evaluating the horizon. Raising the observer can expose more low-elevation sky. Formula: spherical-horizon dip is approximately sqrt(2h / R) Uncertainty: The result remains limited by terrain-mask resolution and local terrain modelling.",
+   "source": "PLAN_FINAL.md §8.10",
+   "anchor": "mast-height",
+   "metrics": [
+    "sunClearanceDeg",
+    "dteMarginDeg"
+   ]
+  },
+  {
+   "id": "term:distance-to-psr",
+   "kind": "term",
+   "title": "Distance to PSR",
+   "summary": "Ground distance to the nearest qualifying permanently shadowed region, a cold trap that may host ice.",
+   "body": "Ground distance to the nearest qualifying permanently shadowed region, a cold trap that may host ice. It provides geographic context between a site and nearby permanent shadow. Formula: distance to nearest qualifying PSR boundary Uncertainty: The value depends on whether the PSR source is published or derived and on the qualifying-region definition.",
+   "source": "PLAN_FINAL_R3_DELTA.md D-5; contracts/data_terrain_misc.md",
+   "anchor": "distance-to-psr",
+   "metrics": [
+    "psrDistanceKm"
+   ]
+  },
+  {
+   "id": "term:earth-twin",
+   "kind": "term",
+   "title": "Earth Twin",
+   "summary": "An educational terrestrial solar-path comparison for an Earth location at the same latitude as the lunar site.",
+   "body": "An educational terrestrial solar-path comparison for an Earth location at the same latitude as the lunar site. It contrasts lunar illumination with an Earth day at the same latitude. Formula: terrestrial solar position at matching latitude over one local solar day Uncertainty: It is labelled as an educational approximation and is not lunar ephemeris geometry.",
+   "source": "PLAN_FINAL.md §5.9, §8.10",
+   "anchor": "earth-twin",
+   "metrics": []
+  },
+  {
+   "id": "term:viability-index-verdict",
+   "kind": "term",
+   "title": "Viability Index and verdict",
+   "summary": "A profile-based summary that combines selected criteria and reports GO, MARGINAL, or NO-GO conservatively.",
+   "body": "A profile-based summary that combines selected criteria and reports GO, MARGINAL, or NO-GO conservatively. It summarizes whether the selected scenario meets the stated mission profile. Formula: Viability Index = weighted profile components; verdict uses conservative bounds for hard requirements Uncertainty: A GO requires conservative bounds; nominal-only results are provisional or marginal as specified by the evaluator.",
+   "source": "PLAN_FINAL.md §5.7, §8.10",
+   "anchor": "viability-index-verdict",
+   "metrics": [
+    "sunlitPct",
+    "linkPct",
+    "longestNightH",
+    "opsHours"
+   ]
+  },
+  {
+   "id": "term:moon-me",
+   "kind": "term",
+   "title": "MOON_ME",
+   "summary": "The DE421-consistent mean-Earth lunar body-fixed frame used for site coordinates and terrain products.",
+   "body": "The DE421-consistent mean-Earth lunar body-fixed frame used for site coordinates and terrain products. It keeps site, terrain, and ephemeris geometry in one stated lunar frame. Formula: body-fixed lunar reference frame Uncertainty: Frame selection is a provenance requirement, not a terrain-sigma value.",
+   "source": "PLAN_FINAL_R3_DELTA.md D-3; contracts/README.md",
+   "anchor": "moon-me",
+   "metrics": []
+  },
+  {
+   "id": "term:true-north-azimuth",
+   "kind": "term",
+   "title": "True-north azimuth",
+   "summary": "Azimuth referenced to geographic north where that direction is defined away from the lunar poles.",
+   "body": "Azimuth referenced to geographic north where that direction is defined away from the lunar poles. It supports conventional directional interpretation away from the polar singularity. Formula: conversion from the site tangent-frame azimuth to true north where defined Uncertainty: True north is not used as the polar reference convention.",
+   "source": "PLAN_FINAL.md §5.1; contracts/data_glossary.md",
+   "anchor": "true-north-azimuth",
+   "metrics": []
+  },
+  {
+   "id": "term:east-positive-longitude",
+   "kind": "term",
+   "title": "East-positive longitude",
+   "summary": "Lunar longitude increases eastward in the stated MOON_ME coordinate convention.",
+   "body": "Lunar longitude increases eastward in the stated MOON_ME coordinate convention. It fixes the sign convention for site coordinates and map interpretation. Formula: longitude measured positive east Uncertainty: This is a coordinate convention, not a positional-accuracy claim.",
+   "source": "contracts/README.md; contracts/data_glossary.md",
+   "anchor": "east-positive-longitude",
+   "metrics": []
+  },
+  {
+   "id": "validation:g2-hourly-ephemeris-hermite-validation",
+   "kind": "validation",
+   "title": "G2 - Hourly ephemeris Hermite validation",
+   "summary": "- Epochs: 10000 (deterministic seed 421) - Sun maximum direction residual: 0.000006502 deg - Earth maximum direction residual: 0.000002091 deg - Gate: PASS (< 0.001 deg; measured 0.000006502 deg)",
+   "body": "- Epochs: 10000 (deterministic seed 421) - Sun maximum direction residual: 0.000006502 deg - Earth maximum direction residual: 0.000002091 deg - Gate: PASS (< 0.001 deg; measured 0.000006502 deg)",
+   "source": "docs/validation.md",
+   "anchor": "g2-hourly-ephemeris-hermite-validation",
+   "metrics": []
+  },
+  {
+   "id": "validation:g7-chandrayaan-3-touchdown-sun-elevation",
+   "kind": "validation",
+   "title": "G7 - Chandrayaan-3 touchdown Sun elevation",
+   "summary": "- Calculation input: 2023-08-23T12:33:00Z (minute precision), 69.373 degrees S, 32.319 degrees E, 0 m on the spherical lunar surface. - Calculation geometry: LT+S apparent Moon-centred Sun vector minus the site vector, evaluated in MOON_ME_",
+   "body": "- Calculation input: 2023-08-23T12:33:00Z (minute precision), 69.373 degrees S, 32.319 degrees E, 0 m on the spherical lunar surface. - Calculation geometry: LT+S apparent Moon-centred Sun vector minus the site vector, evaluated in MOON_ME_DE421; this is a Sun-centre elevation above the local spherical horizontal, with no terrain horizon applied. - Calculated Sun-centre elevation: 8.612140050356778 degrees. - Planned numerical comparison: 8.75 +/- 0.25 degrees; absolute difference: 0.13785994964322157 degrees. Numerical result: PASS. - Source provenance result: SOURCE UNVERIFIED. The R3 plan records the 8.75-degree comparison value but does not cite a primary source. Review of the ISRO mission and mission-detail pages did not locate a statement of 8.75 degrees, +/-0.25 degrees, or a Sun-centre/limb convention. G7 is not a complete independently sourced mission-value validation until that document is identified.",
+   "source": "docs/validation.md",
+   "anchor": "g7-chandrayaan-3-touchdown-sun-elevation",
+   "metrics": []
+  },
+  {
+   "id": "validation:aggregate-g0-g11-report",
+   "kind": "validation",
+   "title": "Aggregate G0-G11 report",
+   "summary": "web/public/data/validation/report.json is generated offline by lumen_pipeline.validation.report.write_validation_report(). It only marks a gate PASS when its required measured evidence artifact is available. In particular, G5 remains BLOCKE",
+   "body": "web/public/data/validation/report.json is generated offline by lumen_pipeline.validation.report.write_validation_report(). It only marks a gate PASS when its required measured evidence artifact is available. In particular, G5 remains BLOCKED without independent PGDA map-pixel references, G10 remains BLOCKED without terrain Monte Carlo sigma and Tier-B calibration artifacts, and G7 remains SOURCE UNVERIFIED despite its numerical PASS. The R3 near-zone helper now preserves the distant DEM horizon whenever the near-zone contribution is zero, including negative and unavailable values.",
+   "source": "docs/validation.md",
+   "anchor": "aggregate-g0-g11-report",
+   "metrics": []
+  },
+  {
+   "id": "decision:R2-1",
+   "kind": "decision",
+   "title": "Published Targets category restored (CLPS, commercial, international) with \"as published on [date]\" and no status/schedu",
+   "summary": "Why: PS asks for Apollo, CLPS, commercial and other countries' sites",
+   "body": "Published Targets category restored (CLPS, commercial, international) with \"as published on [date]\" and no status/schedule text; more historical sites (Apollo 15/17, Blue Ghost M1, SLIM, Chang'e-6) Why: PS asks for Apollo, CLPS, commercial and other countries' sites",
+   "source": "PLAN_FINAL, Revision 2 changelog R2-1 (§7, §8.4)",
+   "anchor": "r2-1",
+   "metrics": []
+  },
+  {
+   "id": "decision:R2-2",
+   "kind": "decision",
+   "title": "Tier B extended to 80–90°S (2 km inside 85°S, 4 km for 80–85°S)",
+   "summary": "Why: Artemis regions lie within ~6° of the pole; Malapert/IM-1 at ~80°S",
+   "body": "Tier B extended to 80–90°S (2 km inside 85°S, 4 km for 80–85°S) Why: Artemis regions lie within ~6° of the pole; Malapert/IM-1 at ~80°S",
+   "source": "PLAN_FINAL, Revision 2 changelog R2-2 (§4, §4.2)",
+   "anchor": "r2-2",
+   "metrics": []
+  },
+  {
+   "id": "decision:R2-3",
+   "kind": "decision",
+   "title": "Seasons: Season Strip (MVP) + 12-month Feasibility Calendar (Tier 1)",
+   "summary": "Why: PS: \"across different lunar days or seasons\"",
+   "body": "Seasons: Season Strip (MVP) + 12-month Feasibility Calendar (Tier 1) Why: PS: \"across different lunar days or seasons\"",
+   "source": "PLAN_FINAL, Revision 2 changelog R2-3 (§8.6, §9)",
+   "anchor": "r2-3",
+   "metrics": []
+  },
+  {
+   "id": "decision:R2-4",
+   "kind": "decision",
+   "title": "Earth Twin overlay + lunar-vs-terrestrial contrast strip (Educator)",
+   "summary": "Why: PS: make lunar vs terrestrial differences apparent",
+   "body": "Earth Twin overlay + lunar-vs-terrestrial contrast strip (Educator) Why: PS: make lunar vs terrestrial differences apparent",
+   "source": "PLAN_FINAL, Revision 2 changelog R2-4 (§8.8, §5.9)",
+   "anchor": "r2-4",
+   "metrics": []
+  },
+  {
+   "id": "decision:R2-5",
+   "kind": "decision",
+   "title": "Science context: distance to nearest permanently shadowed region (PSR) next to engineering metrics",
+   "summary": "Why: PS: balance science and engineering needs",
+   "body": "Science context: distance to nearest permanently shadowed region (PSR) next to engineering metrics Why: PS: balance science and engineering needs",
+   "source": "PLAN_FINAL, Revision 2 changelog R2-5 (§4 P15, §5.7)",
+   "anchor": "r2-5",
+   "metrics": []
+  },
+  {
+   "id": "decision:R2-6",
+   "kind": "decision",
+   "title": "Sun elevation is the hero tile; 3D Horizon Dome promoted to Tier 1; deep-links to QuickMap / Moon Trek / Horizons",
+   "summary": "Why: PS: display solar elevation prominently; multiple visualisations; complement existing tools",
+   "body": "Sun elevation is the hero tile; 3D Horizon Dome promoted to Tier 1; deep-links to QuickMap / Moon Trek / Horizons Why: PS: display solar elevation prominently; multiple visualisations; complement existing tools",
+   "source": "PLAN_FINAL, Revision 2 changelog R2-6 (§8.3, §8.10, §9)",
+   "anchor": "r2-6",
+   "metrics": []
+  },
+  {
+   "id": "decision:R2-7",
+   "kind": "decision",
+   "title": "Event-time uncertainty in MVP (\"Sunset in 41 h ± 5 h\") via horizon-σ ÷ clearance rate, plus ± bounds on percentages",
+   "summary": "Why: Near the pole a 0.2° horizon error can shift sunrise/sunset by hours",
+   "body": "Event-time uncertainty in MVP (\"Sunset in 41 h ± 5 h\") via horizon-σ ÷ clearance rate, plus ± bounds on percentages Why: Near the pole a 0.2° horizon error can shift sunrise/sunset by hours",
+   "source": "PLAN_FINAL, Revision 2 changelog R2-7 (§5.8)",
+   "anchor": "r2-7",
+   "metrics": []
+  },
+  {
+   "id": "decision:R2-8",
+   "kind": "decision",
+   "title": "Windows Table (every Sun / Earth / link / overlap window with start, end, duration, ±) + CSV in MVP",
+   "summary": "Why: Planners need numbers they can paste into a plan",
+   "body": "Windows Table (every Sun / Earth / link / overlap window with start, end, duration, ±) + CSV in MVP Why: Planners need numbers they can paste into a plan",
+   "source": "PLAN_FINAL, Revision 2 changelog R2-8 (§8.3, §9)",
+   "anchor": "r2-8",
+   "metrics": []
+  },
+  {
+   "id": "decision:R2-9",
+   "kind": "decision",
+   "title": "Pointing & Link readout: Earth az/el/range/light-time, Sun az/el, per-station DSN lanes",
+   "summary": "Why: Comms needs where to point and when a station listens",
+   "body": "Pointing & Link readout: Earth az/el/range/light-time, Sun az/el, per-station DSN lanes Why: Comms needs where to point and when a station listens",
+   "source": "PLAN_FINAL, Revision 2 changelog R2-9 (§8.3)",
+   "anchor": "r2-9",
+   "metrics": []
+  },
+  {
+   "id": "decision:R2-10",
+   "kind": "decision",
+   "title": "Quick Answer card: lat/lon + UTC → one compact answer",
+   "summary": "Why: Single-point \"calculator\" use",
+   "body": "Quick Answer card: lat/lon + UTC → one compact answer Why: Single-point \"calculator\" use",
+   "source": "PLAN_FINAL, Revision 2 changelog R2-10 (§8.5)",
+   "anchor": "r2-10",
+   "metrics": []
+  },
+  {
+   "id": "decision:R2-11",
+   "kind": "decision",
+   "title": "Definitions Bar under the Answer Strip: availability definitions visible and editable in place",
+   "summary": "Why: Results are meaningless without their definitions",
+   "body": "Definitions Bar under the Answer Strip: availability definitions visible and editable in place Why: Results are meaningless without their definitions",
+   "source": "PLAN_FINAL, Revision 2 changelog R2-11 (§8.3)",
+   "anchor": "r2-11",
+   "metrics": []
+  },
+  {
+   "id": "decision:R2-12",
+   "kind": "decision",
+   "title": "Emphasis: first thing every user sees is Sun/Earth vs horizon; slope/tilt is the second layer",
+   "summary": "Why: Relevance to the PS core",
+   "body": "Emphasis: first thing every user sees is Sun/Earth vs horizon; slope/tilt is the second layer Why: Relevance to the PS core",
+   "source": "PLAN_FINAL, Revision 2 changelog R2-12 (§8.9, §12)",
+   "anchor": "r2-12",
+   "metrics": []
+  }
+ ]
+}
