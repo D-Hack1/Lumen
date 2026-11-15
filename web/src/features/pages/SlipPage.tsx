@@ -3,6 +3,7 @@
 // Converted from the design. Additions: bars are clickable and keyboard-reachable, a dashed line marks the on-time level, the
 // best window is flagged with a "jump to it" button, and the array height follows the shared setting.
 import { useMemo } from 'react';
+import { showsSampleValues } from '../orbit/realModel';
 import { SITES, type Site } from '../orbit/orbitModel';
 import { useLumenContext } from './usePages';
 import { SLIP_DAYS, bestSlip, fmtDuration, fmtPoints, slipWindows, type WindowStats } from './pagesModel';
@@ -71,7 +72,7 @@ export function SlipPage() {
           <h1 className="lm-h1">What if we slip?</h1>
           <p className="lm-lede">
             Each bar is a 14-day window starting that many days after 8 Feb 2027. Slide to see how a later landing
-            changes power and the link home. Sample values.
+            changes power and the link home.{showsSampleValues() ? ' Sample values.' : ''}
           </p>
         </div>
         <div role="group" aria-label="Site" className="lm-segs">

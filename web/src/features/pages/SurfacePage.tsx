@@ -15,6 +15,7 @@ import {
   until,
   type Site,
 } from '../orbit/orbitModel';
+import { showsSampleValues } from '../orbit/realModel';
 import { useLumenContext } from './usePages';
 import { PANO_H, PANO_W, azToX, compassPoint, horizonPath, skyTrack, skyY, xToAz } from './pagesModel';
 import { go } from './nav';
@@ -125,7 +126,7 @@ export function SurfacePage() {
             EARTH
           </text>
         </svg>
-        <div className="lm-overlay lm-overlay--tl lm-overlay--soft">Design preview · sample values</div>
+        {showsSampleValues() && <div className="lm-overlay lm-overlay--tl lm-overlay--soft">Design preview · sample values</div>}
         <div ref={readout} className="lm-pano__read" role="status" />
         <div className="lm-pano__axis" aria-hidden="true">
           {COMPASS.map((c, i) => (

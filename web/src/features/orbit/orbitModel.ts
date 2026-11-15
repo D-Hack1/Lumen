@@ -3,6 +3,9 @@
 // month, and the countdowns derived from it. These are the design preview's placeholder numbers ("sample values"); when the
 // page is wired to the engine, this file is what gets replaced by real results. Ported unchanged from the approved design.
 
+import { dataMode } from '../../engine/data/source';
+import { realHorizon, realModelReady, realSnapshot } from './realModel';
+
 export const MONTH_HOURS = 708.73;
 export const T_MAX = 709;
 /** Hours between the design's t = 0 (2027-02-08 00:00 UTC) and the new moon the Sun's longitude is counted from. */
@@ -44,7 +47,7 @@ export const SITES: readonly Site[] = [
     name: 'Shackleton connecting ridge',
     short: 'Connecting ridge',
     group: 'Near-perpetual light',
-    lat: -89.45,
+    lat: -89.54,
     lon: 129.0,
     tag: 'Good',
     tone: 'good',
@@ -157,8 +160,12 @@ export function parseCoord(str: string, pos: string, neg: string): number | null
   return v;
 }
 
-/** Synthetic terrain horizon (degrees) at an azimuth for a site, lowered by the array height. */
+/** Real-data mode: the Sun, Earth, DSN and terrain horizon come from the engine's data files, not the design's sample model. */
+const useReal = (): boolean => dataMode() === 'real' && realModelReady();
+
+/** Terrain horizon (degrees) at an azimuth for a site, lowered by the array height. Synthetic unless real data is loaded. */
 export function horizon(az: number, site: Site, mast: number): number {
+  if (useReal()) return realHorizon(az, site, mast);
   const s = site.seed;
   const r = (az * Math.PI) / 180;
   const d = (az - (205 + s * 25)) / 16;
@@ -183,6 +190,7 @@ export interface Snapshot {
 }
 
 export function model(t: number, site: Site, mast: number): Snapshot {
+  if (useReal()) return realSnapshot(t, site, mast);
   const sunAz = (((180 - (360 * (t + SUN_PHASE_OFFSET_H)) / MONTH_HOURS + site.seed * 8) % 360) + 360) % 360;
   const sunEl = 1.3 + site.lift + 0.4 * Math.sin((2 * Math.PI * t) / 2600);
   const dd = (sunEl - horizon(sunAz, site, mast)) / 0.27;

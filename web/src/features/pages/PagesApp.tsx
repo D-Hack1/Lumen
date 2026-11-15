@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react';
 import { AskLumen } from '../ask';
 import { OrbitPage } from '../orbit/OrbitPage';
 import { LumenContext, useLumenState } from '../orbit/lumenState';
+import { loadRealModel, realModelReady } from '../orbit/realModel';
+import { dataMode } from '../../engine/data/source';
 import { ComparePage } from './ComparePage';
 import { go } from './nav';
 import { Shell, type Route } from './Shell';
@@ -18,7 +20,28 @@ const read = (): Route => {
   return (ROUTES as readonly string[]).includes(h) ? (h as Route) : 'orbit';
 };
 
+type Gate = { state: 'ready' } | { state: 'loading' } | { state: 'error'; message: string };
+
+/** In real-data mode the pages wait for the ephemeris, DSN series and terrain masks; they never fall back to sample numbers. */
+function useDataGate(): Gate {
+  const needed = dataMode() === 'real';
+  const [gate, setGate] = useState<Gate>(needed && !realModelReady() ? { state: 'loading' } : { state: 'ready' });
+  useEffect(() => {
+    if (!needed || realModelReady()) return;
+    let live = true;
+    loadRealModel().then(
+      () => live && setGate({ state: 'ready' }),
+      (e: unknown) => live && setGate({ state: 'error', message: e instanceof Error ? e.message : String(e) }),
+    );
+    return () => {
+      live = false;
+    };
+  }, [needed]);
+  return gate;
+}
+
 export function PagesApp() {
+  const gate = useDataGate();
   const lumen = useLumenState();
   const [route, setRoute] = useState<Route>(read);
 
@@ -40,6 +63,14 @@ export function PagesApp() {
     };
     document.title = `${names[route]} · Lumen`;
   }, [route]);
+
+  if (gate.state !== 'ready') {
+    return (
+      <div role="status" style={{ padding: 32, color: '#d8d2c4', font: '15px Inter, sans-serif' }}>
+        {gate.state === 'loading' ? 'Loading real ephemeris and terrain data…' : `Could not load the real data: ${gate.message}`}
+      </div>
+    );
+  }
 
   return (
     <LumenContext.Provider value={lumen}>

@@ -35,6 +35,7 @@ import {
 import { PolarStage, type PolarStats } from './PolarStage';
 import { usePolarTerrain } from './polarAssets';
 import { keyRows, layerDescription, lightDirection, LAYER_LABELS } from './polarCopy';
+import { showsSampleValues, usesTerrain } from './realModel';
 import { phaseAt, polarSunAzimuthDeg } from './ephemeris';
 import type { PolarLayer } from './polarTerrain';
 import './orbit.css';
@@ -256,7 +257,7 @@ export function OrbitPage({ onStandHere, onAddToCompare }: OrbitPageProps) {
           </section>
 
           <div className="lm-note">
-            You can also click anywhere on the Moon to drop a pin. Values are sample data in this preview.
+            You can also click anywhere on the Moon to drop a pin.{showsSampleValues() ? ' Values are sample data in this preview.' : ''}
           </div>
         </aside>
 
@@ -358,7 +359,7 @@ export function OrbitPage({ onStandHere, onAddToCompare }: OrbitPageProps) {
               )}
             </div>
 
-            <div className="lm-overlay lm-overlay--tr">Design preview · sample values</div>
+            {showsSampleValues() && <div className="lm-overlay lm-overlay--tr">Design preview · sample values</div>}
 
             {!whole && (
               <div className="lm-keybox">
@@ -480,9 +481,13 @@ export function OrbitPage({ onStandHere, onAddToCompare }: OrbitPageProps) {
             <h1 className="lm-title">{site.name}</h1>
             <div className="lm-coords">{fmtCoords(site.lat, site.lon)}</div>
             <div className="lm-hint lm-hint--tight">
-              {site.custom
-                ? 'Estimated from a simplified terrain model. Sample values.'
-                : 'Sample values for design preview.'}
+              {showsSampleValues()
+                ? site.custom
+                  ? 'Estimated from a simplified terrain model. Sample values.'
+                  : 'Sample values for design preview.'
+                : usesTerrain(site, mast)
+                  ? 'Real ephemeris and published terrain mask.'
+                  : 'Real ephemeris. No terrain mask for this site or array height, so the horizon is the smooth-Moon bound (optimistic).'}
             </div>
           </div>
 
