@@ -7,6 +7,7 @@
 import { buildScenarioResult, type ScenarioRequest } from '../core/buildResult';
 import { horizonFromMask } from '../core/terrainHorizon';
 import type { Mask } from '../data/masks';
+import type { Sigma } from '../data/sigma';
 import { stateAt, type Definitions } from '../core/evaluate';
 import { makeSite } from '../core/geometry';
 import { inEphemerisRange } from '../core/interp';
@@ -96,8 +97,8 @@ export function scanStage1(eph: Ephemeris, input: ScanInput, dsn: DsnSeries | nu
 }
 
 /** Stage 2: exact evaluation of one candidate (same engine as the Cockpit). */
-export function refineCandidate(eph: Ephemeris, request: ScenarioRequest, candidate: ScanCandidate, dsn: DsnSeries | null = null, mask: Mask | null = null): ScanCandidate {
-  const res = buildScenarioResult(eph, { ...request, startMs: candidate.landingUtc, tScrubMs: candidate.landingUtc }, dsn, mask);
+export function refineCandidate(eph: Ephemeris, request: ScenarioRequest, candidate: ScanCandidate, dsn: DsnSeries | null = null, mask: Mask | null = null, sigma: Sigma | null = null): ScanCandidate {
+  const res = buildScenarioResult(eph, { ...request, startMs: candidate.landingUtc, tScrubMs: candidate.landingUtc }, dsn, mask, sigma);
   if (res.status !== 'ready' || !res.metrics) return candidate; // cannot refine: keep the provisional numbers
   const m = res.metrics;
   return {

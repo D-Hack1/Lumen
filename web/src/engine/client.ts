@@ -5,6 +5,7 @@ import * as Comlink from 'comlink';
 import { buildScenarioResult, type ScenarioRequest } from './core/buildResult';
 import { loadEphem } from './data/ephem';
 import { loadMaskOrNull, loadMasksFor } from './data/masks';
+import { loadSigmaOrNull } from './data/sigma';
 import { loadDsnOrNull } from './data/dsn';
 import { dataMode } from './data/source';
 import { perf } from './perf';
@@ -33,7 +34,7 @@ export function evaluateScenario(req: ScenarioRequest): Promise<ScenarioResult> 
     const w = engine();
     if (w) return w.evaluateScenario(mode, req);
     const eph = await loadEphem();
-    return buildScenarioResult(eph, { ...req, dataVersions: { ...req.dataVersions, ephem: eph.mock ? 'mock' : 'real' } }, await loadDsnOrNull(), await loadMaskOrNull(req.siteId));
+    return buildScenarioResult(eph, { ...req, dataVersions: { ...req.dataVersions, ephem: eph.mock ? 'mock' : 'real' } }, await loadDsnOrNull(), await loadMaskOrNull(req.siteId), await loadSigmaOrNull(req.siteId));
   });
 }
 
@@ -56,7 +57,7 @@ export async function runScanStage1(input: ScanInput): Promise<ScanCandidate[]> 
 /** Scan stage 2 for one candidate (exact evaluation). */
 export async function runRefineCandidate(req: ScenarioRequest, candidate: ScanCandidate): Promise<ScanCandidate> {
   const w = engine();
-  return w ? w.refineCandidate(dataMode(), req, candidate) : refineCandidate(await loadEphem(), req, candidate, await loadDsnOrNull(), await loadMaskOrNull(req.siteId));
+  return w ? w.refineCandidate(dataMode(), req, candidate) : refineCandidate(await loadEphem(), req, candidate, await loadDsnOrNull(), await loadMaskOrNull(req.siteId), await loadSigmaOrNull(req.siteId));
 }
 
 /** Stage 1 for one site at the given day offsets (the calendar asks for a chunk at a time). */

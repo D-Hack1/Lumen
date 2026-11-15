@@ -29,8 +29,11 @@ interface RawLayer {
   legend_stops: Array<{
     value?: number;
     value_pct?: number;
+    /** Class-based legends (slope hazard): the class covers [lo, hi); its stop value is `lo`. */
+    range_deg?: [number, number];
     label: string;
-    hex: string;
+    /** null = a class with no swatch (e.g. "not a PSR"). */
+    hex: string | null;
   }>;
   source_citation: string;
   derived?: boolean;
@@ -146,9 +149,9 @@ export function parseLayers(
       extent: EXTENT[e.extent],
       url: dataUrl(`terrain/layers/${file}`),
       legendStops: (e.legend_stops ?? []).map((g) => ({
-        value: g.value ?? g.value_pct ?? 0,
+        value: g.value ?? (g.value_pct != null ? g.value_pct / 100 : undefined) ?? g.range_deg?.[0] ?? 0, // value_pct 0..100 -> a 0..1 fraction, like the mock legends
         label: g.label,
-        color: g.hex,
+        color: g.hex ?? 'transparent',
       })),
       source: e.source_citation,
       derived: e.derived === true,
