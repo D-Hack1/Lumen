@@ -63,7 +63,7 @@ describe.skipIf(!run)('compare store (real data)', () => {
     // A mask can lower the horizon below the smooth sphere as well as raise it, so the result is NOT bounded by the golden value in either direction: it only has to
     // differ from it, be labelled as terrain, and stay a sane percentage. Exact smooth-sphere parity against the golden lives in core.parity.test.ts.
     const im2 = c.rows[0].result;
-    expect(im2.meta!.tierBadge).toBe('Terrain mask · σ pending');
+    expect(im2.meta!.tierBadge).toBe('Terrain mask · σ Monte-Carlo, 30 clones'); // preliminary Monte-Carlo sigma is published for IM-2
     expect(Math.abs(im2.metrics!.sunlitPct.value! - IM2_REFINED.sunlitPct)).toBeGreaterThan(0.001);
     expect(im2.metrics!.sunlitPct.value!).toBeGreaterThanOrEqual(0);
     expect(im2.metrics!.sunlitPct.value!).toBeLessThanOrEqual(100);

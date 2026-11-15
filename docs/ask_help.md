@@ -11,7 +11,7 @@ changes results), `concept` (background), `status` (what is and isn't connected 
 Kind: status
 Source: live pages ("Design preview · sample values" labels)
 Tags: real, sample, fake, mock, placeholder, accurate, trust, preview, data
-It depends on the mode LUMEN is running in. With real data, the pages wait for the ephemeris, Deep Space Network series and terrain masks and show numbers from the real calculation engine; Stand here says where each view comes from ("Real engine · terrain mask", or "smooth Moon" when a site or array height has no terrain data). Without real data the pages show the design's sample values and say so ("Design preview · sample values"). Either way, sites with a terrain mask currently show "σ pending": the terrain uncertainty is not available yet, so no ± ranges are shown. The engine itself is checked against reference data (see the validation report).
+It depends on the mode LUMEN is running in. With real data, the pages wait for the ephemeris, Deep Space Network series and terrain masks and show numbers from the real calculation engine; Stand here says where each view comes from ("Real engine · terrain mask", or "smooth Moon" when a site or array height has no terrain data). Without real data the pages show the design's sample values and say so ("Design preview · sample values"). Sites with a validated terrain mask (IM-2 and Chandrayaan-3) use a default horizon uncertainty of 0.1° (badge "Terrain mask · σ default"), so they show ± values and [low, high] ranges; this default is a planning value from the plan, not a measured or calibrated uncertainty. Other sites show "σ pending" or the smooth-Moon label and no ±. The engine itself is checked against reference data (see the validation report).
 
 ## What questions can LUMEN answer?
 Kind: concept
@@ -335,10 +335,40 @@ It opens Ask LUMEN on an explanation of that exact number, for the same site and
 Kind: concept
 Source: engine results (tier badge and σ source) and PLAN_FINAL §5.8
 Tags: sigma pending, σ pending, terrain mask, no plus minus, uncertainty missing, badge, tier badge, no range, where did the range go
-"Terrain mask · σ pending" means the site uses a real terrain skyline, but the terrain uncertainty (σ) for it is not available yet. Without σ, LUMEN cannot compute the ± on event times or the [low, high] ranges on percentages, so it shows the nominal values and says why there is no ±, instead of inventing one. When σ becomes available, the ± values appear without any change in how the numbers are calculated.
+"Terrain mask · σ pending" means the site uses a real terrain skyline, but the terrain uncertainty (σ) for it is not available yet. Without σ, LUMEN cannot compute the ± on event times or the [low, high] ranges on percentages, so it shows the nominal values and says why there is no ±, instead of inventing one. "Terrain mask · σ default" means a default uncertainty of 0.1° (the plan's Tier-A value) is in use, so the ± and ranges appear; the default is a planning assumption, not a measurement, and is replaced when Monte-Carlo or calibrated σ is available. Right now IM-2 and Chandrayaan-3 have the default; other sites do not have σ yet.
 
 ## What does "smooth Moon" mean on a site?
 Kind: concept
 Source: live pages (Stand here) and PLAN_FINAL §4.2
 Tags: smooth moon, smooth-moon, no terrain, tier c, flat horizon, no skyline, sphere, no terrain data
 "Smooth Moon" means there is no terrain data for that site or array height, so LUMEN treats the Moon as a smooth sphere with no skyline. The Sun and Earth are then blocked only by the curvature of the Moon. These are smooth-sphere estimates, not terrain-bounded sunrise, sunset, or visibility predictions. Stand here says so on the page.
+
+## What is the Methodology page?
+Kind: howto
+Source: live pages (Methodology)
+Tags: methodology, validation, glossary, scope, limitations, how it works page, about, documentation, report, gates, ai disclosure
+Methodology is the reading page of LUMEN. It states what LUMEN does and does not compute, how a number is produced, the data sources with links, the definitions, how the ± is calculated and where σ comes from, the validation gates with their real status (read from the published validation report), known limitations, the AI-use disclosure, and the glossary. Open it from the header, or press / and type "go to methodology".
+
+## What is the Details section on Stand here?
+Kind: howto
+Source: live pages (Stand here, "Details")
+Tags: details, windows table, pointing and link, power and barcode, tabs, export csv, dsn lanes, windows, survival barcode, power curve, clearance
+Below the numbers, Stand here has a Details section with three views drawn from the same result as the numbers. Windows: every Sun, Earth, link and operating window in the 30 days with start and end times, duration, peak elevation and flags; click a row to jump the clock, and export the table as CSV or JSON. Pointing and link: where the Sun and Earth are at the clock time, Earth's range and one-way light time, and which Deep Space Network stations can see the Moon. Power and barcode: panel power and Sun and Earth clearance over the window with the uncertainty band, and the survival barcode by day.
+
+## How do I export the windows table?
+Kind: howto
+Source: live pages (Stand here, Details, Windows)
+Tags: export, csv, json, download, save, windows table, data, spreadsheet, copy numbers
+On Stand here, open Details, choose Windows, and use the Export CSV or JSON buttons above the table. The file includes a header with the site, tier, uncertainty source and definitions, and respects the type filter (All, Sun, Earth, Link, Ops) you have selected.
+
+## What do the validation gates mean, and how many pass?
+Kind: status
+Source: validation report (read live on the Methodology page)
+Tags: gates, validation gates, g0, g1, g2, g4, g7, pass, pending, blocked, how many pass, validated, checks, report status
+LUMEN's checks are numbered gates (G0 to G11). The Methodology page reads the published validation report and shows each gate's real status — PASS, PENDING or BLOCKED — with its criterion and evidence, and the overall status. A gate is marked PASS only when a recorded check meets its criterion; a gate with no recorded result stays PENDING, and a gate that depends on missing inputs is BLOCKED. The counts change as new evidence is published, so read them on the Methodology page rather than relying on a number written here.
+
+## Can I click a chart to move through time?
+Kind: howto
+Source: live pages (Stand here, Details)
+Tags: scrub, click chart, hover, crosshair, ghost line, move time, jump, timeline, power chart, barcode click
+Yes. On Stand here, hovering over the power chart or the barcode draws a dashed line on both, and clicking either one jumps the clock to that moment, so the panorama, the numbers panel and the charts all move together. Clicking a row of the Windows table jumps to the start of that window.

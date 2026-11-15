@@ -11,10 +11,12 @@ import { ComparePage } from './ComparePage';
 import { go } from './nav';
 import { Shell, type Route } from './Shell';
 import { SlipPage } from './SlipPage';
+import { MethodologyPage } from '../methodology/MethodologyPage';
+import { QuickStartDrawer } from '../guidance/QuickStartDrawer';
 import { SurfacePage } from './SurfacePage';
 import './pages.css';
 
-const ROUTES: readonly Route[] = ['orbit', 'stand-here', 'compare', 'slip'];
+const ROUTES: readonly Route[] = ['orbit', 'stand-here', 'compare', 'slip', 'methodology'];
 const read = (): Route => {
   const h = window.location.hash.replace('#', '');
   return (ROUTES as readonly string[]).includes(h) ? (h as Route) : 'orbit';
@@ -72,6 +74,7 @@ function PagesShell() {
       'stand-here': 'Stand here',
       compare: 'Compare',
       slip: 'Slip explorer',
+      methodology: 'Methodology',
     };
     document.title = `${names[route]} · Lumen`;
   }, [route]);
@@ -91,8 +94,10 @@ function PagesShell() {
         {route === 'stand-here' && <SurfacePage />}
         {route === 'compare' && <ComparePage />}
         {route === 'slip' && <SlipPage />}
+        {route === 'methodology' && <MethodologyPage />}
       </Shell>
       <AskLumen />
+      <QuickStartDrawer />
     </LumenContext.Provider>
   );
 }

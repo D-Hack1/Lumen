@@ -37,6 +37,8 @@ describe('navigation', () => {
     ['stand here', 'stand-here'],
     ['show horizon', 'stand-here'],
     ['go to slip explorer', 'slip'],
+    ['go to methodology', 'methodology'],
+    ['open the validation report', 'methodology'],
     ['slip explorer', 'slip'],
   ])('%s → %s', (text, route) => expect(cmd(text)).toEqual({ kind: 'go', route }));
 });

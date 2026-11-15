@@ -79,7 +79,7 @@ describe('terrain mask wiring (real Shackleton mask)', () => {
   it('evaluateScenario (the Cockpit path, in-thread) picks the mask up from the site id', async () => {
     const r = await evaluateScenario(shackleton());
     expect(r.metrics!.sunlitPct.value).toBe(0);
-    expect(r.meta!.tierBadge).toBe('Terrain mask · σ pending');
+    expect(r.meta!.tierBadge).toBe('Terrain mask · σ Monte-Carlo, 30 clones'); // preliminary Monte-Carlo sigma is published for Shackleton
     const noMask = await evaluateScenario(shackleton({ siteId: 'no_such_site' }));
     expect(noMask.metrics!.sunlitPct.value).toBe(100);
   });

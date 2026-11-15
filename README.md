@@ -40,6 +40,24 @@ npm run e2e:real       # LEGACY shell only (web/e2e/legacy/): checks that need r
 npm run lint && npm run typecheck
 ```
 
+### Build, deploy and offline
+
+```
+npm run build                              # production build + service worker (app shell and data are precached)
+VITE_BASE=/Lumen/ VITE_LUMEN_DATA=real npm run build   # what the GitHub Pages workflow does
+npm run preview                            # serve dist/
+```
+
+`.github/workflows/deploy.yml` publishes `main` to GitHub Pages (one-time setting: Settings → Pages → Source "GitHub Actions").
+Data files under `web/public/data*` are Git LFS objects; check out with LFS. After the first load the app works with the network off.
+
+### What is in the live app
+
+Orbit, Stand here (with a Details section: Windows Table, Pointing & link, Power & barcode), Compare, Slip, Methodology (scope,
+sources, validation gates read from the published report), a Quick-Start drawer, and **Ask LUMEN** (press `/`; offline search and
+templates, no language model; content from `docs/ask_help.md`, rebuilt with `node web/scripts/build-knowledge.mjs`).
+Known limitations and what is not done: `docs/limitations.md`. Submission write-up: `docs/submission.md`.
+
 Layout, slot ids, density modes and the hot-path rules for teammates: `docs/ui_guide.md`.
 
 ## Status

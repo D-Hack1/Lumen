@@ -71,4 +71,5 @@ questions it must NOT answer, knowledge freshness) · `web/e2e/ask.spec.ts` (liv
 - It only knows what is written down; anything else gets "I don't have an answer" plus examples. It is not a language model.
 - The box's own wording is Planner wording (the live pages have no persona switch).
 - No Methodology route yet, so sources are shown as text, not links.
-- Real σ / ± has not landed for IM-2 ("σ pending"); when it does, the ± sentences fill in without changes here — re-check them.
+- σ is the Tier-A DEFAULT (0.1°, "σ default") for IM-2 and CY-3 only, so ± values appear for them; other sites still say "σ pending".
+  It is a planning value, not Monte-Carlo or calibrated. When real σ replaces it, the ± sentences fill in without changes here.

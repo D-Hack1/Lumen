@@ -6,12 +6,13 @@
 // Coachmark anchors: the whole barcode, the legend, and a point anchor that follows the scrub crosshair.
 // Fast Lane (guide §1.3, §1.4): hover writes crosshairBus only, no React state; overlay draws the crosshair line.
 import { useRef } from 'react';
-import { useResult } from '../../engine/hooks';
+import { useScenarioResult } from '../shared/scenarioResultContext';
 import { crosshairBus } from '../../state/buses';
 import { createDotPattern, createHatchPattern } from '../../ui/patterns';
 import { color } from '../../ui/tokens';
 import { COACH, coachAnchor, placeAnchor, POINT_ANCHOR_STYLE } from '../shared/coachAnchors';
 import { LayeredCanvas } from '../shared/LayeredCanvas';
+import { chartPointer } from '../shared/chartPointer';
 import { useVisualCopy } from '../shared/visualCopy';
 
 // Module-level so the array reference is stable across renders (LayeredCanvas resubscribes when it changes).
@@ -33,10 +34,11 @@ const SWATCH: Record<State, string> = {
 };
 
 export function Barcode() {
-  const result = useResult();
+  const result = useScenarioResult();
   const series = result.series;
   const vc = useVisualCopy();
   const crossAnchor = useRef<HTMLDivElement>(null);
+  const pointer = chartPointer(series, 'barcode', { mode: 'bars' });
 
   const days = series ? Math.round((series.stepMs * series.sunUp.length) / 86_400_000) : 0;
 
@@ -47,7 +49,7 @@ export function Barcode() {
       aria-label={vc.t('barcode.aria')}
       style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, gap: 2 }}
     >
-      <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+      <div style={{ flex: 1, minHeight: 0, position: 'relative', cursor: 'crosshair' }} {...pointer}>
         <div ref={crossAnchor} {...coachAnchor(COACH.barcodeCrosshair)} style={POINT_ANCHOR_STYLE} aria-hidden />
         <LayeredCanvas
           className="barcode"

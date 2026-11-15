@@ -38,6 +38,15 @@ describe.skipIf(!have)('real-mode loaders', () => {
     console.log(`psr: ${finite} finite samples, ${zero} inside a PSR`);
     expect(finite).toBeGreaterThan(1000);
   });
-  it('sigma: not produced yet (404)', async () => { await expect(loadSigma('im2_athena')).rejects.toThrow(/404/); });
+  // Preliminary Monte-Carlo sigma (30 clones) is published for the three Tier-A sites; each must match its own mask's validity exactly.
+  it.each(['im2_athena', 'cy3_shiv_shakti', 'shackleton_ridge'])('sigma: %s is Monte-Carlo (30 clones) and matches its mask', async (id) => {
+    const [s, m] = await Promise.all([loadSigma(id), loadMask(id)]);
+    expect(s.source).toBe('monte_carlo');
+    expect(s.cloneCount).toBe(30);
+    expect(s.mock).toBe(false);
+    expect(s.sigmaDeg.length).toBe(m.elevDeg.length);
+    for (let i = 0; i < s.sigmaDeg.length; i++) expect(Number.isFinite(s.sigmaDeg[i])).toBe(Number.isFinite(m.elevDeg[i])); // contract 10.6: same finite/NaN pattern
+  });
+  it('sigma: a site with no sigma artifact (Blue Ghost, Tier C) is a 404, so no ± is invented for it', async () => { await expect(loadSigma('blue_ghost_m1')).rejects.toThrow(/404/); });
   it('dispersion: not produced yet (404)', async () => { await expect(loadDispersion('im2_athena')).rejects.toThrow(/404/); });
 });

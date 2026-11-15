@@ -3,7 +3,7 @@
 // window, filled where the Moon is above that station's horizon (geometric, Moon-centre elevation — the same
 // quantity data_dsn.md ships). A fourth lane shows the site's own link-up series so "Earth visible but no
 // station" is readable at a glance. Crosshair is overlay-only (Fast Lane, bus-driven redraw).
-import { useResult } from '../../engine/hooks';
+import { useScenarioResult } from '../shared/scenarioResultContext';
 import { crosshairBus } from '../../state/buses';
 import { color } from '../../ui/tokens';
 import { LayeredCanvas } from '../shared/LayeredCanvas';
@@ -14,7 +14,7 @@ const COMPLEX: Record<string, string> = { 'DSS-14': 'Goldstone', 'DSS-43': 'Canb
 const LABEL_W = 62;
 
 export function DsnLanes() {
-  const result = useResult();
+  const result = useScenarioResult();
   const series = result.series;
   const { dsn, unavailable } = useDsn();
 

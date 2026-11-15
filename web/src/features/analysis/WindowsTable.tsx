@@ -4,7 +4,7 @@
 // only (Fast Lane — no React state), and export goes through Nived's `engine/export` so the CSV/JSON header
 // block (site, tier, σ source, definitions, data versions) is identical everywhere.
 import { useMemo, useState } from 'react';
-import { useResult } from '../../engine/hooks';
+import { useScenarioResult } from '../shared/scenarioResultContext';
 import { crosshairBus } from '../../state/buses';
 import { exportCsv } from '../../engine/export/csv';
 import { exportJson } from '../../engine/export/json';
@@ -65,7 +65,7 @@ export interface WindowsTableProps {
 }
 
 export function WindowsTable({ result: given }: WindowsTableProps = {}) {
-  const cockpit = useResult();
+  const cockpit = useScenarioResult();
   const result = given ?? cockpit;
   const [filter, setFilter] = useState<WindowType | 'all'>('all');
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'start', dir: 1 });

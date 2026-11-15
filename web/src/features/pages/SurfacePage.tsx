@@ -20,6 +20,7 @@ import { PANO_H, PANO_W, azToX, compassPoint, horizonPath, skyTrack, skyY, xToAz
 import { go } from './nav';
 import { standHereView, useEngineResult, useSkyline } from './engineBindings';
 import { StandHereNumbers } from './StandHereNumbers';
+import { StandHereDetails } from '../analysis/StandHereDetails';
 
 const SHORT: Record<string, string> = { im2: 'IM-2', shack: 'Ridge', malapert: 'Malapert', haworth: 'Haworth' };
 const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'N'];
@@ -196,6 +197,9 @@ export function SurfacePage() {
       </div>
 
       {eng && v && <StandHereNumbers result={eng} terrain={v.source === 'terrain'} windowLabel="30 days from 8 Feb 2027" />}
+
+      {/* Windows Table, Pointing & Link (DSN lanes), Power curve and Barcode — drawn from the same result as the numbers above. */}
+      {eng && <StandHereDetails result={eng} t={t} onSeek={(h) => setT(Math.max(0, Math.min(T_MAX, Math.round(h))))} />}
 
       <section aria-label="Time" className="lm-box lm-box--row">
         <button

@@ -32,7 +32,10 @@ export function pwaOptions(dataMode: LumenDataMode = 'mock'): Partial<VitePWAOpt
       // App shell + only the data folder this build uses (never ship both sets offline).
       // Every asset type the app can reference must be listed, or it silently disappears offline (webp body images did).
       globPatterns: ['**/*.{js,css,html,woff2,svg,png,webp,jpg,jpeg,avif,gif,ico}', `${dataDir}/**/*.{json,bin,png,svg}`, 'content/**/*.json'],
-      globIgnores: dataMode === 'real' ? ['data-mock/**'] : ['data/**'],
+      // Map-layer rasters are 21-102 MB each (illumination / Earth-visibility PNGs, PSR-distance bins) - far over any sane install
+      // size, and the live pages do not need them. They are NOT precached; if a view ever requests one, the CacheFirst rule below
+      // caches it on first use (the build used to fail on them: "Assets exceeding the limit").
+      globIgnores: [...(dataMode === 'real' ? ['data-mock/**'] : ['data/**']), `${dataDir}/terrain/layers/**`, `${dataDir}/terrain/psr/**`],
       maximumFileSizeToCacheInBytes: MAX_FILE_BYTES,
       navigateFallback: 'index.html',
       cleanupOutdatedCaches: true,

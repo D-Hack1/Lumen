@@ -5,14 +5,14 @@
 // `series` itself only changes at human rate (new scenario), so that part can stay a normal render.
 import { useEffect, useRef } from 'react';
 import { fmtLightTime, fmtRangeKm } from '../../engine/format';
-import { useResult } from '../../engine/hooks';
+import { useScenarioResult } from '../shared/scenarioResultContext';
 import { crosshairBus } from '../../state/buses';
 import { color } from '../../ui/tokens';
 import { DsnLanes } from './DsnLanes';
 import { sampleAt } from './pointingSample';
 
 export function PointingLink() {
-  const result = useResult();
+  const result = useScenarioResult();
   const series = result.series;
   const sunRef = useRef<HTMLElement>(null);
   const earthRef = useRef<HTMLElement>(null);

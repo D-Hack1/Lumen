@@ -22,15 +22,22 @@ test.describe('Why? on Stand here explains the numbers on screen', () => {
     await expect(card).toContainText('2 m array');
   });
 
-  test('clearance: the card quotes the tile value and says why there is no ± (σ pending), inventing none', async ({ page }) => {
+  test('clearance: the card quotes the tile value; a ± appears ONLY when σ exists, otherwise it says why not', async ({ page }) => {
     const shown = (await page.locator(`${tile('metric.clearance')} .lm-nums__value`).innerText()).split('·')[0].trim(); // "−6.17°"
     await page.locator(`${tile('metric.clearance')} .lm-nums__why`).click();
     const card = page.locator('.ask__card--why').first();
     await expect(card).toContainText('Sun clearance', { timeout: 30_000 });
     await expect(card).toContainText(shown);
     const text = await card.innerText();
-    if (/σ pending/.test(text)) expect(text).not.toMatch(/±\s*\d/); // no ± number while σ is pending
-    expect(text).toMatch(/derived from the series|from the series/); // the clearance rate is derived, never hard-coded
+    if (/σ pending/.test(text)) {
+      expect(text).not.toMatch(/±\s*\d/); // σ pending: no ± number anywhere, and the clearance rate is derived from the series
+      expect(text).toMatch(/derived from the series/);
+    } else {
+      // σ is available (Tier-A default for IM-2): the ± comes from the result and the card names its source — never hard-coded.
+      expect(text).toContain('σ source: default');
+      expect(text).toMatch(/in .+ ± .+/); // "Sunset in 17 d 19 h ± 1 min"
+      expect(text).toMatch(/σ ÷ \|rate\|/); // the rate × σ explanation is derived from the series
+    }
   });
 
   test('the card follows the array height you changed', async ({ page }) => {

@@ -10,7 +10,7 @@
 //   help
 // Anything else is NOT a command; the box then tries the knowledge search ("explain") instead.
 
-export type AskRoute = 'orbit' | 'stand-here' | 'compare' | 'slip';
+export type AskRoute = 'orbit' | 'stand-here' | 'compare' | 'slip' | 'methodology';
 
 export interface AskSite {
   id: string;
@@ -45,10 +45,11 @@ export const HELP_EXAMPLES: readonly string[] = ['go to compare', 'show IM-2', '
 
 export const SLIP_LIMIT_DAYS = 30;
 
-const ROUTE_LABEL: Record<AskRoute, string> = { orbit: 'Orbit', 'stand-here': 'Stand here', compare: 'Compare', slip: 'Slip explorer' };
+const ROUTE_LABEL: Record<AskRoute, string> = { orbit: 'Orbit', 'stand-here': 'Stand here', compare: 'Compare', slip: 'Slip explorer', methodology: 'Methodology' };
 
 // Longest alias first so "slip explorer" is not swallowed by "slip".
 const ROUTE_ALIASES: readonly [AskRoute, readonly string[]][] = [
+  ['methodology', ['methodology', 'validation report', 'validation page', 'validation', 'glossary']],
   ['slip', ['slip explorer', 'slip page', 'what if we slip', 'slip view']],
   ['stand-here', ['stand here', 'standing here', 'surface view', 'surface', 'horizon', 'skyline', 'panorama']],
   ['compare', ['compare sites', 'compare', 'comparison']],

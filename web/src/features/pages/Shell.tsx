@@ -4,15 +4,17 @@
 import type { ReactNode } from 'react';
 import { timeLabel } from '../orbit/orbitModel';
 import { OPEN_EVENT } from '../ask/askWhy';
+import { openQuickStart } from '../guidance/quickstart';
 import type { LumenState } from '../orbit/lumenState';
 
-export type Route = 'orbit' | 'stand-here' | 'compare' | 'slip';
+export type Route = 'orbit' | 'stand-here' | 'compare' | 'slip' | 'methodology';
 
 const NAV: { route: Route; label: string }[] = [
   { route: 'orbit', label: 'Orbit' },
   { route: 'stand-here', label: 'Stand here' },
   { route: 'compare', label: 'Compare' },
   { route: 'slip', label: 'Slip explorer' },
+  { route: 'methodology', label: 'Methodology' },
 ];
 
 export function Shell({ route, lumen, children }: { route: Route; lumen: LumenState; children: ReactNode }) {
@@ -43,6 +45,9 @@ export function Shell({ route, lumen, children }: { route: Route; lumen: LumenSt
         </nav>
         <span className="lm-grow" />
         {showClock && <div className="lm-clock">{timeLabel(lumen.t)}</div>}
+        <button type="button" className="lm-btn lm-btn--ghost" onClick={openQuickStart} title="Four guided ways to start">
+          Quick start
+        </button>
         <button
           type="button"
           className="lm-btn lm-btn--ghost"
