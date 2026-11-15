@@ -7,7 +7,11 @@ from lumen_pipeline.reference.events import Event, detect_events
 from lumen_pipeline.reference.interp import Ephemeris
 from lumen_pipeline.reference.visibility import Horizon, availability
 from lumen_pipeline.reference.windows import merge_windows, windows_from_events
-from lumen_pipeline.validation.golden import build_golden_set, default_ephemeris_path
+from lumen_pipeline.validation.golden import (
+    build_golden_set,
+    default_ephemeris_path,
+    default_output_path,
+)
 
 
 def test_hermite_interpolation_recovers_constant_velocity_motion():
@@ -147,7 +151,36 @@ def test_golden_set_is_reproducible_and_declares_missing_dependencies(tmp_path):
 
     assert json.loads(first_path.read_text(encoding="utf-8")) == first
     assert first_path.read_bytes() == second_path.read_bytes()
+    assert first_path.read_bytes() == default_output_path().read_bytes()
     case = first["cases"][0]
     assert case["input"]["terrain_mode"] == "smooth_sphere_pending_im2_mask"
     assert "dsn" in case["unavailable"]
-    assert case["metrics"]["linkPct"]["value"] is None
+    assert case["metrics"]["energyPerDayWh"]["value"] is None
+
+
+def test_golden_set_v2_has_refined_metrics_and_explicit_no_dsn_fallback():
+    payload = json.loads(default_output_path().read_text(encoding="utf-8"))
+    case = payload["cases"][0]
+
+    assert payload["version"] == "2.0.0"
+    assert payload["metric_method"] == "event_refined_windows"
+    assert payload["tolerances"] == {
+        "elevation_deg": 0.005,
+        "azimuth_deg": 0.005,
+        "event_time_s": 60,
+        "metric_percent": 1.0,
+    }
+    assert len(case["render_samples_hourly"]) == 721
+    assert {window["type"] for window in case["windows"]} == {"sun", "earth", "ops"}
+    assert case["ops_events"]
+    assert case["link_metric_source"] == "earth_visibility_fallback_no_dsn"
+    assert "dsn" in case["unavailable"]
+    assert "link_windows" in case["unavailable"]
+
+    metrics = case["metrics"]
+    assert abs(metrics["sunlitPct"]["value"] - 49.2931) < 0.0001
+    assert abs(metrics["earthVisiblePct"]["value"] - 67.2086) < 0.0001
+    assert metrics["linkPct"]["value"] == metrics["earthVisiblePct"]["value"]
+    assert metrics["longestCommGapH"]["value"] is not None
+    ops_window_hours = sum(window["duration_h"] for window in case["windows"] if window["type"] == "ops")
+    assert abs(metrics["opsHours"]["value"] - ops_window_hours) < 1e-10
