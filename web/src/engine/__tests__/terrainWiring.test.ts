@@ -83,4 +83,16 @@ describe('terrain mask wiring (real Shackleton mask)', () => {
     const noMask = await evaluateScenario(shackleton({ siteId: 'no_such_site' }));
     expect(noMask.metrics!.sunlitPct.value).toBe(100);
   });
+
+  it('IM-2 (real mask, 2 m): the mask changes the numbers (in either direction: terrain can lower the horizon as well as raise it) and the labels say terrain, no sigma', async () => {
+    const t0 = Date.parse('2025-03-06T17:28:50Z');
+    const im2 = shackleton({ siteId: 'im2_athena', latDeg: -84.7906, lonDegEast: 29.1957, heightM: 2, startMs: t0, tScrubMs: t0, touchdownMs: t0 });
+    const imMask = await loadMask('im2_athena');
+    const smooth = buildScenarioResult(eph, im2);
+    const terrain = buildScenarioResult(eph, im2, null, imMask);
+    expect(Math.abs(terrain.metrics!.sunlitPct.value! - smooth.metrics!.sunlitPct.value!)).toBeGreaterThan(0.001);
+    expect(terrain.meta!.tierBadge).toBe('Terrain mask · σ pending');
+    expect(terrain.meta!.tierBadge).not.toBe(smooth.meta!.tierBadge);
+    expect(terrain.metrics!.sunlitPct.lo).toBeNull(); // still no sigma, so no +/-
+  });
 });
