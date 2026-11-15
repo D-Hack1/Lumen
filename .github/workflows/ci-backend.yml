@@ -24,12 +24,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          lfs: true
+          lfs: false
       - name: Hydrate and verify ephemeris LFS artifact
         shell: bash
         run: |
           set -euo pipefail
-          git -C .. lfs pull
+          git -C .. lfs pull --include="web/public/data/ephem/ephem.bin"
           ephem="../web/public/data/ephem/ephem.bin"
           test "$(stat --printf='%s' "$ephem")" -eq 3366144
           if head -c 64 "$ephem" | grep -q '^version https://git-lfs.github.com/spec/v1'; then
