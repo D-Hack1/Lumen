@@ -4,6 +4,7 @@ import pytest
 
 from lumen_pipeline.validation.g7 import (
     REFERENCE_ELEVATION_DEG,
+    REFERENCE_SOURCE,
     TOLERANCE_DEG,
     build_g7_report,
     write_g7_report,
@@ -19,7 +20,7 @@ def test_g7_report_reproduces_touchdown_reference_and_provenance(tmp_path):
 
     assert reread == report
     assert report_path.read_bytes() == repeated_path.read_bytes()
-    assert report["status"] == "PASS", json.dumps(
+    assert report["calculation_status"] == "PASS", json.dumps(
         {
             "numerical_result": report["numerical_result"],
             "provenance_result": report["provenance_result"],
@@ -42,6 +43,8 @@ def test_g7_report_reproduces_touchdown_reference_and_provenance(tmp_path):
         abs(report["computed"]["sun_elevation_deg"] - REFERENCE_ELEVATION_DEG)
     )
     assert report["numerical_result"] == "PASS"
+    assert report["source_provenance_result"] == "SOURCE_UNVERIFIED"
+    assert report["status"] == "SOURCE_UNVERIFIED"
     expected_provenance_reasons = []
     if not report["ephemeris"]["ephemeris_hash_matches_sidecar"]:
         expected_provenance_reasons.append("ephemeris_sha256_mismatch")
@@ -56,7 +59,22 @@ def test_g7_report_reproduces_touchdown_reference_and_provenance(tmp_path):
     assert report["qualitative_timeline_check"]["status"] == "PASS"
     assert report["qualitative_timeline_check"]["sun_below_6_deg_utc"].startswith("2023-09-")
     assert report["ephemeris"]["ephemeris_hash_matches_sidecar"]
-    assert report["reference"]["primary_source_status"].startswith("UNVERIFIED")
+    assert report["reference"]["primary_source_status"] == "SOURCE_UNVERIFIED"
+    assert report["reference"]["source_metadata"] == REFERENCE_SOURCE
+    assert report["reference"]["source_metadata"]["source_url"] is None
+    assert report["reference"]["source_metadata"]["quoted_numerical_claim"] is None
+    assert all(
+        not source["supports_8_75_degree_claim"]
+        for source in report["reference"]["source_metadata"]["sources_examined"]
+    )
+    assert report["calculation_assumptions"]["touchdown_time"]["value_utc"] == report["timestamp_utc"]
+    assert report["calculation_assumptions"]["landing_location"]["latitude_deg"] == pytest.approx(
+        -69.373
+    )
+    assert report["calculation_assumptions"]["reference_frame"]["value"] == "MOON_ME_DE421"
+    assert report["calculation_assumptions"]["sun_elevation_definition"][
+        "reported_claim_limb_convention"
+    ] == "SOURCE_UNVERIFIED"
 
 
 def test_g7_uses_landing_coordinates_not_prelanding_target():

@@ -145,5 +145,7 @@ def build_synthetic_near_zone_golden_set(output_path: str | Path | None = None) 
     output = Path(output_path) if output_path is not None else default_synthetic_output_path()
     payload = synthetic_near_zone_payload()
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_bytes((json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8"))
+    # The committed golden fixture uses CRLF; write it explicitly so byte-for-byte
+    # reproducibility does not depend on the host platform's newline handling.
+    output.write_bytes((json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\r\n").encode("utf-8"))
     return payload

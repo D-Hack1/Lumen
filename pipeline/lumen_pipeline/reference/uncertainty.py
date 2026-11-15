@@ -14,7 +14,7 @@ from typing import TypeVar
 import numpy as np
 
 from lumen_pipeline.reference.events import Event
-from lumen_pipeline.reference.visibility import Horizon
+from lumen_pipeline.reference.visibility import FiniteSegmentTree, Horizon
 
 RATE_INTERVAL_SECONDS = 120.0
 GRAZING_RATE_DEG_PER_HOUR = 0.005
@@ -193,7 +193,8 @@ def shift_horizon_mask(horizon: Horizon, sigma_deg: float | Sequence[float] | np
         raise ValueError("sigma_deg must be scalar or match the horizon mask shape") from error
     if not np.all(np.isfinite(sigma)) or np.any(sigma < 0.0):
         raise ValueError("sigma_deg must be finite and non-negative")
-    return replace(horizon, elevations_deg=shifted)
+    range_extrema = FiniteSegmentTree.from_elevations(shifted) if horizon.range_extrema is not None else None
+    return replace(horizon, elevations_deg=shifted, range_extrema=range_extrema)
 
 
 def three_pass_bounds(
