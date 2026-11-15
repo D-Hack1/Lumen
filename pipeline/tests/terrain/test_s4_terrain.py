@@ -336,8 +336,12 @@ def test_mask_header_payload_metadata_and_summary(monkeypatch, tmp_path):
     assert metadata["azimuth_direction"] == "toward_site_frame_e"
     assert metadata["near_field_resolution_m"] == 5.0
     assert metadata["d_min_m"] == 15.0
-    assert metadata["median_filter_radius_m"] == 100.0
-    assert "median_filter_region_radius_m" not in metadata
+    # contracts/data_masks.md §5/§5.3 names this field
+    # "median_filter_region_radius_m"; see masks.py's sidecar-writing
+    # comment for why the internal NearFieldModel attribute keeps its
+    # unqualified name.
+    assert metadata["median_filter_region_radius_m"] == 100.0
+    assert "median_filter_radius_m" not in metadata
     assert metadata["median_filter_kernel_px"] == 3
     assert metadata["median_filter_status"] == "applied"
     assert metadata["provenance"]["median_filter_reason"] is None

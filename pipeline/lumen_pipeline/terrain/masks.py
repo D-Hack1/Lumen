@@ -443,7 +443,13 @@ def generate_tier_a_mask(
         "near_field_resolution_m": near.near_field_resolution_m,
         "d_min_m": near.d_min_m,
         "z0_m": near.z0_m,
-        "median_filter_radius_m": near.median_filter_radius_m,
+        # contracts/data_masks.md §5/§5.3 names this field
+        # "median_filter_region_radius_m" (the spatial region around the
+        # site, not the filter kernel's own radius). The internal
+        # NearFieldModel.median_filter_radius_m attribute keeps its name
+        # unchanged since golden_near_zone_synthetic.py constructs
+        # NearFieldModel with that keyword and must not be touched here.
+        "median_filter_region_radius_m": near.median_filter_radius_m,
         "median_filter_kernel_px": near.median_filter_kernel_px[0],
         "median_filter_status": near.median_filter_status,
         "plane_fit_kernel_px": 2 * near.plane_fit_k + 1,
