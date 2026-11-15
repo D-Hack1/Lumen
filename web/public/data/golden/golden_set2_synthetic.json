@@ -513,22 +513,25 @@
       "synthetic_flat_visibility_boundaries",
       "synthetic_terrain_mask_boundary",
       "synthetic_disk_limb_conventions",
+      "synthetic_disk_span_extrema",
+      "synthetic_nan_wraparound_extrema",
       "synthetic_event_at_window_start",
       "synthetic_refined_visibility_window",
       "synthetic_total_clearance_rate",
       "synthetic_exact_event_uncertainty",
+      "synthetic_disk_event_thresholds",
       "synthetic_grazing_rate",
       "synthetic_near_zone_slope_edges",
       "synthetic_tier_c_smooth_moon",
       "synthetic_min_sun_elevation_ops",
-      "synthetic_power_eclipse_soc"
+      "synthetic_power_eclipse_soc",
+      "synthetic_dsn_out_of_coverage"
     ],
     "partial": {
       "synthetic_dsn_link_modes": "TS replays DSN interpolation and pointwise on/off states; link-window metrics are Python-only.",
       "synthetic_three_pass_bounds": "TS replays scalar three-pass mask bounds; scenario-window bounds are Python-only."
     },
     "python_only": {
-      "synthetic_dsn_out_of_coverage": "TS has no DSN-aware link-window metrics.",
       "synthetic_guarded_span_spike": "TS has no envelope-guarded coarse sampler or exact span-extrema proof."
     }
   },
