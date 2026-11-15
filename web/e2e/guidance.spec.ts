@@ -12,28 +12,22 @@ async function open(page: Page, url = '/') {
 }
 
 test.describe('Methodology', () => {
-  test('is in the nav and shows the scope statement, sources, definitions, uncertainty and AI disclosure', async ({ page }) => {
+  test('is in the nav and shows the scope statement, sources, definitions, uncertainty and glossary', async ({ page }) => {
     const errs = await open(page, '/#orbit');
     await page.getByRole('link', { name: 'Methodology' }).first().click();
     await expect(page).toHaveURL(/#methodology$/);
     await expect(page.getByRole('heading', { level: 1, name: /Methodology/ })).toBeVisible();
-    for (const h of ['What LUMEN does and does not compute', 'How a number is produced', 'Data sources', 'Definitions and frames', 'Uncertainty', 'Validation', 'Known limitations', 'AI-use disclosure', 'Glossary']) {
+    for (const h of ['What LUMEN does and does not compute', 'How a number is produced', 'Data sources', 'Definitions and frames', 'Uncertainty', 'Glossary']) {
       await expect(page.getByRole('heading', { level: 2, name: new RegExp(h) })).toBeVisible();
+    }
+    // these three sections were removed from the page on request
+    for (const h of ['Validation', 'Known limitations', 'AI-use disclosure']) {
+      await expect(page.getByRole('heading', { level: 2, name: new RegExp(h) })).toHaveCount(0);
     }
     await expect(page.locator('#m-scope')).toContainText('does not compute');
     await expect(page.locator('#m-scope')).toContainText('link budgets');
     await expect(page.locator('#m-data a[href^="https://"]').first()).toBeVisible();
     expect(errs).toEqual([]);
-  });
-
-  test('the validation table is read from the published report: every gate G0–G11 with a real status', async ({ page }) => {
-    await open(page, '/#methodology');
-    const rows = page.locator('#m-validation tbody tr');
-    await expect(rows.first()).toBeVisible({ timeout: 20_000 });
-    expect(await rows.count()).toBeGreaterThanOrEqual(12);
-    await expect(page.locator('#m-validation')).toContainText(/\d+ of \d+ gates pass/);
-    const statuses = await page.locator('#m-validation tbody td[data-status]').allInnerTexts();
-    for (const s of statuses) expect(s).toMatch(/PASS|PENDING|BLOCKED|FAIL/);
   });
 
   test('the glossary lists the terms and the page has no horizontal scroll at 1280 px', async ({ page }) => {

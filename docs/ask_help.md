@@ -347,7 +347,7 @@ Tags: smooth moon, smooth-moon, no terrain, tier c, flat horizon, no skyline, sp
 Kind: howto
 Source: live pages (Methodology)
 Tags: methodology, validation, glossary, scope, limitations, how it works page, about, documentation, report, gates, ai disclosure
-Methodology is the reading page of LUMEN. It states what LUMEN does and does not compute, how a number is produced, the data sources with links, the definitions, how the ± is calculated and where σ comes from, the validation gates with their real status (read from the published validation report), known limitations, the AI-use disclosure, and the glossary. Open it from the header, or press / and type "go to methodology".
+Methodology is the reading page of LUMEN. It states what LUMEN does and does not compute, how a number is produced, the data sources with links, the definitions, how the ± is calculated and where σ comes from, and the glossary. Open it from the header, or press / and type "go to methodology".
 
 ## What is the Details section on Stand here?
 Kind: howto
@@ -363,9 +363,9 @@ On Stand here, open Details, choose Windows, and use the Export CSV or JSON butt
 
 ## What do the validation gates mean, and how many pass?
 Kind: status
-Source: validation report (read live on the Methodology page)
+Source: validation report (validation/report.json)
 Tags: gates, validation gates, g0, g1, g2, g4, g7, pass, pending, blocked, how many pass, validated, checks, report status
-LUMEN's checks are numbered gates (G0 to G11). The Methodology page reads the published validation report and shows each gate's real status — PASS, PENDING or BLOCKED — with its criterion and evidence, and the overall status. A gate is marked PASS only when a recorded check meets its criterion; a gate with no recorded result stays PENDING, and a gate that depends on missing inputs is BLOCKED. The counts change as new evidence is published, so read them on the Methodology page rather than relying on a number written here.
+LUMEN's checks are numbered gates (G0 to G11). Each gate's real status — PASS, FAIL, PENDING or BLOCKED — with its criterion and evidence is recorded in the validation report published with the project data (validation/report.json), together with the overall status. A gate is marked PASS only when a recorded check meets its criterion; a gate with no recorded result stays PENDING, and a gate that depends on missing inputs is BLOCKED. The counts change as new evidence is published, so read them in the validation report rather than relying on a number written here.
 
 ## Can I click a chart to move through time?
 Kind: howto

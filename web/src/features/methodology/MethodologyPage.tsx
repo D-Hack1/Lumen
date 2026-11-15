@@ -1,28 +1,12 @@
 // Owner: Ebin (written for the live pages; route "methodology")
 // Methodology & Validation (PLAN_FINAL §8.7): what LUMEN does and does not compute, how a number is produced, where the data comes
-// from, the definitions and the uncertainty method, the validation gates with their REAL status (read from the published
-// validation report — never hand-edited), known limitations, AI-use disclosure, and the glossary.
-// Honesty rules: the scope statement is the plan's own wording; a gate is shown PASS only if the report says PASS; nothing here
-// claims more than the report does.
-import { useEffect, useMemo, useState } from 'react';
-import { DataError, fetchJson } from '../../engine/data/source';
+// from, the definitions and the uncertainty method, and the glossary. (The validation gates, known limitations and AI-use disclosure
+// sections were removed from this page on request; the validation report itself is still published in the data folder.)
+// Honesty rule: the scope statement is the plan's own wording.
+import { useEffect, useState } from 'react';
 import { CREDITS } from '../../content/credits';
 import './methodology.css';
 
-interface Gate {
-  id: string;
-  description?: string;
-  criterion?: string;
-  status: string;
-  reason?: unknown;
-  provenance?: unknown;
-  value?: unknown;
-}
-interface Report {
-  status?: string;
-  gates: Gate[];
-  limitations?: string[];
-}
 interface GlossaryEntry {
   id: string;
   term: string;
@@ -35,57 +19,20 @@ interface GlossaryEntry {
   learn_more_anchor?: string;
 }
 
-const GLYPH: Record<string, string> = { PASS: '●', PENDING: '○', BLOCKED: '✕', FAIL: '✕' };
-
-const asText = (x: unknown): string => {
-  if (x == null) return '';
-  if (typeof x === 'string') return x;
-  if (Array.isArray(x)) return x.map(asText).filter(Boolean).join('; ');
-  if (typeof x === 'object') {
-    const o = x as Record<string, unknown>;
-    return asText(o.reason ?? o.summary ?? o.detail ?? o.description ?? o.research_note ?? '');
-  }
-  return String(x);
-};
-
-/** A short, honest evidence line per gate: the measured value for a PASS, the stated reason for anything else. */
-export function gateEvidence(g: Gate): string {
-  if (g.status === 'PASS') {
-    const v = g.value;
-    if (v && typeof v === 'object') {
-      const nums = Object.entries(v as Record<string, unknown>)
-        .filter(([, n]) => typeof n === 'number')
-        .map(([k, n]) => `${k.replace(/_/g, ' ')}: ${Number(n).toPrecision(3)}`);
-      if (nums.length) return nums.join(' · ');
-    }
-    return asText(g.provenance) || 'Passed.';
-  }
-  return asText(g.reason) || asText(g.provenance) || 'No result is available yet.';
-}
-
 const SECTIONS = [
   ['scope', 'What LUMEN does and does not compute'],
   ['how', 'How a number is produced'],
   ['data', 'Data sources'],
   ['definitions', 'Definitions and frames'],
   ['uncertainty', 'Uncertainty (±)'],
-  ['validation', 'Validation'],
-  ['limits', 'Known limitations'],
-  ['ai', 'AI-use disclosure'],
   ['glossary', 'Glossary'],
 ] as const;
 
 export function MethodologyPage() {
-  const [report, setReport] = useState<Report | null>(null);
-  const [reportErr, setReportErr] = useState<string | null>(null);
   const [glossary, setGlossary] = useState<GlossaryEntry[]>([]);
 
   useEffect(() => {
     let live = true;
-    fetchJson<Report>('validation/report.json').then(
-      (r) => live && setReport(r),
-      (e: unknown) => live && setReportErr(e instanceof DataError || e instanceof Error ? e.message : String(e)),
-    );
     const base = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
     fetch(`${base.replace(/\/$/, '')}/content/glossary.json`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
@@ -96,19 +43,12 @@ export function MethodologyPage() {
     };
   }, []);
 
-  const counts = useMemo(() => {
-    const c = { PASS: 0, PENDING: 0, BLOCKED: 0 } as Record<string, number>;
-    for (const g of report?.gates ?? []) c[g.status] = (c[g.status] ?? 0) + 1;
-    return c;
-  }, [report]);
-
   return (
     <main className="lm-wrap lm-meth">
       <div>
         <h1 className="lm-h1">Methodology &amp; validation</h1>
         <p className="lm-lede">
-          How LUMEN works, what it rests on, how far it has been checked, and where it stops. Written to be read, not skimmed: every claim here is
-          either the project plan’s own wording or read live from the validation report.
+          How LUMEN works, what it rests on, and where it stops. Written to be read, not skimmed: every claim here is the project plan’s own wording.
         </p>
       </div>
 
@@ -227,76 +167,6 @@ export function MethodologyPage() {
           of the elevation model). It rests on two unverified modelling assumptions — that the published error raster is a one-σ magnitude, and a 50 m
           correlation length that has not been physically calibrated — and is marked preliminary in its own file. Sites without a σ file show no ± and say why.
           Nothing is invented to fill the gap.
-        </p>
-      </section>
-
-      <section id="m-validation" className="lm-box lm-meth__sec">
-        <h2>Validation</h2>
-        {reportErr && <p className="lm-meth__err">The validation report could not be loaded ({reportErr}).</p>}
-        {!report && !reportErr && <p className="lm-hint">Loading the validation report…</p>}
-        {report && (
-          <>
-            <p>
-              <strong>
-                {counts.PASS} of {report.gates.length} gates pass
-              </strong>
-              {counts.PENDING ? `, ${counts.PENDING} are pending` : ''}
-              {counts.BLOCKED ? `, ${counts.BLOCKED} are blocked` : ''}. Overall status: <strong>{(report.status ?? 'unknown').replace(/_/g, ' ')}</strong>. A gate is only
-              marked PASS when a recorded check meets its criterion; a unit test existing is not enough.
-            </p>
-            <div className="lm-meth__tablewrap">
-              <table className="lm-meth__table">
-                <thead>
-                  <tr>
-                    <th>Gate</th>
-                    <th>Check</th>
-                    <th>Criterion</th>
-                    <th>Status</th>
-                    <th>Evidence</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {report.gates.map((g) => (
-                    <tr key={g.id}>
-                      <td className="num">{g.id}</td>
-                      <td>{g.description ?? ''}</td>
-                      <td>{g.criterion ?? ''}</td>
-                      <td data-status={g.status}>
-                        <span aria-hidden="true">{GLYPH[g.status] ?? '·'}</span> {g.status}
-                      </td>
-                      <td className="lm-meth__ev">{gateEvidence(g)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
-      </section>
-
-      <section id="m-limits" className="lm-box lm-meth__sec">
-        <h2>Known limitations</h2>
-        <ul>
-          {(report?.limitations ?? []).map((l) => (
-            <li key={l}>{l}</li>
-          ))}
-          <li>The vertical datum of the adjusted LOLA elevation model relative to the 1,737.4 km reference sphere is not formally confirmed.</li>
-          <li>
-            Dispersion (landing-ellipse slope statistics) and the Tier-B regional terrain grid are not produced yet, so custom points and most of the pole use a
-            smooth-Moon estimate and say so.
-          </li>
-          <li>The catalogue coordinates for the Shackleton connecting ridge are under review (NASA’s average-illumination map shows permanent shadow there).</li>
-          <li>Site coordinates and touchdown times are only as good as their cited sources; unverified rows are not shown as verified.</li>
-        </ul>
-      </section>
-
-      <section id="m-ai" className="lm-box lm-meth__sec">
-        <h2>AI-use disclosure</h2>
-        <p>
-          Parts of LUMEN’s code, tests and documentation were written with the help of an AI assistant (Anthropic’s Claude). Each team member keeps a log of
-          how AI was used in <code>docs/ai_usage/</code> in the project repository. AI was not used to invent data: every number the app shows comes from
-          the ephemeris and terrain files above through the calculations described here, and the explanation assistant (“Ask LUMEN”) works offline from the
-          project’s own written material, with no language model.
         </p>
       </section>
 
