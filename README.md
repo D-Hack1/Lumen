@@ -122,12 +122,4 @@ npm run preview                                        # serve dist/
 
 The app is a static site (`web/dist/`), so any static host works. It is served from the root of https://lumen.dhack.in, which uses the default base path `/`. `.github/workflows/deploy.yml` is an optional alternative that publishes `main` to GitHub Pages under a sub-path (it needs Settings → Pages → Source "GitHub Actions"). Data files under `web/public/data*` are Git LFS objects, so check out with LFS. After the first load the app works with the network off.
 
-## Documentation
 
-- [`docs/submission.md`](docs/submission.md) — the submission write-up
-- [`docs/limitations.md`](docs/limitations.md) — what is not done and why
-- [`docs/ask_help.md`](docs/ask_help.md) — the written material Ask LUMEN answers from
-
-## AI use
-
-Parts of the code, tests and documentation were written with the help of an AI assistant (Anthropic's Claude), in Claude Code sessions. The assistant did not generate data: every number the app shows comes from the ephemeris and terrain files through the calculations above. Ask LUMEN uses no language model.
