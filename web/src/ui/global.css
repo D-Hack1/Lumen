@@ -104,6 +104,11 @@ button {
     opacity: 0;
   }
 }
+@keyframes lumen-fade-out {
+  to {
+    opacity: 0;
+  }
+}
 @keyframes lumen-pop-in {
   from {
     opacity: 0;

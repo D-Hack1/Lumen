@@ -12,7 +12,7 @@ import { evaluateVerdict, type VerdictProfile, type VerdictWeights } from './ver
 import { FINE_STEP_MS, refineTransition } from './events';
 import { energyPerDayWh, powerSeries, type PowerConfig } from './padPower';
 import type { DsnSeries } from '../data/dsn';
-import { Horizon } from './visibility';
+import { Horizon, diskFractionVisible } from './visibility';
 import { horizonFromMask } from './terrainHorizon';
 import type { Mask } from '../data/masks';
 import { toWindowRecord } from './windows';
@@ -92,7 +92,7 @@ export function buildScenarioResult(eph: Ephemeris, req: ScenarioRequest, dsn: D
   const events: EventRecord[] = [...ev.sunEvents, ...ev.earthEvents].sort((a, b) => a.t - b.t);
 
   // Answer Strip facts (D-14). "Sun up" = geometrically visible; the ops-elevation requirement is handled by the state.
-  const geomSunUp = cur.sun.diskFraction >= d.sunDiskThreshold && cur.sun.clearanceDeg >= 0;
+  const geomSunUp = diskFractionVisible(cur.sun.diskFraction, d.sunDiskThreshold) && cur.sun.clearanceDeg >= 0;
   const sunAvailable = cur.sun.up;
   const sunNext = ev.sunEvents.find((e) => e.t > tScrub && e.type === (sunAvailable ? 'sunset' : 'shadowExit')) ?? null;
   const resume = ev.sunEvents.find((e) => e.t > tScrub && e.type === 'shadowExit') ?? null;
@@ -140,6 +140,7 @@ export function buildScenarioResult(eph: Ephemeris, req: ScenarioRequest, dsn: D
     },
     verdict: verdict.verdict,
     verdictReasons: verdict.reasons,
+    verdictRequirements: verdict.requirements,
     viability: { index: verdict.viabilityIndex, components: verdict.components },
     answer, events, windows: ev.refined.windows.map(toWindowRecord), series, metrics,
   };

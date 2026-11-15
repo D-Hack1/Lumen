@@ -9,8 +9,7 @@ import { AU_KM } from '../core/constants';
 import { detectEvents } from '../core/events';
 import { evaluatePowerSeries } from '../core/power';
 import { energyPerDayWh } from '../core/padPower';
-import { availability } from '../core/visibility';
-import { Horizon } from '../core/visibility';
+import { availability, diskFraction, diskFractionVisible, Horizon } from '../core/visibility';
 import { longestWindowGapHours, mergeWindows, windowPercentage, windowsFromEvents } from '../core/windows';
 import { detectTransitions } from '../core/events';
 import { dsnElevationsAt, dsnLinkUp } from '../core/dsn';
@@ -39,17 +38,51 @@ const ev = (et: number): EventRecord => ({ type: 'sunset', t: et * S, dtMs: null
 const opts = { diskThreshold: 0.5 };
 
 describe('Golden Set 2 (synthetic) vs the TypeScript engine', () => {
-  it('has the 15 documented cases and explicit TypeScript parity classifications', () => {
+  it('has the 19 documented cases and explicit TypeScript parity classifications', () => {
     expect(file.cases.map((c) => c.id)).toEqual([
-      'synthetic_flat_visibility_boundaries', 'synthetic_terrain_mask_boundary', 'synthetic_disk_limb_conventions', 'synthetic_event_at_window_start',
-      'synthetic_refined_visibility_window', 'synthetic_total_clearance_rate', 'synthetic_three_pass_bounds', 'synthetic_exact_event_uncertainty',
-       'synthetic_grazing_rate', 'synthetic_near_zone_slope_edges', 'synthetic_guarded_span_spike', 'synthetic_tier_c_smooth_moon',
-       'synthetic_min_sun_elevation_ops', 'synthetic_power_eclipse_soc', 'synthetic_dsn_link_modes', 'synthetic_dsn_out_of_coverage',
+      'synthetic_flat_visibility_boundaries', 'synthetic_terrain_mask_boundary', 'synthetic_disk_limb_conventions', 'synthetic_disk_span_extrema',
+      'synthetic_nan_wraparound_extrema', 'synthetic_event_at_window_start', 'synthetic_refined_visibility_window', 'synthetic_total_clearance_rate',
+      'synthetic_three_pass_bounds', 'synthetic_exact_event_uncertainty', 'synthetic_disk_event_thresholds', 'synthetic_grazing_rate',
+      'synthetic_near_zone_slope_edges', 'synthetic_guarded_span_spike', 'synthetic_tier_c_smooth_moon', 'synthetic_min_sun_elevation_ops',
+      'synthetic_power_eclipse_soc', 'synthetic_dsn_link_modes', 'synthetic_dsn_out_of_coverage',
     ]);
     expect(file.typescript_parity.python_only).toHaveProperty('synthetic_guarded_span_spike');
-    expect(file.typescript_parity.python_only).toHaveProperty('synthetic_dsn_out_of_coverage');
     expect(Object.keys(file.typescript_parity.partial).sort()).toEqual(['synthetic_dsn_link_modes', 'synthetic_three_pass_bounds']);
     expect(file.typescript_parity.full).not.toContain('synthetic_guarded_span_spike');
+    // Never claim parity that is not replayed: every case labelled `full` has a replay below, and Python-only cases have none.
+    const everyLabelled = [...file.typescript_parity.full, ...Object.keys(file.typescript_parity.partial), ...Object.keys(file.typescript_parity.python_only)];
+    expect(new Set(everyLabelled).size).toBe(everyLabelled.length); // no case carries two labels
+    // Cases this file replays in TS but whose label in the fixture has not caught up yet (Gowri to move them: first three -> full, the last -> partial/full).
+    const replayedButUnlabelled = ['synthetic_disk_span_extrema', 'synthetic_nan_wraparound_extrema', 'synthetic_disk_event_thresholds', 'synthetic_dsn_out_of_coverage'];
+    const unlabelled = file.cases.map((c) => c.id).filter((id) => !everyLabelled.includes(id));
+    expect(unlabelled.every((id) => replayedButUnlabelled.includes(id))).toBe(true);
+  });
+
+  it('synthetic_disk_span_extrema: a spike one bin before azimuth 0 is inside the Sun\'s disk span, so the disk is not fully visible', () => {
+    const c = get('synthetic_disk_span_extrema');
+    const mask = new Float64Array(3600);
+    mask[3599] = c.input.spike_elevation_deg; // bin 3599 is centred at 359.95 deg
+    const f = diskFraction('sun', c.input.sun_elevation_deg, c.input.centre_azimuth_deg, 149597870.7, new Horizon({ elevationsDeg: mask, binWidthDeg: 0.1 }));
+    expect(f).toBeLessThan(c.expected.disk_fraction_lt);
+    expect(f).toBeGreaterThanOrEqual(0);
+  });
+
+  it('synthetic_nan_wraparound_extrema: a full-circle span over a mask with an unavailable bin gives the finite min and max', () => {
+    const c = get('synthetic_nan_wraparound_extrema');
+    const elevations = Float64Array.from((c.input.elevations_deg as Array<number | null>).map((v) => (v == null ? NaN : v)));
+    const [lo, hi] = new Horizon({ elevationsDeg: elevations, binWidthDeg: c.input.bin_width_deg }).extrema(0, 180);
+    expect(lo).toBe(c.expected.minimum_deg);
+    expect(hi).toBe(c.expected.maximum_deg);
+  });
+
+  it('synthetic_disk_event_thresholds: 0% needs any part of the disk, 50% and 100% are at-least thresholds', () => {
+    const c = get('synthetic_disk_event_thresholds');
+    expect(c.input.thresholds).toEqual([0, 0.5, 1]);
+    expect(diskFractionVisible(0, 0)).toBe(c.expected.zero_visible_at_zero);
+    expect(diskFractionVisible(0.5, 0.5)).toBe(c.expected.half_visible_at_half);
+    expect(diskFractionVisible(1, 1)).toBe(c.expected.full_visible_at_full);
+    expect(diskFractionVisible(0.001, 0)).toBe(true); // any sliver counts at 0%
+    expect(diskFractionVisible(0.499, 0.5)).toBe(false);
   });
 
   it.each(['synthetic_flat_visibility_boundaries', 'synthetic_terrain_mask_boundary'])('%s: elevation +-2 deg about the horizon gives clearance, disk fraction and visibility', (id) => {

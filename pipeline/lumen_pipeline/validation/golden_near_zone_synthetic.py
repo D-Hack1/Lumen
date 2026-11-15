@@ -71,8 +71,16 @@ def _case(case_id: str, slope_deg: float, uphill_azimuth_deg: float, bins: list[
                     "azimuth_deg": azimuth_deg,
                     "distant_distance_km": distant_distance[height_index],
                     "distant_elevation_deg": distant_elevation[height_index],
-                    "expected_distance_km": round(float(distance[height_index, bin_index]), 8),
-                    "expected_elevation_deg": round(float(elevation[height_index, bin_index]), 8),
+                    "expected_distance_km": (
+                        round(float(distance[height_index, bin_index]), 8)
+                        if np.isfinite(distance[height_index, bin_index])
+                        else None
+                    ),
+                    "expected_elevation_deg": (
+                        round(float(elevation[height_index, bin_index]), 8)
+                        if np.isfinite(elevation[height_index, bin_index])
+                        else None
+                    ),
                     "observer_height_m": height_m,
                 }
             )
@@ -103,7 +111,7 @@ def synthetic_near_zone_payload() -> dict[str, object]:
             "order": "height_major",
             "unselected_elevation_deg": "NaN",
             "unselected_distance_km": "NaN",
-            "json_null": "NaN",
+            "json_null": "null",
             "selected_bins": "override defaults with distant inputs",
         },
         "observer_heights_m": list(HEIGHTS_M),
@@ -145,7 +153,10 @@ def build_synthetic_near_zone_golden_set(output_path: str | Path | None = None) 
     output = Path(output_path) if output_path is not None else default_synthetic_output_path()
     payload = synthetic_near_zone_payload()
     output.parent.mkdir(parents=True, exist_ok=True)
-    # The committed golden fixture uses CRLF; write it explicitly so byte-for-byte
-    # reproducibility does not depend on the host platform's newline handling.
-    output.write_bytes((json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\r\n").encode("utf-8"))
+    output.write_bytes(
+        (
+            json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False)
+            + "\n"
+        ).encode("utf-8")
+    )
     return payload

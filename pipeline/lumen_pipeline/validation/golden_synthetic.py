@@ -127,15 +127,19 @@ def synthetic_golden_payload() -> dict[str, object]:
                 "synthetic_flat_visibility_boundaries",
                 "synthetic_terrain_mask_boundary",
                 "synthetic_disk_limb_conventions",
+                "synthetic_disk_span_extrema",
+                "synthetic_nan_wraparound_extrema",
                 "synthetic_event_at_window_start",
                 "synthetic_refined_visibility_window",
                 "synthetic_total_clearance_rate",
                 "synthetic_exact_event_uncertainty",
+                "synthetic_disk_event_thresholds",
                 "synthetic_grazing_rate",
                 "synthetic_near_zone_slope_edges",
                 "synthetic_tier_c_smooth_moon",
                 "synthetic_min_sun_elevation_ops",
                 "synthetic_power_eclipse_soc",
+                "synthetic_dsn_out_of_coverage",
             ],
             "partial": {
                 "synthetic_three_pass_bounds": "TS replays scalar three-pass mask bounds; scenario-window bounds are Python-only.",
@@ -143,7 +147,6 @@ def synthetic_golden_payload() -> dict[str, object]:
             },
             "python_only": {
                 "synthetic_guarded_span_spike": "TS has no envelope-guarded coarse sampler or exact span-extrema proof.",
-                "synthetic_dsn_out_of_coverage": "TS has no DSN-aware link-window metrics.",
             },
         },
         "cases": cases,
@@ -155,5 +158,5 @@ def build_synthetic_golden_set(output_path: str | Path | None = None) -> dict[st
     output = Path(output_path) if output_path is not None else default_synthetic_output_path()
     payload = synthetic_golden_payload()
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    output.write_bytes((json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n").encode("utf-8"))
     return payload

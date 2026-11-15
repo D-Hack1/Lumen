@@ -1,6 +1,9 @@
 # ui_guide.md
 
-_Owner: Abhinav_ · Phases 1–3. Read this before building any component that goes into a bento slot.
+> **Legacy shell.** The live app now mounts the four Lumen pages (`web/src/features/pages`, entry `web/src/main.tsx`). The cockpit/compare shell described in §§1–8 (`web/src/App.tsx`, `app/views/*`, `features/scenarios/*`) is still in the tree but **not mounted**, and its Playwright specs (`web/e2e/*.spec.ts`) do not run against the live app. Kept for reference and possible porting.
+
+
+_Owner: Abhinav_ · Phases 1–4. Read this before building any component that goes into a bento slot.
 
 ## 1. Shell and views
 - The app root is locked to the viewport (`100dvh`, `overflow: hidden`). **The page never scrolls.**
@@ -35,7 +38,7 @@ The attributes are set on `<html>`. Budgets are defined once in `web/src/ui/toke
 | `touchdown` | Ebin · TouchdownPad | flex |
 | `profileBattery` | Abhinav · ProfileBatteryAccordion (header; opens as an overlay) | 48 / 40 / 36 |
 
-**Compare:** `scenarioRows`, `missionProfile` (left) · `compareSlip`, `compareTabs`, `compareVisual` (centre) · `scan` (scrolls), `deltaTable`, `compareWindows` (scrolls) (right). **Methodology:** `methodology` (scrolls).
+**Compare (Phase 4):** `scenarioRows`, `missionProfile` (left) · `compareSlip`, `compareTabs`, `compareVisual`, `deltaTable` (centre) · `scan` (scrolls), `compareWindows` (scrolls) (right). The Delta Table moved under the barcodes; `compareWindows` grew to 300 / 250 / 200 px. **Methodology:** `methodology` (scrolls).
 
 The Mission Bar is 56 / 52 / 48 px.
 
@@ -81,5 +84,17 @@ Open `/?fixture=worst-case` to fill every slot with worst-case content: Educator
 - Search: a typed `lat, lon` (`−84.79, 29.20`, `84.79S 29.2E`) offers **Analyse custom point** (Enter → `setCustomPoint`) and **Quick Answer** (Nived's `useQuickAnswer`, shown in a popover with "Open in Cockpit"). `focusSiteSearch()` focuses the field (for the Mission Bar).
 - Definitions Bar: one line built from the store (`features/definitions/definitionsText.ts`); ✎ opens the editor (Sun disk threshold, observer height 1/2/5/10 m, Earth margin, DTE disk threshold, DSN mode + mask, min Sun elevation for ops) and the one-click **ISRO Vikram ops (min Sun elevation 6°)** preset. Sliders commit on release (one recompute). A non-default preset shows a chip (`Preset: ISRO ops` / `Custom rules`) with × reset.
 
-## 8. Keyboard map
+## 8. Compare, Mission Profile and battery (Phase 4) — legacy shell
+> **Legacy shell.** The live app now mounts the four Lumen pages (`web/src/features/pages`, entry `web/src/main.tsx`). The cockpit/compare shell described in this section (`web/src/App.tsx`, `app/views/*`, `features/scenarios/*`) is still in the tree but **not mounted**, and its Playwright specs (`web/e2e/*.spec.ts`) do not run against the live app. Kept for reference and possible porting.
+
+- **Scenario rows A–D** (`features/scenarios/ScenarioRows.tsx`): rows are `compareRows` in the store (≤ 4; `+ Add`, `+ Compare` on cards, Shift-click on a card or map pin all call `addCompareRow`). Each row: colour tag + letter (`--c-row-a…d`, never colour alone), ★ baseline (exactly one; the store repairs it on every action and on `hydrate`), site + tier, effective landing UTC, attitude summary, verdict, ⧉ duplicate, ↗ load into Cockpit, × remove. The 5th row is refused with a tooltip. Add/remove = 160 ms transition (`useListTransition`: opacity + FLIP `translateY`, interruptible, reduced-motion aware).
+- **Slip** (`CompareSlip.tsx`): `[All rows | Row X]`. All → global `slipDays` (shared with the Cockpit); Row → that row's `slipDays`. Effective landing = `landingUtc + (slipDays + row.slipDays) × 1 d` (`rowLandingUtc`). Drag writes `slipBus { slipDays, dragging, rowId }` only; row landing text and the chip are rewritten from the bus by ref (Fast Lane). Release / key → one store commit. HUD: slip frame p95 16.7–16.8 ms, 0 dropped.
+- **Mission Profile** (`MissionProfileForm.tsx`): 8 fields with units, validated in place (range, integer days, link hours ≤ duration × 24); invalid input never reaches the store; valid edits commit debounced 150 ms (Enter / blur commit at once). Below the form: the battery line and the requirement list for the selected row.
+- **Profile & Battery accordion** (`ProfileBatteryAccordion.tsx`, kit `Accordion`): header shows "Survives longest night ✓ with X h margin" (endurance = Wh × DoD ÷ W vs the night's **upper** bound). Opens as a portalled overlay that rises over the Touchdown Pad (180 ms, transform + opacity); never moves a slot. The battery check is **advisory** — not in the engine verdict yet.
+- **Verdict popover** (`MissionProfileSummary.tsx` + `RequirementList.tsx`): every hard requirement with limit · conservative bound (nominal) · pass / marginal / fail / no data, statuses from the engine's own `evaluateVerdict`. Shows "provisional" when the chip is provisional **or** the Scan list is stage 1 only (`state/scanStatus.ts`, D-15; ScanPanel reports its own stage). Statuses use the engine's `verdictRequirements` when present.
+- **View switch** (`App.tsx`): the outgoing view stays mounted, inert, and fades out over 120 ms while the incoming view fades in over 150 ms (opacity only).
+- **URL**: `compareRows` (incl. `slipDays`), `compareSelected`, `compareSlipTarget`, `profile` (incl. `usableDodPct`) and `compareTab` all round-trip; see `contracts/frontend_state_api.md` §7.
+- Pure helpers (unit-tested): `profileModel.ts` (validation, battery, requirement rows, summary line), `rowModel.ts` (labels).
+
+## 9. Keyboard map
 Phase 1 provides arrow-key navigation inside segmented controls and tabs. The full map (1/2/3, S/E/X/T, Q, ←/→, Space, Esc) arrives in Phase 5.

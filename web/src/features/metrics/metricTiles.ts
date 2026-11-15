@@ -22,3 +22,15 @@ export function metricTiles(m: MetricSet, t: T): Array<[string, string]> {
   ];
 }
 
+
+/** The MetricSet field each tile is about (the tile's copy key is not the field name). Used by the optional "Why?" hook. */
+export const TILE_METRIC: Record<string, keyof MetricSet> = {
+  'metric.clearance': 'sunClearanceDeg',
+  'metric.earthEl': 'earthElevationDeg',
+  'metric.sunlit': 'sunlitPct',
+  'metric.link': 'linkPct',
+  'metric.longestNight': 'longestNightH',
+  'metric.commGap': 'longestCommGapH',
+  'metric.ops': 'opsHours',
+  'metric.psr': 'psrDistanceKm',
+};

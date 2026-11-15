@@ -11,11 +11,25 @@
   overflow: hidden;
 }
 
+.app-stage {
+  display: grid;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
 .app-view {
+  grid-area: 1 / 1;
   min-height: 0;
   min-width: 0;
   overflow: hidden;
   animation: lumen-fade-in var(--dur-view) var(--ease-out);
+}
+/* Outgoing view during the ≤ 150 ms crossfade: on top, fading out, never interactive (exit ≤ enter). */
+.app-view--leaving {
+  z-index: 1;
+  pointer-events: none;
+  animation: lumen-fade-out var(--dur-fast) var(--ease-out) forwards;
 }
 
 /* ---------- bento ---------- */
@@ -65,10 +79,37 @@
   grid-template-rows: var(--slot-compare-rows) minmax(0, 1fr);
 }
 .bento--compare .bento__col--centre {
-  grid-template-rows: var(--slot-slip) var(--slot-compare-tabs) minmax(0, 1fr);
+  grid-template-rows: var(--slot-slip) var(--slot-compare-tabs) minmax(0, 1fr) var(--slot-delta-table);
 }
 .bento--compare .bento__col--right {
-  grid-template-rows: minmax(0, 1fr) var(--slot-delta-table) var(--slot-compare-windows);
+  grid-template-rows: minmax(0, 1fr) var(--slot-compare-windows);
+}
+/* Compare Windows Table: caption line + Ebin's table filling the rest (slot is a whitelisted scroller) */
+.slot--compareWindows {
+  display: flex;
+  flex-direction: column;
+}
+.slot--compareWindows > :not(.cmp-win__cap) {
+  flex: 1;
+  min-height: 0;
+}
+.cmp-win__cap {
+  display: flex;
+  flex: none;
+  align-items: baseline;
+  gap: var(--sp-4);
+  min-width: 0;
+  padding: var(--sp-2) var(--sp-5) 0;
+  font-size: var(--fs-xs);
+}
+.cmp-win__title {
+  flex: none;
+  color: var(--c-text-muted);
+  font-weight: var(--fw-semibold);
+}
+.cmp-win__note {
+  min-width: 0;
+  color: var(--c-text-faint);
 }
 
 /* Map slot hosts a square map centred in the column */

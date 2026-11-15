@@ -6,14 +6,24 @@ import { fmtPm } from '../../engine/format';
 import { useResult } from '../../engine/hooks';
 import type { MetricSet, ScenarioResult } from '../../engine/types';
 import { PanelState } from '../answer/PanelState';
-import { metricTiles } from './metricTiles';
+import { TILE_METRIC, metricTiles } from './metricTiles';
 import { verdictLines } from './verdictLines';
 import { WORST_CASE_METRICS } from '../../mocks/forced';
 import { useCopyFn } from '../../state/copy';
 import { InfoBadge } from '../../ui/InfoBadge';
 import './metrics.css';
 
-export function MetricDeck({ metrics, result: given }: { metrics?: MetricSet; /** Override the live result (tests, forced states). */ result?: ScenarioResult }) {
+export function MetricDeck({
+  metrics,
+  result: given,
+  onWhy,
+}: {
+  metrics?: MetricSet;
+  /** Override the live result (tests, forced states). */
+  result?: ScenarioResult;
+  /** Optional: when given, the hero and every tile show a small "Why?" button that calls this with the tile's MetricSet field. Omitted = no button, markup unchanged. */
+  onWhy?: (metricKey: keyof MetricSet) => void;
+}) {
   const t = useCopyFn();
   const live = useResult();
   const result = given ?? live;
@@ -27,6 +37,7 @@ export function MetricDeck({ metrics, result: given }: { metrics?: MetricSet; /*
       <div>
         <div className="metric-deck__hero-label">
           {t('metric.sunElevation')} <InfoBadge term="Sun elevation" />
+          {onWhy && <WhyButton label={t('metric.sunElevation')} onClick={() => onWhy('sunElevationDeg')} />}
         </div>
         <div className="metric-deck__hero">
           <span>{hero.value}</span>
@@ -38,6 +49,7 @@ export function MetricDeck({ metrics, result: given }: { metrics?: MetricSet; /*
           <div key={key} className="metric-deck__tile" data-metric={key}>
             <div className="metric-deck__label truncate">
               {t(key)} <InfoBadge term={t(key)} />
+              {onWhy && TILE_METRIC[key] && <WhyButton label={t(key)} onClick={() => onWhy(TILE_METRIC[key])} />}
             </div>
             <div className="metric-deck__value truncate" title={text}>
               {text}
@@ -56,5 +68,13 @@ export function MetricDeck({ metrics, result: given }: { metrics?: MetricSet; /*
         )}
       </div>
     </div>
+  );
+}
+
+function WhyButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button type="button" className="metric-deck__why" aria-label={`Why this number? ${label}`} onClick={onClick}>
+      Why?
+    </button>
   );
 }

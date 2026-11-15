@@ -14,6 +14,7 @@ import { Barcode } from '../../features/barcode/Barcode';
 import { SlipBar } from '../../features/barcode/SlipBar';
 import { TouchdownPad } from '../../features/touchdown/TouchdownPad';
 import { Sidebar } from '../../features/sidebar/Sidebar';
+import { ProfileBatteryAccordion } from '../../features/scenarios/ProfileBatteryAccordion';
 import { useCopyFn } from '../../state/copy';
 import { Segmented } from '../../ui/Segmented';
 import { BentoColumn, BentoGrid } from '../layout/BentoGrid';
@@ -80,7 +81,9 @@ export function CockpitView() {
             <TouchdownPad />
           </Slot>
         )}
-        <Slot id="profileBattery" />
+        <Slot id="profileBattery">
+          <ProfileBatteryAccordion />
+        </Slot>
       </BentoColumn>
     </BentoGrid>
   );

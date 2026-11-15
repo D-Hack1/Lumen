@@ -435,3 +435,102 @@
   font-weight: var(--fw-regular);
   font-size: var(--fs-2xs);
 }
+
+/* ---------- Accordion (header in its slot; body is a fixed overlay — never pushes layout) ---------- */
+.ui-acc {
+  height: 100%;
+  min-width: 0;
+}
+.ui-acc__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  padding: 0 var(--sp-5);
+  border: 0;
+  background: transparent;
+  color: var(--c-text);
+  font-size: var(--fs-sm);
+  text-align: left;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+.ui-acc__head:hover {
+  background: var(--c-surface2);
+}
+.ui-acc__head:focus-visible {
+  outline: 2px solid var(--c-focus);
+  outline-offset: -2px;
+}
+.ui-acc__head-body {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--sp-4);
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.ui-acc__caret {
+  color: var(--c-text-faint);
+  font-size: var(--fs-xs);
+  transition: transform var(--dur-base) var(--ease-out);
+}
+.ui-acc[data-open] .ui-acc__caret {
+  transform: rotate(180deg);
+}
+.ui-acc__panel {
+  position: fixed;
+  z-index: 35;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: var(--sp-5);
+  background: var(--c-surface2);
+  border: 1px solid var(--c-hairline-strong);
+  border-radius: var(--r-lg);
+  color: var(--c-text);
+  font-size: var(--fs-sm);
+}
+
+/* ---------- Icon button (row actions: ★ ⧉ × ↗) ---------- */
+.ui-icon-btn {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--c-text-faint);
+  font-size: var(--fs-sm);
+  line-height: 1;
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+.ui-icon-btn:hover:not(:disabled) {
+  background: var(--c-surface3);
+  color: var(--c-text);
+}
+.ui-icon-btn:active:not(:disabled) {
+  transform: scale(0.94);
+}
+.ui-icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.ui-icon-btn:focus-visible {
+  outline: 2px solid var(--c-focus);
+  outline-offset: 1px;
+}
+.ui-icon-btn[aria-pressed='true'] {
+  color: var(--c-sun);
+}
+:root[data-density='d4'] .ui-icon-btn {
+  width: 20px;
+  height: 20px;
+}

@@ -82,3 +82,22 @@
   line-height: 1.35;
   overflow: hidden;
 }
+
+/* Optional "Why?" hook (Ask LUMEN): small, quiet, only rendered when MetricDeck gets onWhy. */
+.metric-deck__why {
+  margin-left: 6px;
+  padding: 0 6px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 0.7em;
+  line-height: 1.6;
+  opacity: 0.6;
+  cursor: pointer;
+}
+.metric-deck__why:hover,
+.metric-deck__why:focus-visible {
+  opacity: 1;
+}

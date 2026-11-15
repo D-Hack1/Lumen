@@ -181,12 +181,20 @@ export interface ResultMeta {
   mock: boolean;
 }
 
+/** One Mission Profile requirement as the verdict judged it (the engine's own answer, so the UI never re-derives it). 'unknown' = no data or only an optimistic bound. */
+export interface VerdictRequirement {
+  id: 'sunlit' | 'link' | 'night' | 'slope';
+  status: 'pass' | 'marginal' | 'fail' | 'unknown';
+}
+
 export interface ScenarioResult {
   status: 'idle' | 'loading' | 'ready' | 'error';
   error: string | null;
   meta: ResultMeta | null;
   verdict: Verdict;
   verdictReasons: string[];
+  /** Per-requirement status behind `verdict`. Absent on mock results and while loading. */
+  verdictRequirements?: VerdictRequirement[];
   /** Viability Index (0-100) and its weighted components, shown side by side. Null when there is nothing to score. */
   viability: { index: number | null; components: Array<{ id: 'sunlit' | 'link' | 'night' | 'slope'; score: number | null; weight: number }> } | null;
   answer: AnswerState | null;
@@ -300,7 +308,8 @@ export interface RegionOutline {
 
 export interface LayersResult {
   layers: LayerEntry[];
-  extents: Record<MapExtent, LayerExtent> | null;
+  /** Only extents that have at least one available layer; null when no layer is available. */
+  extents: Partial<Record<MapExtent, LayerExtent>> | null;
   sizePx: [number, number] | null;
   regions: RegionOutline[];
   loading: boolean;

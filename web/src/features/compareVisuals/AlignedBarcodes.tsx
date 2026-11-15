@@ -3,19 +3,34 @@
 // Encoding follows §8.1 #8 — never colour alone: Sun-only = amber solid, Sun+Earth = teal solid,
 // Earth-only = blue dots, blocked = grey hatch. One shared crosshair: the scrub/hover offset is measured from the
 // first row's start and applied to every row's own time axis, so a column always means "same day since landing".
-// Overlay-only redraw on `crosshairBus` (Fast Lane); the static layer draws once per series.
+// Overlay-only redraw on `crosshairBus` and `slipBus` (Fast Lane); the static layer draws once per series.
+// Live slip: while a slip slider is dragged (slipBus.dragging) each affected row previews the move by sliding its
+// existing bars (barcodeShift.ts) — the engine recomputes once, on release. Rows the drag does not target (the
+// per-row "selected" mode) stay put. The days that slide in from beyond the computed window show as "not computed".
 import { useCompareResults } from '../../engine/hooks';
 import type { Series } from '../../engine/types';
-import { crosshairBus } from '../../state/buses';
+import { crosshairBus, slipBus } from '../../state/buses';
+import { getScenario } from '../../state/scenarioStore';
 import { createDotPattern, createHatchPattern } from '../../ui/patterns';
 import { color } from '../../ui/tokens';
 import { LayeredCanvas } from '../shared/LayeredCanvas';
+import { shiftedColumns, UNKNOWN } from './barcodeShift';
 
 // Module-level so the array reference is stable across renders (LayeredCanvas resubscribes when it changes).
-const OVERLAY_BUSES = [crosshairBus] as const;
+const OVERLAY_BUSES = [crosshairBus, slipBus] as const;
 const MAX_ROWS = 4;
 
 const spanOf = (s: Series) => s.stepMs * s.sunUp.length;
+
+/** Days this row should preview right now: 0 unless a slip drag is live and targets this row. */
+function liveSlipDeltaDays(rowId: string): number {
+  const bus = slipBus.get();
+  if (!bus.dragging) return 0;
+  const st = getScenario();
+  if (bus.rowId == null) return bus.slipDays - st.slipDays; // global slip: every row
+  if (bus.rowId !== rowId) return 0; // per-row slip: only that row
+  return bus.slipDays - (st.compareRows.find((r) => r.id === rowId)?.slipDays ?? 0);
+}
 
 export function AlignedBarcodes() {
   const compare = useCompareResults();
@@ -48,8 +63,30 @@ export function AlignedBarcodes() {
                     ctx.fillRect(i * cw, 0, Math.max(1, cw), h);
                   }
                 }}
-                drawOverlay={(ctx, w, h) => {
+                drawOverlay={(ctx, w, h, dpr) => {
                   if (!series || !refSeries) return;
+                  const delta = liveSlipDeltaDays(row.scenarioId);
+                  if (delta !== 0) {
+                    // Opaque preview over the static bars: same encodings, shifted; "not computed" where nothing slid in.
+                    const hatch = createHatchPattern(ctx, dpr) ?? color.blocked;
+                    const dots = createDotPattern(ctx, dpr) ?? color.earth;
+                    const fills = [hatch, color.sun, dots, color.both] as const;
+                    const cols = Math.max(1, Math.floor(w));
+                    const states = shiftedColumns(series, delta, cols);
+                    ctx.fillStyle = color.surface2;
+                    ctx.fillRect(0, 0, w, h);
+                    for (let c = 0; c < cols; c++) {
+                      if (states[c] === UNKNOWN) continue;
+                      ctx.fillStyle = fills[states[c]];
+                      ctx.fillRect((c / cols) * w, 0, w / cols + 0.5, h);
+                    }
+                    ctx.fillStyle = color.text;
+                    ctx.font = '10px var(--font-mono)';
+                    ctx.textBaseline = 'top';
+                    ctx.textAlign = 'left';
+                    ctx.fillText(`preview · slip ${delta > 0 ? '+' : ''}${delta} d`, 4, 3);
+                    ctx.textBaseline = 'alphabetic';
+                  }
                   const { tScrub, tHover } = crosshairBus.get();
                   const line = (t: number, alpha: number, dashed: boolean) => {
                     const x = ((t - refSeries.t0) / spanOf(refSeries)) * w;

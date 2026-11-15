@@ -21,3 +21,4 @@ export { Slider, type SliderProps } from './Slider';
 export { Tooltip, type TooltipProps } from './Tooltip';
 export { Popover, type PopoverProps } from './Popover';
 export { ToastViewport, toast, dismissToast, type ToastItem } from './Toast';
+export { Accordion, type AccordionProps } from './Accordion';
