@@ -20,6 +20,30 @@ describe('polar projection', () => {
     expect(project(-85, 90).x).toBeGreaterThan(0);
     expect(Math.hypot(project(-69.373, 32.319).x, project(-69.373, 32.319).y)).toBeGreaterThan(halfExtentKm(80));
   });
+  it('matches an independent pyproj reference for "+proj=stere +lat_0=-90 +lat_ts=-90 +lon_0=0 +R=1737400" (axis-orientation regression)', () => {
+    // Ground truth computed independently via pyproj.Transformer against the
+    // actual producer CRS string (not derived from this module's own
+    // formula), at colatitude 10 deg (lat -80, r = 2*1737.4*tan(5deg) = 304.006 km):
+    //   lon=0   -> (x=0,        y=+304.006)
+    //   lon=90  -> (x=+304.006, y=0)
+    //   lon=180 -> (x=0,        y=-304.006)
+    //   lon=270 -> (x=-304.006, y=0)
+    // This pins x = r*sin(lon_east), y = r*cos(lon_east) against the real
+    // south-polar-stereographic projection, not merely a self-consistent
+    // round trip (which would also pass if sin/cos were both negated).
+    const r = 304.006;
+    const cases: [number, number, number][] = [
+      [0, 0, r],
+      [90, r, 0],
+      [180, 0, -r],
+      [270, -r, 0],
+    ];
+    for (const [lon, x, y] of cases) {
+      const p = project(-80, lon);
+      expect(p.x).toBeCloseTo(x, 2);
+      expect(p.y).toBeCloseTo(y, 2);
+    }
+  });
 });
 
 describe('deltas', () => {

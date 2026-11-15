@@ -134,6 +134,27 @@ To maintain architectural boundaries, this document distinguishes:
 - The raster is a shared distance-to-PSR artifact. Per-site `distance_km`,
   `bearing_deg`, and area fields in site summaries are derived site metrics,
   not separate raster values.
+- **Verified naming clarification (not yet implemented):** `web/src/engine/data/psr.ts`'s
+  `loadPsr()` currently reads exactly this single, un-suffixed, merged
+  `psr_distance.{bin,json}` pair (a quantized `uint16` raster with
+  `half_extent_km`/`pixel_m` fields) for point-query lookups
+  (e.g. `Basemap.tsx`'s hover distance readout). No producer currently
+  writes this specific artifact; it remains an open implementation gap,
+  independent of the §5.3 item 5 naming below.
+- **Do not confuse this artifact with the §5.3 item 5 "Distance-to-PSR" map
+  layer.** `lumen_pipeline.terrain.psr.generate_psr_distance_layer(extent)`
+  already writes `psr_distance_80_90S.{bin,json}` and
+  `psr_distance_85_90S.{bin,json}` -- per-extent, `float32`, ground-distance
+  kilometres, with `radius_m`/`resolution_m`/`width_px`/`height_px` fields.
+  That is a *different*, already-implemented Tier-1 map-layer artifact (one
+  raster per standard S-7 extent, matching every other map layer's naming
+  convention), not a draft or incorrect name for this section's merged
+  evaluator raster. The two are schema-incompatible (`uint16` vs `float32`,
+  merged vs per-extent, different field names) and must not be treated as
+  interchangeable. If a consumer (e.g. a loader reading
+  `psr_distance_80_90S.*`) is integrating against the Tier-1 map layer, that
+  is correct and matches the producer; it is not a fix for the still-missing
+  single merged raster this section describes.
 
 ### 4.2 Source Ladder & Derivation Rules (Confirmed)
 - **Preferred Source:** Published polar PSR polygon/shapefile dataset, if accessible, validated, and citable by milestone H8.
@@ -187,6 +208,16 @@ Every map layer is rendered at two standard polar extents:
    - Exceeded: $(15^\circ, 90^\circ)$
 4. **PSR (Permanently Shadowed Regions):** Binary mask of qualifying cold-trap regions (published or derived).
 5. **Distance-to-PSR (Tier 1):** Continuous distance transform raster from qualifying PSR boundaries.
+   **Verified, already implemented:** `lumen_pipeline.terrain.psr.generate_psr_distance_layer(extent)`
+   writes `web/public/data/terrain/psr/psr_distance_<extent>.bin` (`<extent>`
+   is `80_90S` or `85_90S`, matching every other S-7 layer's naming) plus a
+   matching `.json` sidecar, as a little-endian `float32`,
+   C-contiguous row-major raster of true ground-distance kilometres
+   (`NaN` outside DEM coverage), not a palette-indexed PNG like the other
+   four layers in this list -- a confirmed, deliberate deviation from §5.1's
+   general "PNG" rule for this one continuous-valued layer. This artifact is
+   distinct from, and must not be confused with, the single merged
+   `psr_distance.bin` evaluator raster in §4.1.
 
 ### 5.4 Visual & Technical Rules
 - **Projection:** A single polar-stereographic projection shared across the entire layer set.
