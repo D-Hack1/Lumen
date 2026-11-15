@@ -13,7 +13,9 @@ import { FINE_STEP_MS, refineTransition } from './events';
 import { energyPerDayWh, powerSeries, type PowerConfig } from './padPower';
 import type { DsnSeries } from '../data/dsn';
 import { Horizon, diskFractionVisible } from './visibility';
-import { horizonFromMask } from './terrainHorizon';
+import { horizonFromMask, sigmaAtAzimuth, sigmaRowFor } from './terrainHorizon';
+import { evaluateWithBounds, type BoundedEvaluation } from './bounds';
+import { sigmaSourceLabel, type Sigma } from '../data/sigma';
 import type { Mask } from '../data/masks';
 import { toWindowRecord } from './windows';
 
@@ -50,7 +52,7 @@ function emptyError(message: string): ScenarioResult {
   return { status: 'error', error: message, meta: null, verdict: 'PENDING', verdictReasons: [], viability: null, answer: null, events: [], windows: [], series: null, metrics: null };
 }
 
-function buildSeries(ev: Evaluation, power: PowerConfig | null): Series {
+function buildSeries(ev: Evaluation, power: PowerConfig | null, sigmaBand: ((azimuthDeg: number) => number) | null = null): Series {
   const n = ev.samples.length;
   const f = () => new Float32Array(n);
   const u = () => new Uint8Array(n);
@@ -63,7 +65,7 @@ function buildSeries(ev: Evaluation, power: PowerConfig | null): Series {
     s.earthElevDeg[i] = p.earth.elevationDeg; s.earthAzDeg[i] = p.earth.azimuthDeg; s.earthClearanceDeg[i] = p.earth.clearanceDeg; s.earthDiskPct[i] = 100 * p.earth.diskFraction; s.earthRangeKm[i] = p.earth.distanceKm;
     s.sunUp[i] = p.sun.up ? 1 : 0; s.earthUp[i] = p.earth.up ? 1 : 0;
     s.linkUp[i] = p.linkUp ? 1 : 0; // Earth visible AND (when the DSN rule applies) a complex above the mask
-    // sigmaBandDeg stays 0: no sigma yet
+    if (sigmaBand) s.sigmaBandDeg[i] = sigmaBand(p.sun.azimuthDeg); // +/- sigma of the effective mask at the Sun azimuth; stays 0 without sigma
   });
   if (power) {
     const g = powerSeries(power, ev.samples.map((p) => ({ azimuthDeg: p.sun.azimuthDeg, elevationDeg: p.sun.elevationDeg, distanceKm: p.sun.distanceKm, diskFraction: p.sun.diskFraction })));
@@ -73,7 +75,7 @@ function buildSeries(ev: Evaluation, power: PowerConfig | null): Series {
   return s;
 }
 
-export function buildScenarioResult(eph: Ephemeris, req: ScenarioRequest, dsn: DsnSeries | null = null, mask: Mask | null = null): ScenarioResult {
+export function buildScenarioResult(eph: Ephemeris, req: ScenarioRequest, dsn: DsnSeries | null = null, mask: Mask | null = null, sigma: Sigma | null = null): ScenarioResult {
   const endMs = req.startMs + req.durationDays * DAY;
   if (!inEphemerisRange(eph, req.startMs) || !inEphemerisRange(eph, endMs)) {
     return emptyError(`The ephemeris covers ${new Date(eph.startMs).toISOString().slice(0, 10)} to ${new Date(eph.endMs).toISOString().slice(0, 10)}; this window is outside it.`);
@@ -84,12 +86,18 @@ export function buildScenarioResult(eph: Ephemeris, req: ScenarioRequest, dsn: D
   const terrainHorizon = horizonFromMask(mask, req.heightM);
   const horizon = terrainHorizon ?? new Horizon({ observerHeightM: req.heightM });
   const d = req.definitions;
-  const ev = evaluate({ eph, site, horizon, startMs: req.startMs, durationDays: req.durationDays, definitions: d, dsn });
-  const series = buildSeries(ev, req.power ?? null);
+  // With a usable sigma for this mask and height (data_masks.md §4/§8) the scenario is evaluated on the -sigma / nominal / +sigma masks (three-pass bounds): metrics get
+  // lo/hi, events get a +/- time, and the verdict is judged on the conservative bound (so GO becomes possible). Without it nothing below changes.
+  const sigmaRow = terrainHorizon ? sigmaRowFor(sigma, mask, req.heightM) : null;
+  const sigmaAt = sigmaRow && mask ? (az: number) => sigmaAtAzimuth(sigmaRow, mask.binWidthDeg, az) : null;
+  const input = { eph, site, horizon, startMs: req.startMs, durationDays: req.durationDays, definitions: d, dsn };
+  const bw: BoundedEvaluation | null = sigmaRow && sigmaAt ? evaluateWithBounds(input, { sigmaDeg: sigmaRow, sigmaAtAzimuthDeg: sigmaAt }) : null;
+  const ev = bw ? bw.nominal : evaluate(input);
+  const series = buildSeries(ev, req.power ?? null, sigmaAt);
 
   const tScrub = Math.min(Math.max(req.tScrubMs, req.startMs), endMs);
   const cur = stateAt(eph, site, horizon, d, tScrub, dsn);
-  const events: EventRecord[] = [...ev.sunEvents, ...ev.earthEvents].sort((a, b) => a.t - b.t);
+  const events: EventRecord[] = [...(bw?.sunEvents ?? ev.sunEvents), ...(bw?.earthEvents ?? ev.earthEvents)].sort((a, b) => a.t - b.t);
 
   // Answer Strip facts (D-14). "Sun up" = geometrically visible; the ops-elevation requirement is handled by the state.
   const geomSunUp = diskFractionVisible(cur.sun.diskFraction, d.sunDiskThreshold) && cur.sun.clearanceDeg >= 0;
@@ -110,7 +118,7 @@ export function buildScenarioResult(eph: Ephemeris, req: ScenarioRequest, dsn: D
     opsMinElevDeg: d.minSunElevationOpsDeg > 0 ? d.minSunElevationOpsDeg : null, sunNext,
     darkSinceMs: !geomSunUp ? (lastSunset?.t ?? null) : null, opsResumeT: resume?.t ?? null,
     earthElevDeg: cur.earth.elevationDeg, earthVisible: cur.earth.up, linkUp: cur.linkUp, dsnAware: ev.dsnApplied, earthNext, linkResumeT,
-    windowSunlitPct: val(m.sunlitPct), windowLinkPct: val(m.linkPct),
+    windowSunlitPct: bw ? bw.metrics.sunlitPct : val(m.sunlitPct), windowLinkPct: bw ? bw.metrics.linkPct : val(m.linkPct),
   });
 
   const touch = req.touchdownMs != null && inEphemerisRange(eph, req.touchdownMs) ? stateAt(eph, site, horizon, d, req.touchdownMs, dsn) : null;
@@ -118,8 +126,8 @@ export function buildScenarioResult(eph: Ephemeris, req: ScenarioRequest, dsn: D
   const metrics: MetricSet = {
     sunElevationDeg: val(cur.sun.elevationDeg), sunClearanceDeg: val(cur.sun.clearanceDeg), sunDiskPct: val(100 * cur.sun.diskFraction),
     earthElevationDeg: val(cur.earth.elevationDeg), dteMarginDeg: val(cur.earth.clearanceDeg),
-    sunlitPct: val(m.sunlitPct), linkPct: val(m.linkPct), // Earth visible AND, when the DSN rule applies, a complex above the mask
-    longestNightH: val(m.longestNightH), longestCommGapH: val(m.longestCommGapH), opsHours: val(m.opsHours),
+    sunlitPct: bw ? bw.metrics.sunlitPct : val(m.sunlitPct), linkPct: bw ? bw.metrics.linkPct : val(m.linkPct), // Earth visible AND, when the DSN rule applies, a complex above the mask
+    longestNightH: bw ? bw.metrics.longestNightH : val(m.longestNightH), longestCommGapH: bw ? bw.metrics.longestCommGapH : val(m.longestCommGapH), opsHours: bw ? bw.metrics.opsHours : val(m.opsHours),
     energyPerDayWh: req.power ? val(energyPerDayWh(series.powerW, series.stepMs)) : nulls,
     sunElevationAtTouchdownDeg: touch ? val(touch.sun.elevationDeg) : null,
     padSlopeDeg: req.padSlopeDeg != null ? val(req.padSlopeDeg) : null,
@@ -127,14 +135,14 @@ export function buildScenarioResult(eph: Ephemeris, req: ScenarioRequest, dsn: D
   };
 
   // No sigma yet => the values are nominal on the mask (or a smooth-Moon best case without one): a failure is certain, a pass is only PENDING (see verdict.ts).
-  const verdict = evaluateVerdict({ metrics, windowHours: req.durationDays * 24, profile: req.profile, weights: req.weights, boundsKind: 'optimistic', basis: terrainHorizon ? 'mask' : 'smooth-moon' });
+  const verdict = evaluateVerdict({ metrics, windowHours: req.durationDays * 24, profile: req.profile, weights: req.weights, boundsKind: bw ? 'bounded' : 'optimistic', basis: terrainHorizon ? 'mask' : 'smooth-moon' });
 
   return {
     status: 'ready', error: null,
     meta: {
       siteId: req.siteId ?? 'custom', tier: req.tier,
-      tierBadge: terrainHorizon ? 'Terrain mask · σ pending' : 'Smooth-Moon horizon · terrain pending',
-      sigmaSource: terrainHorizon ? 'terrain mask, σ pending' : 'smooth-Moon bound', snapDistanceKm: null,
+      tierBadge: bw && sigma ? `Terrain mask · σ ${sigmaSourceLabel(sigma)}` : terrainHorizon ? 'Terrain mask · σ pending' : 'Smooth-Moon horizon · terrain pending',
+      sigmaSource: bw && sigma ? sigmaSourceLabel(sigma) : terrainHorizon ? 'terrain mask, σ pending' : 'smooth-Moon bound', snapDistanceKm: null,
       definitionsSummary: `Sun available = ≥${Math.round(d.sunDiskThreshold * 100)}% disk above the horizon${d.minSunElevationOpsDeg > 0 ? ` and ≥${d.minSunElevationOpsDeg}° elevation` : ''} @${req.heightM} m · Link = Earth ≥${d.earthMarginDeg}° above the horizon${ev.dsnApplied ? ` + DSN ≥${d.dsnMaskDeg}°` : ' (DSN not applied)'}`,
       dataVersions: req.dataVersions, mock: eph.mock,
     },

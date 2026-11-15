@@ -2,7 +2,7 @@
 // Loader: terrain/sigma/<id>.{bin,json} (data_masks.md §4, §8). Separate from the mask; NaN pattern must match the mask.
 import { AZIMUTH_COUNT, HEIGHT_COUNT, parseLumenHeader, readFloat32LE } from './lumenBinary';
 import { loadMask, type Mask } from './masks';
-import { DataError, fetchBuffer, fetchJson } from './source';
+import { DataError, dataMode, dataUrl, fetchBuffer, fetchJson } from './source';
 
 export type SigmaSource = 'default' | 'monte_carlo' | 'calibrated';
 
@@ -13,6 +13,8 @@ export interface Sigma {
   /** (4, 3600) height-major, degrees, >= 0; NaN where the mask is unavailable. */
   sigmaDeg: Float32Array;
   notes: string | null;
+  /** Synthetic/mock artifact: never used for real results (same rule as masks). */
+  mock: boolean;
 }
 
 interface RawSigma {
@@ -22,6 +24,7 @@ interface RawSigma {
   clone_count?: number;
   unit: string;
   notes?: string;
+  mock?: boolean;
   shape: number[];
   height_order_m: number[];
   binary: { magic: string; format_version: number; byte_order: string; array_order: string };
@@ -51,7 +54,7 @@ export function parseSigma(id: string, bin: ArrayBuffer, j: RawSigma): Sigma {
   for (let i = 0; i < sigmaDeg.length; i++) {
     if (!Number.isNaN(sigmaDeg[i]) && sigmaDeg[i] < 0) bad(id, `negative sigma at index ${i}`);
   }
-  return { siteId: id, source: j.source, cloneCount: j.clone_count ?? null, sigmaDeg, notes: j.notes ?? null };
+  return { siteId: id, source: j.source, cloneCount: j.clone_count ?? null, sigmaDeg, notes: j.notes ?? null, mock: j.mock === true };
 }
 
 /** Gate 6: finite sigma wherever the mask is valid, NaN wherever it is not. */
@@ -80,4 +83,34 @@ export function loadSigma(siteId: string): Promise<Sigma> {
     p.catch(() => cache.delete(siteId));
   }
   return p;
+}
+
+/** How the result labels its sigma (ResultMeta.sigmaSource), from the artifact's declared source (data_masks.md §8). */
+export function sigmaSourceLabel(s: Pick<Sigma, 'source' | 'cloneCount' | 'notes'>): string {
+  if (s.source === 'monte_carlo') return `Monte-Carlo, ${s.cloneCount} clones`;
+  if (s.source === 'calibrated') return `calibrated: ${s.notes}`;
+  return 'default';
+}
+
+const absent = new Set<string>();
+
+/**
+ * The site's production sigma, or null when there is none to use: no site id, mock data mode, a mock artifact, or a missing/invalid one (wrong header,
+ * negative value, NaN pattern that disagrees with the mask). Null means the result keeps "sigma pending": no +/- is ever invented.
+ */
+export async function loadSigmaOrNull(siteId: string | null | undefined): Promise<Sigma | null> {
+  if (!siteId || dataMode() !== 'real') return null;
+  const key = `${dataUrl('')}${siteId}`;
+  if (absent.has(key)) return null;
+  try {
+    const s = await loadSigma(siteId);
+    return s.mock ? null : s;
+  } catch {
+    absent.add(key);
+    return null;
+  }
+}
+
+export function __resetSigmaAbsentForTests(): void {
+  absent.clear();
 }
