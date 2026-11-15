@@ -7,12 +7,12 @@ import { showsSampleValues } from '../orbit/realModel';
 import { SITES, type Site } from '../orbit/orbitModel';
 import { useLumenContext } from './usePages';
 import { useEngineResult } from './engineBindings';
+import { getBaseUtc, longDate } from '../orbit/windowStart';
 import { StandHereNumbers } from './StandHereNumbers';
 import { SLIP_DAYS, bestSlip, fmtDuration, fmtPoints, slipWindows, type WindowStats } from './pagesModel';
 
 const SHORT: Record<string, string> = { im2: 'IM-2', shack: 'Ridge', malapert: 'Malapert', haworth: 'Haworth' };
-const EPOCH = Date.UTC(2027, 1, 8);
-const dateOf = (slip: number): string => new Date(EPOCH + slip * 86_400_000).toISOString().slice(0, 10);
+const dateOf = (slip: number): string => new Date(getBaseUtc() + slip * 86_400_000).toISOString().slice(0, 10);
 
 function Bars({
   wins,
@@ -76,7 +76,7 @@ export function SlipPage() {
         <div>
           <h1 className="lm-h1">What if we slip?</h1>
           <p className="lm-lede">
-            Each bar is a 14-day window starting that many days after 8 Feb 2027. Slide to see how a later landing
+            Each bar is a 14-day window starting that many days after {longDate(getBaseUtc())}. Slide to see how a later landing
             changes power and the link home.{showsSampleValues() ? ' Sample values.' : ''}
           </p>
         </div>

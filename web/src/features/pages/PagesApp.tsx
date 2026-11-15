@@ -1,7 +1,8 @@
 // Owner: Abhinav
 // The four Lumen pages behind one shell, routed by URL hash (#orbit, #stand-here, #compare, #slip). Theme, selected site,
 // array height, clock and compare list are shared, so a choice made on one page carries to the others.
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
+import { useWindowStart } from '../orbit/windowStart';
 import { AskLumen } from '../ask';
 import { OrbitPage } from '../orbit/OrbitPage';
 import { LumenContext, useLumenState } from '../orbit/lumenState';
@@ -47,7 +48,9 @@ export function PagesApp() {
   if (gate.state !== 'ready') {
     return (
       <div role="status" style={{ padding: 32, color: '#d8d2c4', font: '15px Inter, sans-serif' }}>
-        {gate.state === 'loading' ? 'Loading real ephemeris and terrain data…' : `Could not load the real data: ${gate.message}`}
+        {gate.state === 'loading'
+          ? 'Loading real ephemeris and terrain data…'
+          : `Could not load the real data: ${gate.message}`}
       </div>
     );
   }
@@ -58,6 +61,7 @@ export function PagesApp() {
 function PagesShell() {
   const lumen = useLumenState();
   const [route, setRoute] = useState<Route>(read);
+  const startUtc = useWindowStart(); // pages remount when the window start changes, so no memoised model keeps the old dates
 
   useEffect(() => {
     const on = () => {
@@ -82,19 +86,21 @@ function PagesShell() {
   return (
     <LumenContext.Provider value={lumen}>
       <Shell route={route} lumen={lumen}>
-        {route === 'orbit' && (
-          <OrbitPage
-            onStandHere={() => go('stand-here')}
-            onAddToCompare={(s) => {
-              lumen.addPick(s.id);
-              go('compare');
-            }}
-          />
-        )}
-        {route === 'stand-here' && <SurfacePage />}
-        {route === 'compare' && <ComparePage />}
-        {route === 'slip' && <SlipPage />}
-        {route === 'methodology' && <MethodologyPage />}
+        <Fragment key={startUtc}>
+          {route === 'orbit' && (
+            <OrbitPage
+              onStandHere={() => go('stand-here')}
+              onAddToCompare={(s) => {
+                lumen.addPick(s.id);
+                go('compare');
+              }}
+            />
+          )}
+          {route === 'stand-here' && <SurfacePage />}
+          {route === 'compare' && <ComparePage />}
+          {route === 'slip' && <SlipPage />}
+          {route === 'methodology' && <MethodologyPage />}
+        </Fragment>
       </Shell>
       <AskLumen />
       <QuickStartDrawer />

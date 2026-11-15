@@ -12,7 +12,7 @@ import { crosshairBus } from '../../state/buses';
 import { installTokens } from '../../ui/tokens';
 import '../../ui/kit.css';
 import { Barcode } from '../barcode/Barcode';
-import { BASE_UTC } from '../orbit/orbitModel';
+import { getBaseUtc } from '../orbit/windowStart';
 import { ScenarioResultProvider } from '../shared/ScenarioResultProvider';
 import { PointingLink } from './PointingLink';
 import { PowerCurve } from './PowerCurve';
@@ -35,7 +35,7 @@ export function StandHereDetails({ result, t, onSeek }: { result: ScenarioResult
 
   // page clock → charts
   useEffect(() => {
-    crosshairBus.set({ tScrub: BASE_UTC + t * HOUR_MS, source: 'standHere' });
+    crosshairBus.set({ tScrub: getBaseUtc() + t * HOUR_MS, source: 'standHere' });
   }, [t]);
 
   // charts → page clock: a click on the Power curve / Barcode, or a Windows Table row, sets the shared tScrub. (Ignore the page's own writes.)
@@ -44,7 +44,7 @@ export function StandHereDetails({ result, t, onSeek }: { result: ScenarioResult
     return crosshairBus.subscribe((v) => {
       if (v.tScrub === last) return; // hover moves, not a seek
       last = v.tScrub;
-      if (v.source !== 'standHere' && onSeek) onSeek((v.tScrub - BASE_UTC) / HOUR_MS);
+      if (v.source !== 'standHere' && onSeek) onSeek((v.tScrub - getBaseUtc()) / HOUR_MS);
     });
   }, [onSeek]);
 

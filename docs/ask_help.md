@@ -372,3 +372,9 @@ Kind: howto
 Source: live pages (Stand here, Details)
 Tags: scrub, click chart, hover, crosshair, ghost line, move time, jump, timeline, power chart, barcode click
 Yes. On Stand here, hovering over the power chart or the barcode draws a dashed line on both, and clicking either one jumps the clock to that moment, so the panorama, the numbers panel and the charts all move together. Clicking a row of the Windows table jumps to the start of that window.
+
+## Can I pick a different date?
+Kind: howto
+Source: live pages (header)
+Tags: date, start date, date picker, change date, other date, different date, when, which dates, 2028, 2029, calendar, window start
+Yes. The "Start date" box in the header sets the first day of every window (in UTC). It applies to all the pages: the Orbit clock, the Stand here numbers, Compare and the Slip explorer. You can choose any day from 2 January 2023 to 31 October 2030, because the ephemeris data ends on 31 December 2030 and the longest window needs room after the start. The default is 8 February 2027. The date resets to the default when you reload the page.

@@ -171,6 +171,25 @@
   border-radius: 10px;
   padding: 10px 14px;
 }
+.lm-datepick {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--mut);
+}
+.lm-datepick input {
+  font: 14px 'JetBrains Mono', ui-monospace, monospace;
+  color: var(--fg);
+  background: var(--raise);
+  border: 1px solid var(--line2);
+  border-radius: 10px;
+  padding: 9px 10px;
+  color-scheme: dark;
+}
+.lm-theme-light .lm-datepick input {
+  color-scheme: light;
+}
 .lm-btn {
   height: 44px;
   padding: 0 16px;

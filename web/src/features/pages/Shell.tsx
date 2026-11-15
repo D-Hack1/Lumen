@@ -6,6 +6,8 @@ import { timeLabel } from '../orbit/orbitModel';
 import { OPEN_EVENT } from '../ask/askWhy';
 import { openQuickStart } from '../guidance/quickstart';
 import type { LumenState } from '../orbit/lumenState';
+import { dataMode } from '../../engine/data/source';
+import { MAX_START_UTC, MIN_START_UTC, isoDate, parseIsoDate, setWindowStart, useWindowStart } from '../orbit/windowStart';
 
 export type Route = 'orbit' | 'stand-here' | 'compare' | 'slip' | 'methodology';
 
@@ -19,6 +21,8 @@ const NAV: { route: Route; label: string }[] = [
 
 export function Shell({ route, lumen, children }: { route: Route; lumen: LumenState; children: ReactNode }) {
   const showClock = route === 'orbit' || route === 'stand-here';
+  const startUtc = useWindowStart();
+  const showDate = dataMode() === 'real' && route !== 'methodology';
   return (
     <div className={`lm-page lm-shell ${lumen.light ? 'lm-theme-light' : 'lm-theme-dark'}`}>
       <header className="lm-header">
@@ -44,6 +48,19 @@ export function Shell({ route, lumen, children }: { route: Route; lumen: LumenSt
           ))}
         </nav>
         <span className="lm-grow" />
+        {showDate && (
+          <label className="lm-datepick" title="First day of every window (UTC). The ephemeris covers 2023–2030.">
+            <span>Start date</span>
+            <input
+              type="date"
+              aria-label="Window start date (UTC)"
+              min={isoDate(MIN_START_UTC)}
+              max={isoDate(MAX_START_UTC)}
+              value={isoDate(startUtc)}
+              onChange={(e) => setWindowStart(parseIsoDate(e.target.value))}
+            />
+          </label>
+        )}
         {showClock && <div className="lm-clock">{timeLabel(lumen.t)}</div>}
         <button type="button" className="lm-btn lm-btn--ghost" onClick={openQuickStart} title="Four guided ways to start">
           Quick start

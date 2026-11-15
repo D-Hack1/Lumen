@@ -40,7 +40,7 @@ to one elevation threshold; Tier-B snap error is up to about 2.8 km in the 4 km 
 ## Interface
 - The Windows Table, Pointing & Link and the Power/Barcode charts are on the Stand here page only. The earlier cockpit (Answer Strip,
   Definitions Bar, Scan, Mission Profile, Touchdown Pad, Quick Answer card) is in the repository but not mounted in the live app.
-- The live pages show one 30-day window from 8 Feb 2027 (and 14-day windows on Compare / Slip); there is no free date picker yet.
+- The live pages show one 30-day window (14 days on Compare / Slip) that starts on the **Start date** in the header (default 8 Feb 2027). Any whole UTC day from 2 Jan 2023 to 31 Oct 2030 can be chosen — the published ephemeris and DSN files end on 31 Dec 2030. The date applies to every page and resets to the default on reload; there is no time-of-day or end-date control.
 - Persona (Planner / Educator) switching is not in the live pages; Educator wording exists in the unmounted cockpit.
 - Ask LUMEN answers only from the project's own written material (glossary, plan rationale, validation report, `docs/ask_help.md`); it is
   search and templates, not a language model, and says so when it has no answer.

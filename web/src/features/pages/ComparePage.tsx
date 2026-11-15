@@ -6,6 +6,7 @@ import { useMemo } from 'react';
 import { showsSampleValues } from '../orbit/realModel';
 import { MASTS, type Site } from '../orbit/orbitModel';
 import { MAX_COMPARE } from '../orbit/lumenState';
+import { getBaseUtc, longDate } from '../orbit/windowStart';
 import { useLumenContext } from './usePages';
 import { fmtDuration, windowStats, type WindowStats } from './pagesModel';
 import { go } from './nav';
@@ -62,7 +63,7 @@ export function ComparePage() {
       <div>
         <h1 className="lm-h1">Compare sites</h1>
         <p className="lm-lede">
-          Pick up to four. Every number is for the same 14-day window starting 8 Feb 2027. {showsSampleValues() ? 'Design preview, sample values.' : ''}
+          Pick up to four. Every number is for the same 14-day window starting {longDate(getBaseUtc())}. {showsSampleValues() ? 'Design preview, sample values.' : ''}
         </p>
       </div>
 

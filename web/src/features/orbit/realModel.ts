@@ -16,9 +16,10 @@ import type { SiteRecord } from '../../engine/types';
 import { setRealEphemeris } from './realEphem';
 import { SITES, type Site, type Snapshot } from './orbitModel';
 import { windowStats } from '../pages/pagesModel';
+import { getBaseUtc } from './windowStart';
 
 /** Hours-since-epoch of the design's t = 0 (2027-02-08 00:00 UTC); duplicated from orbitModel to avoid a runtime import cycle. */
-const BASE_UTC = Date.UTC(2027, 1, 8, 0, 0, 0);
+
 
 /** Short labels for the site tabs (catalog ids). Unknown ids fall back to the catalog name. */
 const SHORT: Record<string, string> = { im2_athena: 'IM-2', shackleton_ridge: 'Ridge', cy3_shiv_shakti: 'CY-3', blue_ghost_m1: 'Blue Ghost' };
@@ -111,7 +112,7 @@ export const usesTerrain = (site: Site, mast: number): boolean => (loaded ? prep
 export function realSnapshot(t: number, site: Site, mast: number): Snapshot {
   const L = loaded as Loaded;
   const p = prepare(site, mast);
-  const s = stateAt(L.eph, p.site, p.horizon, DEFS, BASE_UTC + t * 3_600_000, L.dsn);
+  const s = stateAt(L.eph, p.site, p.horizon, DEFS, getBaseUtc() + t * 3_600_000, L.dsn);
   return {
     sunAz: s.sun.azimuthDeg,
     sunEl: s.sun.elevationDeg,

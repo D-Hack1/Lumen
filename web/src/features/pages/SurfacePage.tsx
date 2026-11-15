@@ -18,6 +18,7 @@ import {
 import { useLumenContext } from './usePages';
 import { PANO_H, PANO_W, azToX, compassPoint, horizonPath, skyTrack, skyY, xToAz } from './pagesModel';
 import { go } from './nav';
+import { getBaseUtc, longDate } from '../orbit/windowStart';
 import { standHereView, useEngineResult, useSkyline } from './engineBindings';
 import { StandHereNumbers } from './StandHereNumbers';
 import { StandHereDetails } from '../analysis/StandHereDetails';
@@ -196,7 +197,7 @@ export function SurfacePage() {
         </div>
       </div>
 
-      {eng && v && <StandHereNumbers result={eng} terrain={v.source === 'terrain'} windowLabel="30 days from 8 Feb 2027" />}
+      {eng && v && <StandHereNumbers result={eng} terrain={v.source === 'terrain'} windowLabel={`30 days from ${longDate(getBaseUtc())}`} />}
 
       {/* Windows Table, Pointing & Link (DSN lanes), Power curve and Barcode — drawn from the same result as the numbers above. */}
       {eng && <StandHereDetails result={eng} t={t} onSeek={(h) => setT(Math.max(0, Math.min(T_MAX, Math.round(h))))} />}

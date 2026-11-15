@@ -16,13 +16,14 @@ import type { ScenarioResult } from '../../engine/types';
 import { LumenContext, SLIP_MAX } from '../orbit/lumenState';
 import type { Site } from '../orbit/orbitModel';
 import { useEngineResult } from '../pages/engineBindings';
+import { getBaseUtc, longDate } from '../orbit/windowStart';
 import { go } from '../pages/nav';
 import { AskBox } from './AskBox';
 import type { AskPorts, AskSite } from './commands';
 
 /** The live slip state only accepts 0 … SLIP_MAX days (no earlier-than-on-time landing in the Slip explorer). */
 const SLIP_RANGE = { min: 0, max: SLIP_MAX } as const;
-const WINDOW = '30 days from 8 Feb 2027';
+const windowLabel = (): string => `30 days from ${longDate(getBaseUtc())}`;
 
 type Source = 'page' | 'store';
 
@@ -54,7 +55,7 @@ export function AskLumen() {
   const real = dataMode() === 'real';
   const note =
     state.source === 'page'
-      ? `These are the same numbers as “Numbers for this window” on Stand here: ${lumen.site.name}, ${lumen.mast} m array, ${WINDOW}.`
+      ? `These are the same numbers as “Numbers for this window” on Stand here: ${lumen.site.name}, ${lumen.mast} m array, ${windowLabel()}.`
       : 'These numbers come from the app’s own default scenario in mock-data mode — not from the site and array height you are looking at.';
   return (
     <>

@@ -20,7 +20,7 @@ import { dataMode } from '../../engine/data/source';
 import { makeRequest } from '../../engine/requests';
 import type { ScenarioRequest } from '../../engine/core/buildResult';
 import type { ScenarioResult, SiteRecord } from '../../engine/types';
-import { BASE_UTC } from '../orbit/orbitModel';
+import { getBaseUtc, useWindowStart } from '../orbit/windowStart';
 import { isCatalogSite } from '../orbit/realModel';
 import { PANO_H, PANO_W, azToX } from './pagesModel';
 
@@ -47,13 +47,14 @@ export function requestFor(site: LiveSite, mastM: number, slipDays: number, dura
   const base = { ...DEFAULT_SCENARIO, durationDays, slipDays };
   return makeRequest(base, sites, {
     siteRef: id ? { kind: 'site', id } : { kind: 'point', lat: site.lat, lon: site.lon },
-    landingUtc: BASE_UTC, heightM: mastM, scrubUtc: BASE_UTC + slipDays * DAY_MS,
+    landingUtc: getBaseUtc(), heightM: mastM, scrubUtc: getBaseUtc() + slipDays * DAY_MS,
   });
 }
 
-/** The engine result for the live site/mast over [BASE_UTC + slip, + durationDays]; null while loading, on error, and unless the data mode is real. */
+/** The engine result for the live site/mast over [window start + slip, + durationDays]; null while loading, on error, and unless the data mode is real. */
 export function useEngineResult(site: LiveSite, mastM: number, slipDays = 0, durationDays: DurationDays = 30): ScenarioResult | null {
   const [res, setRes] = useState<ScenarioResult | null>(null);
+  const startUtc = useWindowStart(); // a new window start re-runs the engine
   useEffect(() => {
     setRes(null); // never keep another site's numbers on screen
     if (dataMode() !== 'real') return;
@@ -68,7 +69,7 @@ export function useEngineResult(site: LiveSite, mastM: number, slipDays = 0, dur
     return () => {
       live = false;
     };
-  }, [site.id, site.lat, site.lon, mastM, slipDays, durationDays]);
+  }, [site.id, site.lat, site.lon, mastM, slipDays, durationDays, startUtc]);
   return res;
 }
 
@@ -150,7 +151,7 @@ function track(az: Float32Array, el: Float32Array, step: number, y: (e: number) 
 export function standHereView(r: ScenarioResult, sky: Skyline | null, tHours: number): StandHereView | null {
   const s = r.series;
   if (!s || r.status !== 'ready') return null;
-  const tMs = BASE_UTC + tHours * HOUR_MS;
+  const tMs = getBaseUtc() + tHours * HOUR_MS;
   const i = Math.max(0, Math.min(s.sunUp.length - 1, Math.round((tMs - s.t0) / s.stepMs)));
   const hz = sky ?? skylineFor(null, 0);
 

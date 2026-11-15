@@ -4,6 +4,7 @@
 // page is wired to the engine, this file is what gets replaced by real results. Ported unchanged from the approved design.
 
 import { dataMode } from '../../engine/data/source';
+import { getBaseUtc } from './windowStart';
 import { realHorizon, realModelReady, realSnapshot } from './realModel';
 
 export const MONTH_HOURS = 708.73;
@@ -239,9 +240,9 @@ export function fmtHours(h: number | null): string {
 }
 
 export function timeLabel(t: number): string {
-  const iso = new Date(BASE_UTC + t * 3_600_000).toISOString();
+  const iso = new Date(getBaseUtc() + t * 3_600_000).toISOString();
   return `${iso.slice(0, 10)}  ${iso.slice(11, 16)} UTC`;
 }
 
 export const timelineTicks = (): string[] =>
-  Array.from({ length: 8 }, (_, k) => new Date(BASE_UTC + k * 101.3 * 3_600_000).toISOString().slice(5, 10));
+  Array.from({ length: 8 }, (_, k) => new Date(getBaseUtc() + k * 101.3 * 3_600_000).toISOString().slice(5, 10));
