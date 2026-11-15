@@ -85,6 +85,38 @@
     },
     {
       "expected": {
+        "disk_fraction_lt": 1.0
+      },
+      "id": "synthetic_disk_span_extrema",
+      "input": {
+        "centre_azimuth_deg": 0.0,
+        "off_centre_spike_azimuth_deg": 359.95,
+        "site_id": "synthetic_disk_span",
+        "spike_elevation_deg": 10.0,
+        "sun_elevation_deg": 1.0,
+        "time_scale": "ET seconds"
+      }
+    },
+    {
+      "expected": {
+        "maximum_deg": 4.0,
+        "minimum_deg": -3.0
+      },
+      "id": "synthetic_nan_wraparound_extrema",
+      "input": {
+        "bin_width_deg": 90.0,
+        "elevations_deg": [
+          1.0,
+          null,
+          -3.0,
+          4.0
+        ],
+        "site_id": "synthetic_nan_wrap",
+        "time_scale": "ET seconds"
+      }
+    },
+    {
+      "expected": {
         "events": [],
         "window": {
           "end_et": 240.0,
@@ -205,6 +237,23 @@
           120.0
         ],
         "site_id": "synthetic_exact",
+        "time_scale": "ET seconds"
+      }
+    },
+    {
+      "expected": {
+        "full_visible_at_full": true,
+        "half_visible_at_half": true,
+        "zero_visible_at_zero": false
+      },
+      "id": "synthetic_disk_event_thresholds",
+      "input": {
+        "site_id": "synthetic_disk_events",
+        "thresholds": [
+          0.0,
+          0.5,
+          1.0
+        ],
         "time_scale": "ET seconds"
       }
     },
