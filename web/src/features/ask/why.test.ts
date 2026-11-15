@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { ScenarioResult, Series } from '../../engine/types';
 import { clearanceRateDegPerH, detectWhy, explain, explainGeneric, hasTemplate, reasonNoPm, sigmaDeg } from './why';
@@ -6,7 +8,7 @@ import type { KnowledgeEntry } from './knowledge';
 const H = 3_600_000;
 const STEP = 2 * 60_000; // the real series grid: 2 minutes
 
-/** 11 samples; clearance rises 0.02 °/h (so +0.00066…°/step); σ band constant (or 0). */
+/** Synthetic fixture (not any real site's numbers). 11 samples; clearance rises 0.02 °/h (so +0.00066…°/step); σ band constant (or 0). */
 function series(sigma: number, ratePerH = 0.02): Series {
   const n = 11;
   const f = (g: (i: number) => number) => Float32Array.from({ length: n }, (_, i) => g(i));
@@ -38,7 +40,7 @@ function result(over: Partial<ScenarioResult> & { sigmaSource?: string; dtMs?: n
   return {
     status: 'ready',
     error: null,
-    meta: { siteId: 'im2_athena', tier: 'A', tierBadge: 'Tier A · near-field 5 m', sigmaSource, snapDistanceKm: null, definitionsSummary: 'Sun ≥ 50% disk; link = Earth + DSN', dataVersions: {}, mock: false },
+    meta: { siteId: 'test_site', tier: 'A', tierBadge: 'Terrain mask · σ pending', sigmaSource, snapDistanceKm: null, definitionsSummary: 'Sun ≥ 50% disk; link = Earth + DSN', dataVersions: {}, mock: false },
     verdict: 'MARGINAL',
     verdictReasons: ['Sunlit 62% is below the 70% requirement'],
     verdictRequirements: [{ id: 'sunlit', status: 'marginal' }],
@@ -81,7 +83,7 @@ describe('today’s real-mode result: no σ, no ± → says WHY, invents nothing
   it('has no number after a ±', () => expect(text(w)).not.toMatch(/±\s*\d/));
   it('quotes the σ source and the tier badge', () => {
     expect(text(w)).toContain('terrain mask, σ pending');
-    expect(text(w)).toContain('Tier A · near-field 5 m');
+    expect(text(w)).toContain('Terrain mask · σ pending');
     expect(text(w)).toContain("isn't available for this site yet");
   });
   it('still reports the derived clearance rate, labelled as derived', () => expect(text(w)).toMatch(/0\.020 °\/h .*derived from the series/));
@@ -179,5 +181,32 @@ describe('any MetricSet key is accepted (Nived’s onWhy hands us keyof MetricSe
     expect(t).toContain('dteMarginDeg: 3.00');
     expect(t).toContain('no written explanation for this number yet');
     expect(t).not.toMatch(/±\s*\d/);
+  });
+});
+
+describe('the “what it is” line is the RIGHT definition (regression: Earth elevation showed Libration’s)', () => {
+  const entries: KnowledgeEntry[] = JSON.parse(readFileSync(resolve(__dirname, '../../../public/content/knowledge.json'), 'utf8')).entries;
+  it('Earth elevation uses its own method text, never the Libration definition', () => {
+    const w = explain('earthElevationDeg', result(), entries);
+    const first = w.lines[0].text;
+    expect(first).toContain('Earth elevation is worked out');
+    expect(first).not.toContain('oscillation');
+  });
+  it('every templated metric either has a matching entry or says nothing — never an unrelated one', () => {
+    for (const k of ['sunElevationDeg', 'sunClearanceDeg', 'earthElevationDeg', 'sunlitPct', 'linkPct', 'longestNightH', 'opsHours', 'psrDistanceKm'] as const) {
+      const w = explain(k, result(), entries);
+      expect(w.lines[0].kind, k).toBe('what');
+      expect(w.sources.join(' '), k).not.toContain('Libration');
+    }
+  });
+});
+
+describe('mock data is flagged', () => {
+  it('says MOCK DATA in the context line when the result is mock', () => {
+    const r = result();
+    r.meta!.mock = true;
+    expect(explain('sunlitPct', r).context).toContain('MOCK DATA');
+    r.meta!.mock = false;
+    expect(explain('sunlitPct', r).context).not.toContain('MOCK');
   });
 });

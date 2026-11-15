@@ -12,7 +12,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ScenarioResult } from '../../engine/types';
 import { HELP_EXAMPLES, parseCommand, runCommand, type AskCommand, type AskPorts, type AskSite } from './commands';
-import { loadKnowledge, searchKnowledge, snippet, type KnowledgeIndex } from './knowledge';
+import { answerText, intentOf, loadKnowledge, searchKnowledge, type KnowledgeIndex, type KnowledgeKind } from './knowledge';
 import { OPEN_EVENT } from './askWhy';
 import { detectWhy, explain, explainGeneric, hasTemplate, type Why, type WhyRequest } from './why';
 import './ask.css';
@@ -22,6 +22,8 @@ export interface AskBoxProps {
   sites: readonly AskSite[];
   /** True once the live pages expose a slip state (so "slip 9 days" can act). */
   canSlip: boolean;
+  /** Range the live slip state accepts; commands outside it are clamped and the box says so. */
+  slipRange?: { min: number; max: number };
   /** The result to explain. Null = nothing to explain yet. */
   result: ScenarioResult | null;
   /** Shown under every explanation when the result is not what the page on screen is showing. */
@@ -36,9 +38,47 @@ type Item =
   | { id: string; kind: 'option'; command: AskCommand; label: string }
   | { id: string; kind: 'note'; text: string }
   | { id: string; kind: 'why'; why: Why }
-  | { id: string; kind: 'hit'; title: string; text: string; source: string; tag: string };
+  | { id: string; kind: 'hit'; title: string; text: string; source: string; tag: string; weak: boolean }
+  | { id: string; kind: 'examples' };
 
-const KIND_TAG = { term: 'Term', validation: 'Validation', limitation: 'Limit', decision: 'Why we decided' } as const;
+const KIND_TAG: Record<KnowledgeKind, string> = {
+  term: 'Term',
+  validation: 'Validation',
+  limitation: 'Limit',
+  decision: 'Why we decided',
+  howto: 'How to',
+  method: 'How it’s calculated',
+  concept: 'Background',
+  status: 'Status',
+};
+
+/** Ordinary-language starting points, by what people tend to want. Shown on an empty box and when nothing matched. */
+const QUESTION_EXAMPLES: readonly { label: string; items: readonly string[] }[] = [
+  { label: 'Using LUMEN', items: ['how do I compare sites?', 'how do I drop a pin?', 'what does the array height do?'] },
+  { label: 'How results are calculated', items: ['how are the results calculated?', 'how is sunlight calculated?', 'how is the link to Earth decided?'] },
+  { label: 'Why things are the way they are', items: ['why is the timing uncertain?', 'why does the sun stay so low?', 'why show a ± on everything?'] },
+];
+
+/** Clickable example questions grouped by what people want; clicking fills the box. */
+function ExampleChips({ onPick, withCommands }: { onPick: (q: string) => void; withCommands?: boolean }) {
+  const groups = withCommands ? [{ label: 'Do something', items: HELP_EXAMPLES.filter((e) => !e.includes('?')) }, ...QUESTION_EXAMPLES] : QUESTION_EXAMPLES;
+  return (
+    <div className="ask__help">
+      {groups.map((g) => (
+        <div key={g.label} className="ask__group">
+          <div className="ask__helplabel">{g.label}</div>
+          <div className="ask__chips">
+            {g.items.map((ex) => (
+              <button key={ex} type="button" className="ask__chip" onClick={() => onPick(ex)}>
+                {ex}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function isTypingTarget(t: EventTarget | null): boolean {
   const el = t as HTMLElement | null;
@@ -47,7 +87,7 @@ function isTypingTarget(t: EventTarget | null): boolean {
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable === true;
 }
 
-export function AskBox({ ports, sites, canSlip, result, resultNote, light, onOpenChange }: AskBoxProps) {
+export function AskBox({ ports, sites, canSlip, slipRange, result, resultNote, light, onOpenChange }: AskBoxProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
@@ -105,17 +145,17 @@ export function AskBox({ ports, sites, canSlip, result, resultNote, light, onOpe
   const items = useMemo<Item[]>(() => {
     const out: Item[] = [];
     const knowledge = index?.docs.map((d) => d.entry) ?? [];
-    const whyFor = (t: WhyRequest): Item => ({
+    const whyFor = (t: WhyRequest, alreadyShown: ReadonlySet<string> = new Set()): Item => ({
       id: `why:${t}`,
       kind: 'why',
-      why: !result ? { target: 'events', title: 'Explanation', context: null, lines: [{ kind: 'value', text: 'There is no result to explain yet.' }], sources: [] } : hasTemplate(t) ? explain(t, result, knowledge) : explainGeneric(t, result),
+      why: !result ? { target: 'events', title: 'Explanation', context: null, lines: [{ kind: 'value', text: 'There is no result to explain yet.' }], sources: [] } : hasTemplate(t) ? explain(t, result, knowledge.filter((k) => !alreadyShown.has(k.id))) : explainGeneric(t, result),
     });
 
     if (forced) out.push(whyFor(forced));
     const q = query.trim();
     if (!q) return out;
 
-    const parsed = parseCommand(q, { sites, canSlip });
+    const parsed = parseCommand(q, { sites, canSlip, slipMin: slipRange?.min, slipMax: slipRange?.max });
     if (parsed.kind === 'command') out.push({ id: 'cmd', kind: 'command', command: parsed.command, label: parsed.label });
     else if (parsed.kind === 'unavailable') out.push({ id: 'unavail', kind: 'note', text: parsed.reason });
     else if (parsed.kind === 'ambiguous') {
@@ -125,18 +165,32 @@ export function AskBox({ ports, sites, canSlip, result, resultNote, light, onOpe
 
     if (parsed.kind !== 'command') {
       const target = detectWhy(q);
-      if (target) out.push(whyFor(target));
-      if (index) {
-        for (const h of searchKnowledge(index, q, 3)) {
-          out.push({ id: `hit:${h.entry.id}`, kind: 'hit', title: h.entry.title, text: snippet(h.entry), source: h.entry.source, tag: KIND_TAG[h.entry.kind] });
-        }
+      const hits = index ? searchKnowledge(index, q, 4) : [];
+      const toItem = (h: (typeof hits)[number], weak: boolean): Item => ({ id: `hit:${h.entry.id}`, kind: 'hit', title: h.entry.title, text: answerText(h.entry), source: h.entry.source, tag: KIND_TAG[h.entry.kind], weak });
+      const strong = hits.filter((h) => h.confidence === 'strong').slice(0, 3);
+      const weak = strong.length === 0 ? hits.slice(0, 2) : [];
+      // "how is X calculated?" → the written method first, then the live numbers. "why is this ± so big?" → live numbers first.
+      // The live numbers come first only when the question is about THIS number ("why is this ± so big?", "my sunlit %");
+      // a general question ("how is X calculated?", "why did you choose a ±?") gets the written answer first.
+      const aboutThisNumber = /\b(this|these|my|current|currently|now|here)\b/.test(q.toLowerCase());
+      const liveFirst = aboutThisNumber && !intentOf(q).method;
+      // If the written answer for this metric is already on screen as a card, the live card doesn't repeat it.
+      const whyItem = target ? whyFor(target, new Set(strong.map((h) => h.entry.id))) : null;
+      if (whyItem && liveFirst) out.push(whyItem);
+      out.push(...strong.map((h) => toItem(h, false)));
+      if (whyItem && !liveFirst) out.push(whyItem);
+      if (weak.length > 0 && !whyItem) {
+        out.push({ id: 'weak', kind: 'note', text: 'Closest I have — I’m not sure these answer your question:' });
+        out.push(...weak.map((h) => toItem(h, true)));
       }
-      if (out.length === 0 || (out.length === 1 && out[0].kind === 'note' && parsed.kind === 'unavailable')) {
-        if (parsed.kind === 'none' && out.length === 0) out.push({ id: 'none', kind: 'note', text: index ? 'I don’t have an answer for that. I only know what is in LUMEN’s glossary, validation report and decision log — try a term, or one of the examples.' : 'Loading what I know…' });
+      const answered = out.some((i) => i.kind === 'hit' || i.kind === 'why');
+      if (!answered && parsed.kind === 'none') {
+        out.push({ id: 'none', kind: 'note', text: index ? 'I don’t have an answer for that. I can help with using LUMEN, how the results are calculated, and why things were decided — and only from what is written down in LUMEN. Try asking one of these:' : 'Loading what I know…' });
+        if (index) out.push({ id: 'examples', kind: 'examples' });
       }
     }
     return out;
-  }, [query, forced, sites, canSlip, result, index]);
+  }, [query, forced, sites, canSlip, slipRange, result, index]);
 
   const runnable = items.filter((i) => i.kind === 'command' || i.kind === 'option');
   useEffect(() => setActive(0), [query, forced]);
@@ -189,19 +243,9 @@ export function AskBox({ ports, sites, canSlip, result, resultNote, light, onOpe
         />
         <div className="ask__list" id={listId} role="listbox" aria-label="Results" aria-live="polite">
           {feedback && <div className="ask__feedback">{feedback}</div>}
-          {items.length === 0 && !query.trim() && (
-            <div className="ask__help">
-              <div className="ask__helplabel">Try</div>
-              <div className="ask__chips">
-                {HELP_EXAMPLES.map((ex) => (
-                  <button key={ex} type="button" className="ask__chip" onClick={() => setQuery(ex)}>
-                    {ex}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          {items.length === 0 && !query.trim() && <ExampleChips onPick={setQuery} withCommands />}
           {items.map((it) => {
+            if (it.kind === 'examples') return <ExampleChips key={it.id} onPick={setQuery} />;
             if (it.kind === 'command' || it.kind === 'option') {
               const isActive = runnable[active]?.id === it.id;
               return (
@@ -214,7 +258,7 @@ export function AskBox({ ports, sites, canSlip, result, resultNote, light, onOpe
             if (it.kind === 'note') return <div key={it.id} className="ask__note">{it.text}</div>;
             if (it.kind === 'hit')
               return (
-                <div key={it.id} className="ask__card">
+                <div key={it.id} className={`ask__card${it.weak ? ' ask__card--weak' : ''}`}>
                   <div className="ask__cardhead">
                     <span className="ask__tag">{it.tag}</span>
                     <span className="ask__cardtitle">{it.title}</span>

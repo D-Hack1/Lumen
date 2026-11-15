@@ -9,7 +9,7 @@
 import { useContext, useEffect, useMemo, useState } from 'react';
 import { useResult } from '../../engine/hooks';
 import type { ScenarioResult } from '../../engine/types';
-import { LumenContext } from '../orbit/lumenState';
+import { LumenContext, SLIP_MAX } from '../orbit/lumenState';
 import { go } from '../pages/nav';
 import { AskBox } from './AskBox';
 import type { AskPorts, AskSite } from './commands';
@@ -19,6 +19,8 @@ import type { AskPorts, AskSite } from './commands';
  * ENGINE's scenario, which is not what the page on screen shows (it still uses sample values) — and the box says so.
  */
 const PAGES_USE_ENGINE_RESULT = false;
+/** The live slip state only accepts 0 … SLIP_MAX days (no earlier-than-on-time landing in the Slip explorer). */
+const SLIP_RANGE = { min: 0, max: SLIP_MAX } as const;
 const NOTE = 'These numbers are from the engine’s own scenario, not from the sample values on the page you are looking at — the pages are not connected to the engine yet.';
 
 /** Mounted only while the box is open: subscribing starts the engine, so we do it on demand. */
@@ -41,7 +43,7 @@ export function AskLumen() {
   return (
     <>
       {open && <ResultBridge onResult={setResult} />}
-      <AskBox ports={ports} sites={sites} canSlip={Boolean(setSlip)} result={result} resultNote={PAGES_USE_ENGINE_RESULT ? undefined : NOTE} light={lumen.light} onOpenChange={setOpen} />
+      <AskBox ports={ports} sites={sites} canSlip={Boolean(setSlip)} slipRange={SLIP_RANGE} result={result} resultNote={PAGES_USE_ENGINE_RESULT ? undefined : NOTE} light={lumen.light} onOpenChange={setOpen} />
     </>
   );
 }
