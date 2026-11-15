@@ -6,6 +6,7 @@ import pytest
 import yaml
 
 from lumen_pipeline.catalog import sparklines
+from lumen_pipeline.common.binio import read_array
 from lumen_pipeline.reference.interp import BodyGeometry
 
 
@@ -85,12 +86,11 @@ def test_sparklines_mark_missing_masks_and_exclude_preliminary_shackleton(tmp_pa
 
 
 def test_sparklines_encode_percentage_boundaries():
-    site = {"latitude_deg": -80.0, "longitude_deg_east": 20.0}
     horizon = sparklines.Horizon(observer_height_m=2.0)
     day = sparklines.parse_utc("2023-01-01T00:00:00Z")
 
-    assert sparklines._daily_percentages(_ConstantEphemeris(-1.0), site, horizon, day, day) == (0, 0)
-    assert sparklines._daily_percentages(_ConstantEphemeris(1.0), site, horizon, day, day) == (100, 100)
+    assert sparklines._daily_percentages(_ConstantEphemeris(-1.0), -80.0, 20.0, horizon, day, day) == (0, 0)
+    assert sparklines._daily_percentages(_ConstantEphemeris(1.0), -80.0, 20.0, horizon, day, day) == (100, 100)
 
 
 def test_mask_requires_matching_coordinate_metadata(tmp_path):
@@ -102,6 +102,7 @@ def test_mask_requires_matching_coordinate_metadata(tmp_path):
         "site_id": "smooth",
         "latitude_deg": -80.0,
         "longitude_deg_east": 20.0,
+        "coordinate_frame": "MOON_ME_DE421",
         "heights_m": [1.0, 2.0, 5.0, 10.0],
         "azimuth_count": 3600,
         "bin_width_deg": 0.1,
@@ -116,13 +117,73 @@ def test_mask_requires_matching_coordinate_metadata(tmp_path):
     (masks / "smooth.bin").write_bytes(header + np.zeros((4, 7200), dtype="<f4").tobytes())
     (masks / "smooth.json").write_text(json.dumps(metadata), encoding="utf-8")
 
-    assert sparklines._mask_horizon(site, root) is not None
+    assert sparklines._mask_horizon(site, root, -80.0, 20.0) is not None
     metadata.pop("latitude_deg")
     (masks / "smooth.json").write_text(json.dumps(metadata), encoding="utf-8")
-    assert sparklines._mask_horizon(site, root) is None
+    assert sparklines._mask_horizon(site, root, -80.0, 20.0) is None
     metadata["latitude_deg"] = -79.0
     (masks / "smooth.json").write_text(json.dumps(metadata), encoding="utf-8")
-    assert sparklines._mask_horizon(site, root) is None
+    assert sparklines._mask_horizon(site, root, -80.0, 20.0) is None
+
+
+def test_cy3_uses_landing_not_display_or_target_coordinates(tmp_path, monkeypatch):
+    sites_path, ephemeris_path = _inputs(tmp_path)
+    source = yaml.safe_load(sites_path.read_text(encoding="utf-8"))
+    source["sites"] = [
+        {
+            "id": "cy3_shiv_shakti",
+            "latitude_deg": -69.367621,
+            "longitude_deg_east": 32.348126,
+            "landing_coords": {"latitude_deg": -69.373, "longitude_deg_east": 32.319},
+        }
+    ]
+    sites_path.write_text(yaml.safe_dump(source), encoding="utf-8")
+    calls = []
+
+    class RecordingEphemeris(_Ephemeris):
+        def body_at(self, body, et, latitude_deg, longitude_deg_east, height_m):
+            calls.append((latitude_deg, longitude_deg_east))
+            return super().body_at(body, et, latitude_deg, longitude_deg_east, height_m)
+
+    monkeypatch.setattr(sparklines.Ephemeris, "from_file", lambda path: RecordingEphemeris())
+    sparklines.build_sparklines(
+        sites_path, ephemeris_path, tmp_path / "sparklines.bin", tmp_path / "missing-terrain",
+        start_utc="2023-01-01T00:00:00Z", end_utc="2023-01-02T00:00:00Z",
+    )
+
+    assert set(calls) == {(-69.373, 32.319)}
+
+
+def test_published_sparklines_match_the_contract_and_exclude_shackleton():
+    binary = sparklines.default_output_path()
+    data, metadata = read_array(binary)
+
+    assert data.dtype == np.uint8
+    assert data.shape == (3, 2, 1096)
+    assert np.all(data <= 100)
+    assert metadata["sites"] == ["cy3_shiv_shakti", "im2_athena", "blue_ghost_m1"]
+    assert metadata["start_utc"] == "2023-01-01T00:00:00Z"
+    assert metadata["days"] == 1096
+    assert set(metadata["provenance"].values()) == {"smooth-sphere estimate; terrain unavailable"}
+    assert "unresolved target coordinates" in metadata["excluded_sites"]["shackleton_ridge"]
+
+
+def test_vectorized_geometry_matches_scalar_ephemeris_path():
+    ephemeris = sparklines.Ephemeris.from_file(sparklines.default_ephemeris_path())
+
+    class ScalarEphemeris:
+        start_et = ephemeris.start_et
+
+        @staticmethod
+        def body_at(*args, **kwargs):
+            return ephemeris.body_at(*args, **kwargs)
+
+    day = sparklines.parse_utc("2025-03-01T00:00:00Z")
+    horizon = sparklines.Horizon(observer_height_m=2.0)
+    vectorized = sparklines._daily_percentages(ephemeris, -69.373, 32.319, horizon, day, day)
+    scalar = sparklines._daily_percentages(ScalarEphemeris(), -69.373, 32.319, horizon, day, day)
+
+    assert vectorized == scalar
 
 
 def test_sparklines_require_utc_midnight_bounds(tmp_path, monkeypatch):

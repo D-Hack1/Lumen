@@ -178,6 +178,9 @@ mask.
   "created_utc": "RFC3339 UTC timestamp",
   "git_commit": "40-character commit",
   "site_id": "string",
+  "latitude_deg": "number",
+  "longitude_deg_east": "number",
+  "coordinate_frame": "MOON_ME_DE421",
   "bin_width_deg": 0.1,
   "azimuth_count": 3600,
   "azimuth_zero": "projected_site_frame_reference",
@@ -215,6 +218,9 @@ mask.
 }
 ```
 
+`latitude_deg`, `longitude_deg_east`, and `coordinate_frame` bind the mask to
+the exact computation coordinate selected from the source-verified site row;
+consumers must reject a mask that does not exactly match that coordinate.
 `near_field_resolution_m` and `dem_source` describe the actual processed
 inputs, not the preferred source. For Statio Shiv Shakthi, the selected source
 must be the source actually obtained and processed from the PLAN_FINAL §4.1

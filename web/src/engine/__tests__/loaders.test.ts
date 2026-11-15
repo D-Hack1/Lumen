@@ -31,7 +31,13 @@ describe('real catalog (Gowri build_catalog output)', () => {
       }
       const im2 = c.sites.find((s) => s.id === 'im2_athena')!;
       expect(im2.touchdownUtc).toBe(Date.parse('2025-03-06T17:28:50Z'));
-      expect(Object.keys(c.sparklines)).toEqual([]); // sparklines.bin is not produced yet: optional in real mode
+      expect(Object.keys(c.sparklines).sort()).toEqual(['blue_ghost_m1', 'cy3_shiv_shakti', 'im2_athena']);
+      expect(c.sparklines.im2_athena!.sunlitPct).toHaveLength(1096);
+      expect(c.sparklines.im2_athena!.linkPct).toHaveLength(1096);
+      expect(new Date(c.sparklines.im2_athena!.startUtc).toISOString()).toBe('2023-01-01T00:00:00.000Z');
+      expect(new Date(c.sparklines.im2_athena!.startUtc + 365 * 86_400_000).toISOString()).toBe('2024-01-01T00:00:00.000Z');
+      expect(new Date(c.sparklines.im2_athena!.startUtc + 731 * 86_400_000).toISOString()).toBe('2025-01-01T00:00:00.000Z');
+      expect(new Date(c.sparklines.im2_athena!.startUtc + 1095 * 86_400_000).toISOString()).toBe('2025-12-31T00:00:00.000Z');
     } finally {
       setDataMode(null);
     }

@@ -19,12 +19,19 @@ import numpy as np
 import yaml
 
 from lumen_pipeline.common.binio import write_array
+from lumen_pipeline.common.frames import site_position_km, site_rotation_matrix
 from lumen_pipeline.common.timeutil import format_utc, parse_utc
+from lumen_pipeline.ephem.ephemeris import STEP_SECONDS
 from lumen_pipeline.reference.interp import Ephemeris
 from lumen_pipeline.reference.visibility import FiniteSegmentTree, Horizon, availability
+from lumen_pipeline.terrain.masks import _site_coordinates
 
 DEFAULT_START_UTC = "2023-01-01T00:00:00Z"
-DEFAULT_END_UTC = "2031-01-01T00:00:00Z"
+# The checked-in hourly ephemeris ends at 2030-12-31T23:00Z. A full UTC day
+# needs samples through 23:58, so the final computable exclusive boundary is
+# the preceding midnight until ephemeris coverage is extended.
+DEFAULT_END_UTC = "2030-12-31T00:00:00Z"
+COORDINATE_FRAME = "MOON_ME_DE421"
 OBSERVER_HEIGHT_M = 2.0
 SAMPLE_SECONDS = 120
 SUN_DISK_THRESHOLD = 0.5
@@ -56,7 +63,9 @@ def _utc_day(value: str) -> datetime:
     return instant
 
 
-def _mask_horizon(site: dict[str, Any], terrain_root: Path) -> Horizon | None:
+def _mask_horizon(
+    site: dict[str, Any], terrain_root: Path, latitude_deg: float, longitude_deg_east: float
+) -> Horizon | None:
     """Load the 2 m row only from a site-bound, complete Tier-A artifact."""
     site_id = str(site["id"])
     # The available Shackleton handoff is explicitly preliminary.  Do not turn
@@ -74,6 +83,7 @@ def _mask_horizon(site: dict[str, Any], terrain_root: Path) -> Horizon | None:
         "site_id",
         "latitude_deg",
         "longitude_deg_east",
+        "coordinate_frame",
         "heights_m",
         "azimuth_count",
         "bin_width_deg",
@@ -90,9 +100,11 @@ def _mask_horizon(site: dict[str, Any], terrain_root: Path) -> Horizon | None:
         numeric_metadata = tuple(float(metadata[key]) for key in ("slope_deg", "uphill_azimuth_deg", "d_min_m"))
     except (TypeError, ValueError):
         return None
-    if not np.isclose(latitude, float(site["latitude_deg"]), rtol=0.0, atol=1e-9):
+    if metadata["coordinate_frame"] != COORDINATE_FRAME:
         return None
-    if not np.isclose(longitude, float(site["longitude_deg_east"]), rtol=0.0, atol=1e-9):
+    if not np.isclose(latitude, latitude_deg, rtol=0.0, atol=1e-9):
+        return None
+    if not np.isclose(longitude, longitude_deg_east, rtol=0.0, atol=1e-9):
         return None
     heights = metadata.get("heights_m")
     if not isinstance(heights, list) or len(heights) != 4 or OBSERVER_HEIGHT_M not in heights:
@@ -125,21 +137,61 @@ def _mask_horizon(site: dict[str, Any], terrain_root: Path) -> Horizon | None:
 
 
 def _daily_percentages(
-    ephemeris: Ephemeris, site: dict[str, Any], horizon: Horizon, day_start: datetime, ephemeris_start: datetime
+    ephemeris: Ephemeris,
+    latitude_deg: float,
+    longitude_deg_east: float,
+    horizon: Horizon,
+    day_start: datetime,
+    ephemeris_start: datetime,
 ) -> tuple[int, int]:
     samples = 86400 // SAMPLE_SECONDS
     start_et = ephemeris.start_et + (day_start - ephemeris_start).total_seconds()
+    ets = start_et + np.arange(samples, dtype=float) * SAMPLE_SECONDS
+    if isinstance(ephemeris, Ephemeris):
+        # This is the same Hermite/topocentric computation as Ephemeris.body_at,
+        # evaluated for a UTC day at once so the approved multi-year artifact is
+        # practical to generate. Disk and horizon availability remain per sample.
+        interval = (ets - ephemeris.start_et) / STEP_SECONDS
+        indices = np.floor(interval).astype(int)
+        fraction = interval - indices
+        t2 = fraction * fraction
+        t3 = t2 * fraction
+        h00 = 2 * t3 - 3 * t2 + 1
+        h10 = t3 - 2 * t2 + fraction
+        h01 = -2 * t3 + 3 * t2
+        h11 = t3 - t2
+        positions = np.empty((samples, 2, 3), dtype=float)
+        for body_index, offset in enumerate((0, 6)):
+            positions[:, body_index] = (
+                h00[:, None] * ephemeris.nodes[indices, offset : offset + 3]
+                + h10[:, None] * STEP_SECONDS * ephemeris.nodes[indices, offset + 3 : offset + 6]
+                + h01[:, None] * ephemeris.nodes[indices + 1, offset : offset + 3]
+                + h11[:, None] * STEP_SECONDS * ephemeris.nodes[indices + 1, offset + 3 : offset + 6]
+            )
+        topocentric = positions - site_position_km(latitude_deg, longitude_deg_east, OBSERVER_HEIGHT_M)
+        distance = np.linalg.norm(topocentric, axis=2)
+        directions = (topocentric / distance[:, :, None]) @ site_rotation_matrix(latitude_deg, longitude_deg_east).T
+        azimuth = np.degrees(np.arctan2(directions[:, :, 0], directions[:, :, 1])) % 360.0
+        elevation = np.degrees(np.arcsin(directions[:, :, 2]))
+    else:
+        distance = azimuth = elevation = None
     sun_up = 0
     earth_up = 0
     for index in range(samples):
-        et = start_et + index * SAMPLE_SECONDS
-        sun = ephemeris.body_at("sun", et, site["latitude_deg"], site["longitude_deg_east"], OBSERVER_HEIGHT_M)
-        earth = ephemeris.body_at("earth", et, site["latitude_deg"], site["longitude_deg_east"], OBSERVER_HEIGHT_M)
+        if distance is None or azimuth is None or elevation is None:
+            et = float(ets[index])
+            sun = ephemeris.body_at("sun", et, latitude_deg, longitude_deg_east, OBSERVER_HEIGHT_M)
+            earth = ephemeris.body_at("earth", et, latitude_deg, longitude_deg_east, OBSERVER_HEIGHT_M)
+            sun_distance, sun_azimuth, sun_elevation = sun.distance_km, sun.azimuth_deg, sun.elevation_deg
+            earth_distance, earth_azimuth, earth_elevation = earth.distance_km, earth.azimuth_deg, earth.elevation_deg
+        else:
+            sun_distance, sun_azimuth, sun_elevation = distance[index, 0], azimuth[index, 0], elevation[index, 0]
+            earth_distance, earth_azimuth, earth_elevation = distance[index, 1], azimuth[index, 1], elevation[index, 1]
         sun_up += availability(
-            "sun", sun.elevation_deg, sun.azimuth_deg, sun.distance_km, horizon, disk_threshold=SUN_DISK_THRESHOLD
+            "sun", sun_elevation, sun_azimuth, sun_distance, horizon, disk_threshold=SUN_DISK_THRESHOLD
         )[2]
         earth_up += availability(
-            "earth", earth.elevation_deg, earth.azimuth_deg, earth.distance_km, horizon,
+            "earth", earth_elevation, earth_azimuth, earth_distance, horizon,
             disk_threshold=EARTH_DISK_THRESHOLD, margin_deg=EARTH_MARGIN_DEG,
         )[2]
     # Integer half-up rounding keeps bytes deterministic and avoids banker's rounding.
@@ -180,12 +232,24 @@ def build_sparklines(
     site_ids: list[str] = []
     provenance: dict[str, str] = {}
     excluded_sites: dict[str, str] = {}
-    for site in source["sites"]:
+    sites = source.get("sites") if isinstance(source, dict) else None
+    if not isinstance(sites, list):
+        raise TypeError("sites source must contain a sites list")
+    seen_ids: set[str] = set()
+    for site in sites:
+        if not isinstance(site, dict) or not isinstance(site.get("id"), str):
+            raise TypeError("each site must have a string id")
         site_id = str(site["id"])
+        if site_id in seen_ids:
+            raise ValueError(f"duplicate site id: {site_id}")
+        seen_ids.add(site_id)
+        latitude_deg, longitude_deg_east = _site_coordinates(site_id, site)
+        if not -90.0 <= latitude_deg <= 90.0 or not -180.0 <= longitude_deg_east <= 360.0:
+            raise ValueError(f"{site_id} has invalid computation coordinates")
         if site_id == "shackleton_ridge":
             excluded_sites[site_id] = "not published: preliminary terrain and unresolved target coordinates"
             continue
-        horizon = _mask_horizon(site, terrain)
+        horizon = _mask_horizon(site, terrain, latitude_deg, longitude_deg_east)
         if horizon is None:
             horizon = Horizon(observer_height_m=OBSERVER_HEIGHT_M)
             provenance[site_id] = "smooth-sphere estimate; terrain unavailable"
@@ -193,7 +257,14 @@ def build_sparklines(
             provenance[site_id] = "verified site-matched terrain mask"
         row = np.empty((2, days), dtype=np.uint8)
         for day in range(days):
-            sunlit, link = _daily_percentages(ephemeris, site, horizon, start + timedelta(days=day), ephemeris_start)
+            sunlit, link = _daily_percentages(
+                ephemeris,
+                latitude_deg,
+                longitude_deg_east,
+                horizon,
+                start + timedelta(days=day),
+                ephemeris_start,
+            )
             row[:, day] = (sunlit, link)
         site_ids.append(site_id)
         rows.append(row)
