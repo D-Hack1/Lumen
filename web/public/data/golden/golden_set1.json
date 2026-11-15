@@ -45,6 +45,7 @@
         "start_utc": "2025-03-06T17:28:50Z",
         "terrain_mode": "smooth_sphere_pending_im2_mask"
       },
+      "link_metric_source": "earth_visibility_fallback_no_dsn",
       "metrics": {
         "dteMarginDeg": {
           "hi": null,
@@ -59,7 +60,7 @@
         "earthVisiblePct": {
           "hi": null,
           "lo": null,
-          "value": 67.20833333333333
+          "value": 67.20862268518519
         },
         "energyPerDayWh": {
           "hi": null,
@@ -69,22 +70,22 @@
         "linkPct": {
           "hi": null,
           "lo": null,
-          "value": null
+          "value": 67.20862268518519
         },
         "longestCommGapH": {
           "hi": null,
           "lo": null,
-          "value": null
+          "value": 236.09791666666666
         },
         "longestNightH": {
           "hi": null,
           "lo": null,
-          "value": 365.06666666666666
+          "value": 365.08958333333334
         },
         "opsHours": {
           "hi": null,
           "lo": null,
-          "value": null
+          "value": 296.32916666666665
         },
         "padSlopeDeg": null,
         "psrDistanceKm": null,
@@ -111,9 +112,23 @@
         "sunlitPct": {
           "hi": null,
           "lo": null,
-          "value": 49.2962962962963
+          "value": 49.293113425925924
         }
       },
+      "ops_events": [
+        {
+          "dt_method": "fast",
+          "grazing_reason": null,
+          "type": "opsEnd",
+          "utc": "2025-03-17T00:46:16Z"
+        },
+        {
+          "dt_method": "fast",
+          "grazing_reason": null,
+          "type": "opsStart",
+          "utc": "2025-04-03T16:26:31Z"
+        }
+      ],
       "render_samples_hourly": [
         {
           "earth": {
@@ -13106,8 +13121,8 @@
       ],
       "windows": [
         {
-          "duration_h": 305.9,
-          "end_utc": "2025-03-19T11:22:50Z",
+          "duration_h": 305.871875,
+          "end_utc": "2025-03-19T11:21:09Z",
           "flags": {
             "grazing": false,
             "partial_end": false,
@@ -13118,7 +13133,7 @@
           "type": "sun"
         },
         {
-          "duration_h": 49.03333333333333,
+          "duration_h": 49.03854166666667,
           "end_utc": "2025-04-05T17:28:50Z",
           "flags": {
             "grazing": false,
@@ -13126,12 +13141,12 @@
             "partial_start": false
           },
           "peak_elevation_deg": 2.080110152638598,
-          "start_utc": "2025-04-03T16:26:50Z",
+          "start_utc": "2025-04-03T16:26:31Z",
           "type": "sun"
         },
         {
-          "duration_h": 247.3,
-          "end_utc": "2025-03-17T00:46:50Z",
+          "duration_h": 247.290625,
+          "end_utc": "2025-03-17T00:46:16Z",
           "flags": {
             "grazing": false,
             "partial_end": false,
@@ -13142,7 +13157,7 @@
           "type": "earth"
         },
         {
-          "duration_h": 236.6,
+          "duration_h": 236.61145833333333,
           "end_utc": "2025-04-05T17:28:50Z",
           "flags": {
             "grazing": false,
@@ -13150,13 +13165,38 @@
             "partial_start": false
           },
           "peak_elevation_deg": 11.336601990565525,
-          "start_utc": "2025-03-26T20:52:50Z",
+          "start_utc": "2025-03-26T20:52:09Z",
           "type": "earth"
+        },
+        {
+          "duration_h": 247.290625,
+          "end_utc": "2025-03-17T00:46:16Z",
+          "flags": {
+            "grazing": false,
+            "partial_end": false,
+            "partial_start": true
+          },
+          "peak_elevation_deg": 5.362886228157831,
+          "start_utc": "2025-03-06T17:28:50Z",
+          "type": "ops"
+        },
+        {
+          "duration_h": 49.03854166666667,
+          "end_utc": "2025-04-05T17:28:50Z",
+          "flags": {
+            "grazing": false,
+            "partial_end": true,
+            "partial_start": false
+          },
+          "peak_elevation_deg": 2.080110152638598,
+          "start_utc": "2025-04-03T16:26:31Z",
+          "type": "ops"
         }
       ]
     }
   ],
-  "description": "G-8 IM-2 geometry-only baseline; terrain and DSN data were unavailable at generation.",
+  "description": "G-8 IM-2 geometry-only, event-refined baseline; no terrain or DSN-derived link data.",
+  "metric_method": "event_refined_windows",
   "provenance": {
     "aberration_correction": "LT+S",
     "ephem_sha256": "765308c4598651c34ba0f1328b31f0b53947f1a9cab3b4df6defd44c0225a281",
@@ -13171,5 +13211,5 @@
     "event_time_s": 60,
     "metric_percent": 1.0
   },
-  "version": "1.0.0"
+  "version": "2.0.0"
 }

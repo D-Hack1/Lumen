@@ -67,7 +67,16 @@ def write_terrain_summary(
     pad_json_path: Path | None = None,
     psr: dict[str, Any] | None = None,
 ) -> Path:
-    """Write one actual-output summary and preserve all prior manifest entries."""
+    """Write one actual-output summary, preserving prior manifest entries and
+    prior artifact references for this same site that this call does not
+    itself touch.
+
+    Each pipeline stage (mask, pad, sigma, ...) calls this independently and
+    only knows about its own artifact. Without carrying forward whatever a
+    previous stage already recorded, a later stage's call would silently
+    erase the earlier stage's files_present/manifest entries (e.g. running
+    run_masks.py after run_pad.py would drop the site's pad_json record).
+    """
 
     terrain_root = (
         Path(output_root)
@@ -76,33 +85,60 @@ def write_terrain_summary(
     )
     timestamp = datetime.now(UTC).isoformat().replace("+00:00", "Z")
     git_commit = _git_commit()
+
+    summary_path = terrain_root / "summaries" / f"{site_id}.json"
+    previous_summary: dict[str, Any] = {}
+    if summary_path.is_file():
+        loaded = json.loads(summary_path.read_text(encoding="utf-8"))
+        if isinstance(loaded, dict):
+            previous_summary = loaded
+    previous_files_present = previous_summary.get("files_present")
+    if not isinstance(previous_files_present, dict):
+        previous_files_present = {}
+
     files_present = {
-        "mask_bin": _served_path(mask.binary_path, terrain_root) if mask else None,
-        "mask_json": _served_path(mask.sidecar_path, terrain_root) if mask else None,
-        "sigma_bin": None,
-        "sigma_json": None,
-        "pad_json": _served_path(pad_json_path, terrain_root) if pad_json_path else None,
-        "dispersion_bin": None,
-        "dispersion_json": None,
+        "mask_bin": (
+            _served_path(mask.binary_path, terrain_root)
+            if mask
+            else previous_files_present.get("mask_bin")
+        ),
+        "mask_json": (
+            _served_path(mask.sidecar_path, terrain_root)
+            if mask
+            else previous_files_present.get("mask_json")
+        ),
+        "sigma_bin": previous_files_present.get("sigma_bin"),
+        "sigma_json": previous_files_present.get("sigma_json"),
+        "pad_json": (
+            _served_path(pad_json_path, terrain_root)
+            if pad_json_path
+            else previous_files_present.get("pad_json")
+        ),
+        "dispersion_bin": previous_files_present.get("dispersion_bin"),
+        "dispersion_json": previous_files_present.get("dispersion_json"),
     }
+    mask_available = files_present["mask_bin"] is not None
+    resolved_pad_headline = (
+        pad_headline if pad_headline is not None else previous_summary.get("pad_headline")
+    )
+    resolved_psr = psr if psr is not None else previous_summary.get("psr")
     summary = {
         "version": "0.1.0",
         "site_id": site_id,
         "run_timestamp_utc": timestamp,
         "git_commit": git_commit,
-        "tier": tier if mask else "pending",
+        "tier": tier if mask_available else "pending",
         "near_field_res_m": (crops.near_field_resolution_m if crops.near is not None else None),
         "dem_source": crops.near.source_key if crops.near is not None else None,
         "files_present": files_present,
-        "mask_available": mask is not None,
-        "sigma_available": False,
-        "pad_available": pad_headline is not None,
-        "dispersion_available": False,
-        "pad_headline": pad_headline,
-        "psr": psr,
+        "mask_available": mask_available,
+        "sigma_available": files_present["sigma_bin"] is not None,
+        "pad_available": resolved_pad_headline is not None,
+        "dispersion_available": files_present["dispersion_bin"] is not None,
+        "pad_headline": resolved_pad_headline,
+        "psr": resolved_psr,
         "unavailable": dict(crops.unavailable),
     }
-    summary_path = terrain_root / "summaries" / f"{site_id}.json"
     summary_path.parent.mkdir(parents=True, exist_ok=True)
     summary_path.write_text(
         json.dumps(summary, indent=2, sort_keys=True) + "\n",
@@ -119,12 +155,14 @@ def write_terrain_summary(
     artifacts = manifest.setdefault("artifacts", {})
     if not isinstance(artifacts, dict):
         raise TypeError("terrain manifest artifacts must be an object")
+    previous_entry = artifacts.get(site_id)
+    previous_files = previous_entry.get("files") if isinstance(previous_entry, dict) else None
     entry: dict[str, Any] = {
         "version": "1.0.0",
         "site_id": site_id,
         "created_utc": timestamp,
         "git_commit": git_commit,
-        "files": {},
+        "files": dict(previous_files) if isinstance(previous_files, dict) else {},
     }
     if mask is not None:
         entry["files"].update(
