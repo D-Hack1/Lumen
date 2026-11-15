@@ -38,6 +38,47 @@ describe('real catalog (Gowri build_catalog output)', () => {
   });
 });
 
+describe('real terrain layers index (S-7 layers.json)', () => {
+  it('discovers every available layer, each with a complete, correctly-shaped projection', async () => {
+    const { existsSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const { PUBLIC } = await import('./helpers');
+    const { setDataMode } = await import('../data/source');
+    const { loadLayers } = await import('../data/layers');
+    if (!existsSync(join(PUBLIC, 'data/terrain/layers.json'))) return; // real data not present: nothing to check
+    setDataMode('real');
+    try {
+      const l = await loadLayers();
+      // The fix must make the loader actually discover layers, not return
+      // an empty collection because required projection fields were
+      // missing.
+      expect(l.layers.length).toBeGreaterThan(0);
+      expect(l.layers.length).toBe(8);
+      expect(l.sizePx).not.toBeNull();
+      expect(l.extents).not.toBeNull();
+      for (const extentKey of ['80S', '85S'] as const) {
+        const e = l.extents![extentKey];
+        expect(e, extentKey).toBeDefined();
+        expect(Number.isFinite(e.latLimitDeg)).toBe(true);
+        expect(e.latLimitDeg).toBeLessThan(0); // south-negative convention
+        expect(e.halfExtentKm).toBeGreaterThan(0);
+        expect(Number.isFinite(e.metresPerPx) && e.metresPerPx > 0).toBe(true);
+        expect(e.centrePx).toHaveLength(2);
+        expect(e.centrePx[0]).toBeGreaterThan(0);
+        expect(e.centrePx[1]).toBeGreaterThan(0);
+      }
+      // 85S is deeper into the pole: smaller half-extent than 80S.
+      expect(l.extents!['85S'].halfExtentKm).toBeLessThan(l.extents!['80S'].halfExtentKm);
+      for (const layer of l.layers) {
+        expect(layer.url, layer.id).toMatch(/\/data\/terrain\/layers\/.+\.png$/);
+        expect(layer.legendStops.length, layer.id).toBeGreaterThan(0);
+      }
+    } finally {
+      setDataMode(null);
+    }
+  });
+});
+
 describe('ephem', () => {
   it('loads, reads cadence from the sidecar and matches the physics roughly', async () => {
     const e = await loadEphem();
