@@ -1,3 +1,4 @@
+
 import json
 import math
 
@@ -22,13 +23,40 @@ def _fixture() -> dict[str, object]:
 def test_near_zone_synthetic_fixture_is_deterministic_and_committed(tmp_path):
     first = tmp_path / "first.json"
     second = tmp_path / "second.json"
+
     payload = build_synthetic_near_zone_golden_set(first)
     build_synthetic_near_zone_golden_set(second)
 
+    # Repeated generation must produce identical bytes.
     assert first.read_bytes() == second.read_bytes()
-    committed = default_synthetic_output_path().read_bytes().replace(b"\r\n", b"\n")
-    assert first.read_bytes() == committed
-    assert json.loads(first.read_text(encoding="utf-8")) == payload == synthetic_near_zone_payload()
+
+    # Normalize checkout line endings for cross-platform comparison.
+    generated = first.read_bytes().replace(b"\r\n", b"\n")
+    committed = default_synthetic_output_path().read_bytes().replace(
+        b"\r\n", b"\n"
+    )
+
+    assert generated == committed
+
+    # Verify canonical JSON serialization with an LF terminator.
+    expected_bytes = (
+        json.dumps(
+            synthetic_near_zone_payload(),
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        + "\n"
+    ).encode("utf-8")
+
+    assert generated == expected_bytes
+
+    # Verify the decoded fixture matches the reference payload.
+    assert (
+        json.loads(first.read_text(encoding="utf-8"))
+        == payload
+        == synthetic_near_zone_payload()
+    )
+
     assert payload["array_initialization"] == {
         "shape": [4, 3600],
         "order": "height_major",
@@ -37,21 +65,34 @@ def test_near_zone_synthetic_fixture_is_deterministic_and_committed(tmp_path):
         "json_null": "NaN",
         "selected_bins": "override defaults with distant inputs",
     }
-    assert payload["azimuth_bins"]["center_deg"] == "(azimuth_bin + 0.5) * 0.1"
+
+    assert payload["azimuth_bins"]["center_deg"] == (
+        "(azimuth_bin + 0.5) * 0.1"
+    )
     assert payload["observer_heights_m"] == list(HEIGHTS_M)
 
 
 def test_near_zone_synthetic_fixture_replays_production_helper():
     payload = _fixture()
     tolerance = payload["tolerances"]
-    azimuth = (np.arange(3600, dtype=np.float64) + 0.5) * BIN_WIDTH_DEG
+
+    azimuth = (
+        np.arange(3600, dtype=np.float64) + 0.5
+    ) * BIN_WIDTH_DEG
+
     for case in payload["cases"]:
         elevation = np.full((4, 3600), np.nan, dtype=np.float64)
         distance = np.full((4, 3600), np.nan, dtype=np.float64)
+
         for item in case["selected_bins"]:
             height_index = HEIGHTS_M.index(item["observer_height_m"])
-            elevation[height_index, item["azimuth_bin"]] = item["distant_elevation_deg"]
-            distance[height_index, item["azimuth_bin"]] = item["distant_distance_km"]
+
+            elevation[height_index, item["azimuth_bin"]] = (
+                item["distant_elevation_deg"]
+            )
+            distance[height_index, item["azimuth_bin"]] = (
+                item["distant_distance_km"]
+            )
 
         _apply_near_zone(
             elevation,
@@ -60,52 +101,110 @@ def test_near_zone_synthetic_fixture_replays_production_helper():
             HEIGHTS_M,
             azimuth,
         )
+
         for item in case["selected_bins"]:
             height_index = HEIGHTS_M.index(item["observer_height_m"])
             bin_index = item["azimuth_bin"]
-            assert elevation[height_index, bin_index] == pytest.approx(
-                item["expected_elevation_deg"], abs=tolerance["elevation_deg"]
-            )
-            assert distance[height_index, bin_index] == pytest.approx(
-                item["expected_distance_km"], abs=tolerance["distance_km"]
-            )
+
+            expected_elevation = item["expected_elevation_deg"]
+            expected_distance = item["expected_distance_km"]
+
+            if expected_elevation is None or (
+                isinstance(expected_elevation, float)
+                and math.isnan(expected_elevation)
+            ):
+                assert math.isnan(elevation[height_index, bin_index])
+            else:
+                assert elevation[height_index, bin_index] == pytest.approx(
+                    expected_elevation,
+                    abs=tolerance["elevation_deg"],
+                )
+
+            if expected_distance is None or (
+                isinstance(expected_distance, float)
+                and math.isnan(expected_distance)
+            ):
+                assert math.isnan(distance[height_index, bin_index])
+            else:
+                assert distance[height_index, bin_index] == pytest.approx(
+                    expected_distance,
+                    abs=tolerance["distance_km"],
+                )
 
 
 def test_near_zone_synthetic_fixture_matches_independent_plane_analytic():
     payload = _fixture()
     tolerance = payload["tolerances"]
+
     for case in payload["cases"]:
         slope = math.radians(case["slope_deg"])
         uphill = math.radians(case["uphill_azimuth_deg"])
         d_min_m = case["d_min_m"]
+
         for item in case["selected_bins"]:
             plane_elevation = max(
                 0.0,
                 math.degrees(
                     math.atan(
                         math.tan(slope)
-                        * math.cos(math.radians(item["azimuth_deg"]) - uphill)
+                        * math.cos(
+                            math.radians(item["azimuth_deg"]) - uphill
+                        )
                         - item["observer_height_m"] / d_min_m
                     )
                 ),
             )
+
             distant_elevation = item["distant_elevation_deg"]
-            replaces_distant = distant_elevation is None or plane_elevation > distant_elevation
-            expected_elevation = plane_elevation if replaces_distant else distant_elevation
-            expected_distance = d_min_m / 1000.0 if replaces_distant else item["distant_distance_km"]
-            assert item["expected_elevation_deg"] == pytest.approx(
-                expected_elevation, abs=tolerance["elevation_deg"]
-            )
-            assert item["expected_distance_km"] == pytest.approx(
-                expected_distance, abs=tolerance["distance_km"]
+
+            replaces_distant = plane_elevation > 0.0 and (
+                distant_elevation is None
+                or plane_elevation > distant_elevation
             )
 
-    slope_case = next(case for case in payload["cases"] if case["slope_deg"] == 20.0)
+            expected_elevation = (
+                plane_elevation
+                if replaces_distant
+                else distant_elevation
+            )
+
+            expected_distance = (
+                d_min_m / 1000.0
+                if replaces_distant
+                else item["distant_distance_km"]
+            )
+
+            if expected_elevation is None:
+                assert math.isnan(item["expected_elevation_deg"])
+            else:
+                assert item["expected_elevation_deg"] == pytest.approx(
+                    expected_elevation,
+                    abs=tolerance["elevation_deg"],
+                )
+
+            if expected_distance is None:
+                assert math.isnan(item["expected_distance_km"])
+            else:
+                assert item["expected_distance_km"] == pytest.approx(
+                    expected_distance,
+                    abs=tolerance["distance_km"],
+                )
+
+    # Regression: a zero near-zone occluder must preserve
+    # the negative distant DEM horizon.
+    slope_case = next(
+        case
+        for case in payload["cases"]
+        if case["slope_deg"] == 20.0
+    )
+
     downhill_negative = next(
         item
         for item in slope_case["selected_bins"]
-        if item["azimuth_bin"] == 1800 and item["observer_height_m"] == 1.0
+        if item["azimuth_bin"] == 1800
+        and item["observer_height_m"] == 1.0
     )
+
     assert downhill_negative["distant_elevation_deg"] < 0.0
-    assert downhill_negative["expected_elevation_deg"] == 0.0
-    assert downhill_negative["expected_distance_km"] == 0.03
+    assert downhill_negative["expected_elevation_deg"] == -1.0
+    assert downhill_negative["expected_distance_km"] == 1.0

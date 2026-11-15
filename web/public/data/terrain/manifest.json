@@ -159,5 +159,143 @@
       "version": "1.0.0"
     }
   },
+  "layers": {
+    "average_illumination:80_90S": {
+      "created_utc": "2026-11-15T00:35:25.607832Z",
+      "extent": "80_90S",
+      "files": {
+        "json": {
+          "path": "terrain/layers/average_illumination_80_90S.json",
+          "sha256": "42c273b37ede51098c71547c7352de1fd6ea1bc5c92d38c3fbddfe67f27eb39b"
+        },
+        "png": {
+          "path": "terrain/layers/average_illumination_80_90S.png",
+          "sha256": "dc25a8964543f8f90ca6c8cb03f8af62f9b49ba6783ae891e0a42e0504560cc0"
+        }
+      },
+      "git_commit": "c4e5c36c421c88b90e996df1ecbc79ec6e6a220d",
+      "layer_id": "average_illumination",
+      "version": "0.1.0"
+    },
+    "average_illumination:85_90S": {
+      "created_utc": "2026-11-15T00:35:45.692990Z",
+      "extent": "85_90S",
+      "files": {
+        "json": {
+          "path": "terrain/layers/average_illumination_85_90S.json",
+          "sha256": "23bf3ead94954674e7ae492f900524b47f4c4843310c823a37469e5d97b6386c"
+        },
+        "png": {
+          "path": "terrain/layers/average_illumination_85_90S.png",
+          "sha256": "cb4cc7e2586a3da45f60eac0b7d819819e386decce5e3cc978322369c24524dd"
+        }
+      },
+      "git_commit": "c4e5c36c421c88b90e996df1ecbc79ec6e6a220d",
+      "layer_id": "average_illumination",
+      "version": "0.1.0"
+    },
+    "earth_visibility:80_90S": {
+      "created_utc": "2026-11-15T00:35:28.375027Z",
+      "extent": "80_90S",
+      "files": {
+        "json": {
+          "path": "terrain/layers/earth_visibility_80_90S.json",
+          "sha256": "541d4f4d99eb12778afaa2a5e88d7db902533bec3cd6aea399e9dab715e4c3f9"
+        },
+        "png": {
+          "path": "terrain/layers/earth_visibility_80_90S.png",
+          "sha256": "36abff15e8f70306092a25c53f3d4e07a554e456f1fbeddca7c76ea544bd28e8"
+        }
+      },
+      "git_commit": "c4e5c36c421c88b90e996df1ecbc79ec6e6a220d",
+      "layer_id": "earth_visibility",
+      "version": "0.1.0"
+    },
+    "earth_visibility:85_90S": {
+      "created_utc": "2026-11-15T00:36:00.739363Z",
+      "extent": "85_90S",
+      "files": {
+        "json": {
+          "path": "terrain/layers/earth_visibility_85_90S.json",
+          "sha256": "eaacdde813ed26df060022ee15247a722d0cf787ad80d653f9f8c0aa8962286d"
+        },
+        "png": {
+          "path": "terrain/layers/earth_visibility_85_90S.png",
+          "sha256": "19b9b96636d3c4c3191db134c4793b025ac16d38bb17c5fb89010aa28f7d3ad4"
+        }
+      },
+      "git_commit": "c4e5c36c421c88b90e996df1ecbc79ec6e6a220d",
+      "layer_id": "earth_visibility",
+      "version": "0.1.0"
+    },
+    "psr:80_90S": {
+      "created_utc": "2026-11-15T00:36:10.845052Z",
+      "extent": "80_90S",
+      "files": {
+        "json": {
+          "path": "terrain/layers/psr_80_90S.json",
+          "sha256": "9ed6261c34e3486edded19ff2e76b24e9a5e97ac122677989910742f2e1ce09f"
+        },
+        "png": {
+          "path": "terrain/layers/psr_80_90S.png",
+          "sha256": "86d2f923be86c54d7cbe4e9956049e1f579b6a272e78e56828aeb7e4df4bf962"
+        }
+      },
+      "git_commit": "c4e5c36c421c88b90e996df1ecbc79ec6e6a220d",
+      "layer_id": "psr",
+      "version": "0.1.0"
+    },
+    "psr:85_90S": {
+      "created_utc": "2026-11-15T00:36:25.909228Z",
+      "extent": "85_90S",
+      "files": {
+        "json": {
+          "path": "terrain/layers/psr_85_90S.json",
+          "sha256": "42c979e1989b7ab02c93bbed9f71a3953023aa2251fab62a5574ebc98717ffca"
+        },
+        "png": {
+          "path": "terrain/layers/psr_85_90S.png",
+          "sha256": "5ee9e9f9d3305533622f5d8e0949c7013194c2152d1f7ce14b72cc1d6a344db2"
+        }
+      },
+      "git_commit": "c4e5c36c421c88b90e996df1ecbc79ec6e6a220d",
+      "layer_id": "psr",
+      "version": "0.1.0"
+    },
+    "slope_hazard:80_90S": {
+      "created_utc": "2026-11-15T00:35:18.599670Z",
+      "extent": "80_90S",
+      "files": {
+        "json": {
+          "path": "terrain/layers/slope_hazard_80_90S.json",
+          "sha256": "6cff391a510aeb0d4c6193b75b9d0d12f6bb3352a53fc43e8c80eda7464daac9"
+        },
+        "png": {
+          "path": "terrain/layers/slope_hazard_80_90S.png",
+          "sha256": "51de842230f612862ddf85f86e79f1e2cc9a9734b5ec13a6869c089c8ba34026"
+        }
+      },
+      "git_commit": "c4e5c36c421c88b90e996df1ecbc79ec6e6a220d",
+      "layer_id": "slope_hazard",
+      "version": "0.1.0"
+    },
+    "slope_hazard:85_90S": {
+      "created_utc": "2026-11-15T00:35:29.137336Z",
+      "extent": "85_90S",
+      "files": {
+        "json": {
+          "path": "terrain/layers/slope_hazard_85_90S.json",
+          "sha256": "aa6fe082e4ff063323362dd75b0580e015ec04a6ab07cc87da683470c569d94b"
+        },
+        "png": {
+          "path": "terrain/layers/slope_hazard_85_90S.png",
+          "sha256": "de2066d235a04077496e17706c864e5330f842e262d9d09e7d9b0514cd6e5233"
+        }
+      },
+      "git_commit": "c4e5c36c421c88b90e996df1ecbc79ec6e6a220d",
+      "layer_id": "slope_hazard",
+      "version": "0.1.0"
+    }
+  },
   "version": "0.1.0"
 }
