@@ -7,7 +7,7 @@ It computes Sun and Earth positions from NASA SPICE ephemeris data, compares the
 3D Moon, a real-terrain panorama, a table of every Sun / Earth / link window, Deep Space Network visibility, a "what if we slip?" explorer and a side-by-side site comparison.
 It runs entirely in the browser (an offline-capable PWA, no server), and it says plainly where a number has an uncertainty and where it does not.
 
-**Live app:** https://d-hack1.github.io/Lumen/ (available once GitHub Pages is enabled for the repository; see [Build, deploy and offline](#build-deploy-and-offline)).
+**Live app:** https://lumen.dhack.in
 
 ## The app
 
@@ -115,12 +115,12 @@ The terrain scripts download elevation windows from NASA archives and cache them
 ### Build, deploy and offline
 
 ```
-npm run build                                          # production build + service worker (app shell and data are precached)
-VITE_BASE=/Lumen/ VITE_LUMEN_DATA=real npm run build   # what the GitHub Pages workflow does
+npm run build                                          # production build + service worker (app shell and data are precached), served from the site root
+VITE_BASE=/Lumen/ VITE_LUMEN_DATA=real npm run build   # for hosting under a sub-path such as https://<user>.github.io/Lumen/
 npm run preview                                        # serve dist/
 ```
 
-`.github/workflows/deploy.yml` publishes `main` to GitHub Pages (one-time setting: Settings → Pages → Source "GitHub Actions"). Data files under `web/public/data*` are Git LFS objects, so check out with LFS. After the first load the app works with the network off.
+The app is a static site (`web/dist/`), so any static host works. It is served from the root of https://lumen.dhack.in, which uses the default base path `/`. `.github/workflows/deploy.yml` is an optional alternative that publishes `main` to GitHub Pages under a sub-path (it needs Settings → Pages → Source "GitHub Actions"). Data files under `web/public/data*` are Git LFS objects, so check out with LFS. After the first load the app works with the network off.
 
 ## Documentation
 
