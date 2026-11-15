@@ -163,6 +163,15 @@ export interface Availability {
   visible: boolean;
 }
 
+/**
+ * R3 state predicate for a disk-fraction threshold (Python twin: reference/bounds.py `disk_fraction_visible`): a 0 threshold means "any part of the disk",
+ * so a fully hidden disk (fraction 0) is NOT visible; every other threshold is "at least that fraction". The app's sliders start at 10%, so 0 is only reachable by the
+ * 0 / 50 / 100% event specs, but the rule lives here so every caller agrees.
+ */
+export function diskFractionVisible(fraction: number, threshold: number): boolean {
+  return threshold === 0 ? fraction > 0 : fraction >= threshold;
+}
+
 export interface AvailabilityOptions {
   diskThreshold: number;
   marginDeg?: number;
@@ -180,7 +189,7 @@ export function availability(
 ): Availability {
   const fraction = diskFraction(body, elevationDeg, azimuthDeg, distanceKm, horizon);
   const clearanceDeg = elevationDeg - horizon.effectiveAt(azimuthDeg);
-  let visible = fraction >= opts.diskThreshold && clearanceDeg >= (opts.marginDeg ?? 0);
+  let visible = diskFractionVisible(fraction, opts.diskThreshold) && clearanceDeg >= (opts.marginDeg ?? 0);
   if (body === 'sun') visible = visible && elevationDeg >= (opts.minSunElevationOpsDeg ?? 0);
   return { fraction, clearanceDeg, visible };
 }

@@ -1,6 +1,6 @@
 // Owner: Nived
 // The shared result store: one evaluation per scenario change for ALL consumers, latest-wins, jumpTo.
-import { existsSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { DEFAULT_SCENARIO, useScenario } from '../../state/scenarioStore';
@@ -89,7 +89,11 @@ describe.skipIf(!run)('result store (real data, in-thread engine)', () => {
     expect(getResult().metrics!.energyPerDayWh.value).toBeGreaterThan(0);
     useScenario.setState({ panelPreset: 'horizontalDeck', yawDeg: 0 });
     await until(() => peak() !== fourSide);
-    expect(peak()).toBeLessThan(1361 * Math.sin((8 * Math.PI) / 180)); // a flat deck at a polar site (Sun < 8 deg) cannot make much
+    // A deck lying on the pad cannot make much at a polar site (Sun < 8 deg). The pad itself is tilted (real pad file, 2.8 deg at IM-2), which can only
+    // add its slope to the Sun's elevation relative to the deck, so the bound is the Sun elevation plus the pad slope.
+    const padFile = join(PUBLIC, 'data/terrain/pad/im2_athena.json');
+    const padSlope = existsSync(padFile) ? (JSON.parse(readFileSync(padFile, 'utf8')) as { slope_deg: number }).slope_deg : 0;
+    expect(peak()).toBeLessThan(1361 * Math.sin(((8 + padSlope) * Math.PI) / 180));
     useScenario.setState({ panelPreset: 'fourSide', yawDeg: null, tilt: { magnitudeDeg: 0, directionDeg: 0 } });
     await until(() => peak() === fourSide);
   });
