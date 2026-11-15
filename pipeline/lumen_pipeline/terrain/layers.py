@@ -652,14 +652,31 @@ def write_layers_index(artifacts: list[LayerArtifact], *, output_root: Path | No
         index = {"version": "0.1.0", "layers": []}
     existing = {(entry["layer_id"], entry["extent"]): i for i, entry in enumerate(index["layers"])}
     for artifact in artifacts:
+        sidecar = artifact.sidecar
+        filename = sidecar["filename"]
+        if filename.startswith("layers/"):
+            filename = filename[len("layers/"):]
+        w = sidecar["width_px"]
+        h = sidecar["height_px"]
+        r_m = sidecar["radius_m"]
+        res_m = sidecar["resolution_m"]
+        ext = sidecar["extent"]
+        lat_lim = -80 if ext == "80_90S" else -85
+        proj = dict(sidecar["projection"])
+        proj["size_px"] = [w, h]
+        proj["centre_px"] = [w / 2.0, h / 2.0]
+        proj["lat_limit_deg"] = lat_lim
+        proj["half_extent_km"] = r_m / 1000.0
+        proj["metres_per_px"] = res_m
         entry = {
+            "available": True,
             "layer_id": artifact.layer_id,
             "name": artifact.layer_id.replace("_", " ").title(),
             "extent": artifact.extent,
-            "filename": artifact.sidecar["filename"],
-            "projection": artifact.sidecar["projection"],
-            "legend_stops": artifact.sidecar["legend_stops"],
-            "source_citation": artifact.sidecar["source"]["citation"],
+            "filename": filename,
+            "projection": proj,
+            "legend_stops": sidecar["legend_stops"],
+            "source_citation": sidecar["source"]["citation"],
         }
         key = (artifact.layer_id, artifact.extent)
         if key in existing:

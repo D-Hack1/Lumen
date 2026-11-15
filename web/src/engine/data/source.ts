@@ -32,6 +32,11 @@ export class DataError extends Error {}
 const jsonCache = new Map<string, Promise<unknown>>();
 const binCache = new Map<string, Promise<ArrayBuffer>>();
 
+export function clearDataCache(): void {
+  jsonCache.clear();
+  binCache.clear();
+}
+
 /** Fetch + cache JSON. Optionally require a header `version` in `supportedVersions`. */
 export function fetchJson<T>(path: string, supportedVersions?: Array<number | string>): Promise<T> {
   const url = dataUrl(path);
