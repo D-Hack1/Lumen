@@ -127,7 +127,8 @@ export function drawGlobe(
     ctx.setLineDash([]);
   };
 
-  const ev = latLonToVec(earthLibration(t).lat, earthLibration(t).lon);
+  const el = earthLibration(t + SUN_PHASE_OFFSET_H);
+  const ev = latLonToVec(el.lat, el.lon);
   const sunP = proj(sv, RS);
   const earthP = proj(ev, ED);
 

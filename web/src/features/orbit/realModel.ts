@@ -13,14 +13,30 @@ import { loadEphem, type Ephemeris } from '../../engine/data/ephem';
 import { loadMaskOrNull, type Mask } from '../../engine/data/masks';
 import { dataMode } from '../../engine/data/source';
 import type { SiteRecord } from '../../engine/types';
-import type { Site, Snapshot } from './orbitModel';
+import { setRealEphemeris } from './realEphem';
+import { SITES, type Site, type Snapshot } from './orbitModel';
 import { windowStats } from '../pages/pagesModel';
 
 /** Hours-since-epoch of the design's t = 0 (2027-02-08 00:00 UTC); duplicated from orbitModel to avoid a runtime import cycle. */
 const BASE_UTC = Date.UTC(2027, 1, 8, 0, 0, 0);
 
-/** Orbit-page site id -> catalog / terrain id. Sites not listed have no published terrain and use the smooth-Moon horizon. */
-const TERRAIN_ID: Record<string, string> = { im2: 'im2_athena', shack: 'shackleton_ridge' };
+/** Short labels for the site tabs (catalog ids). Unknown ids fall back to the catalog name. */
+const SHORT: Record<string, string> = { im2_athena: 'IM-2', shackleton_ridge: 'Ridge', cy3_shiv_shakti: 'CY-3', blue_ghost_m1: 'Blue Ghost' };
+const GROUP: Record<string, string> = { historical_landing: 'Historical landing', published_target: 'Published target' };
+
+/** The pages' site list, read from the real catalog (landing coordinates drive computation; see sites.yaml). */
+function siteFromRecord(r: SiteRecord): Site {
+  return {
+    id: r.id,
+    name: r.name,
+    short: SHORT[r.id] ?? r.name,
+    group: [GROUP[r.category] ?? r.category, r.agency].filter(Boolean).join(' · '),
+    lat: r.landingCoords.lat,
+    lon: r.landingCoords.lon,
+    seed: 0,
+    lift: 0,
+  };
+}
 
 const DEFS: Definitions = { ...DEFAULT_DEFINITIONS, dsnMaskDeg: 10 };
 
@@ -45,11 +61,14 @@ export function loadRealModel(): Promise<void> {
       const [eph, dsn, cat] = await Promise.all([loadEphem(), loadDsnOrNull(), loadCatalog()]);
       const records = new Map(cat.sites.map((s) => [s.id, s]));
       const masks = new Map<string, Mask>();
-      for (const id of Object.values(TERRAIN_ID)) {
+      for (const id of records.keys()) {
         const m = await loadMaskOrNull(id);
         if (m) masks.set(id, m);
       }
       loaded = { eph, dsn, records, masks };
+      setRealEphemeris(eph);
+      // Replace the design's sample list in place (the pages read SITES), keeping the catalog's order.
+      (SITES as Site[]).splice(0, SITES.length, ...cat.sites.map(siteFromRecord));
     })();
     loading.catch(() => (loading = null));
   }
@@ -70,7 +89,7 @@ function prepare(site: Site, mast: number): Prepared {
   let p = prepared.get(key);
   if (!p) {
     const L = loaded as Loaded;
-    const tid = TERRAIN_ID[site.id];
+    const tid = L.records.has(site.id) ? site.id : undefined;
     const rec = tid ? L.records.get(tid) : undefined;
     const rotation = rec?.rotationMatrix ?? undefined;
     const terrainHorizon = tid ? horizonFromMask(L.masks.get(tid), mast) : null;
@@ -106,12 +125,12 @@ export function realHorizon(az: number, site: Site, mast: number): number {
 }
 
 // ---- Verdict tags (the curated-site list) ----------------------------------------------------------------------------------
-// The engine's own go / no-go rule (core/verdict.ts) on the same 14-day window Compare shows, against the default Mission Profile.
+// The engine's own go / no-go rule (core/verdict.ts) on the same 14-day window Compare shows, against the Mission Profile in the
+// scenario store (so it follows the profile rather than a copy of it).
 // No terrain uncertainty (sigma) exists yet, so a pass can only be "unconfirmed": the engine never says GO on an optimistic bound.
+import { getScenario } from '../../state/scenarioStore';
 import type { Verdict } from '../../engine/types';
 
-const PROFILE = { minSunlitPct: 50, minLinkHours: 100, maxLongestNightH: 72, maxPadSlopeDeg: 10 };
-const WEIGHTS = { sunlit: 0.4, link: 0.3, night: 0.2, slope: 0.1 };
 const WINDOW_H = 336;
 
 export interface SiteTag {
@@ -132,18 +151,18 @@ const TAG: Record<Verdict, { label: string; tone: SiteTag['tone'] }> = {
 const tagCache = new Map<string, SiteTag>();
 
 export function realSiteTag(site: Site, mast: number): SiteTag {
-  const key = `${site.id}|${site.lat}|${site.lon}|${mast}`;
+  const key = `${site.id}|${site.lat}|${site.lon}|${mast}|${JSON.stringify([getScenario().profile, getScenario().weights])}`;
   let tag = tagCache.get(key);
   if (!tag) {
     const L = loaded as Loaded;
     const w = windowStats(site, mast);
-    const slope = L.records.get(TERRAIN_ID[site.id] ?? '')?.padSlopeDeg ?? null;
+    const slope = L.records.get(site.id)?.padSlopeDeg ?? null;
     const b = (v: number | null) => ({ value: v, lo: null, hi: null });
     const r = evaluateVerdict({
       metrics: { sunlitPct: b(w.sun), linkPct: b(w.dsn), longestNightH: b(w.dark), padSlopeDeg: slope === null ? null : b(slope) } as never,
       windowHours: WINDOW_H,
-      profile: PROFILE,
-      weights: WEIGHTS,
+      profile: getScenario().profile,
+      weights: getScenario().weights,
       boundsKind: 'optimistic',
       basis: prepare(site, mast).terrain ? 'mask' : 'smooth-moon',
     });

@@ -49,7 +49,7 @@ export function PolarStage({ terrain, t, layer, showAlwaysDark, pin, onPick, onS
     image.current ??= ctx.createImageData(n, n);
     const { sunlitPct } = renderPolarFrame(
       terrain,
-      { layer, hoursSinceNewMoon: hours, earthHours: t, showAlwaysDark },
+      { layer, hoursSinceNewMoon: hours, earthHours: hours, showAlwaysDark },
       image.current.data,
     );
     ctx.putImageData(image.current, 0, 0);
@@ -66,7 +66,7 @@ export function PolarStage({ terrain, t, layer, showAlwaysDark, pin, onPick, onS
     };
     if (pin.lat <= -80) {
       const p = latLonToPixel(terrain.grid, pin.lat, pin.lon);
-      const s = samplePolar(terrain, Math.round(p.px), Math.round(p.py), { hoursSinceNewMoon: hours, earthHours: t });
+      const s = samplePolar(terrain, Math.round(p.px), Math.round(p.py), { hoursSinceNewMoon: hours, earthHours: hours });
       if (s) {
         stats = {
           ...stats,
@@ -92,7 +92,7 @@ export function PolarStage({ terrain, t, layer, showAlwaysDark, pin, onPick, onS
     const rc = e.currentTarget.getBoundingClientRect();
     const gx = Math.floor(((e.clientX - rc.left) / rc.width) * n);
     const gy = Math.floor(((e.clientY - rc.top) / rc.height) * n);
-    const s = samplePolar(terrain, gx, gy, { hoursSinceNewMoon: hours, earthHours: t });
+    const s = samplePolar(terrain, gx, gy, { hoursSinceNewMoon: hours, earthHours: hours });
     if (!s) {
       hide();
       return;

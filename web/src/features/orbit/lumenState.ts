@@ -48,7 +48,7 @@ export const LumenContext = createContext<LumenState | null>(null);
 
 export function useLumenState(): LumenState {
   const [light, setLight] = useState(readLight);
-  const [siteId, setSiteId] = useState('im2');
+  const [siteId, setSiteId] = useState(() => SITES[0].id);
   const [custom, setCustom] = useState<Site | null>(null);
   const [mast, setMast] = useState(2);
   const [t, setT] = useState(96);
@@ -56,7 +56,7 @@ export function useLumenState(): LumenState {
   const setSlip = useCallback((days: number) => {
     if (Number.isFinite(days)) setSlipRaw(Math.max(0, Math.min(SLIP_MAX, Math.round(days))));
   }, []);
-  const [picked, setPicked] = useState<string[]>(['im2', 'shack', 'malapert']);
+  const [picked, setPicked] = useState<string[]>(() => SITES.slice(0, 3).map((s) => s.id));
 
   const toggleTheme = useCallback(() => {
     setLight((prev) => {

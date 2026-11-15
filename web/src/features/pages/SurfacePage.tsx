@@ -21,7 +21,6 @@ import { go } from './nav';
 import { standHereView, useEngineResult, useSkyline } from './engineBindings';
 import { StandHereNumbers } from './StandHereNumbers';
 
-const QUICK = SITES.slice(0, 4);
 const SHORT: Record<string, string> = { im2: 'IM-2', shack: 'Ridge', malapert: 'Malapert', haworth: 'Haworth' };
 const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'N'];
 
@@ -53,6 +52,7 @@ export function SurfacePage() {
     return () => clearInterval(id);
   }, [playing, setT]);
 
+  const QUICK = SITES.slice(0, 4);
   const options: Site[] = QUICK.some((s) => s.id === site.id) ? [...QUICK] : [...QUICK, site];
   const sunX = azToX(m.sunAz);
   const sunY = yOf(m.sunEl);

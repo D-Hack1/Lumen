@@ -8,7 +8,6 @@ import { SITES, type Site } from '../orbit/orbitModel';
 import { useLumenContext } from './usePages';
 import { SLIP_DAYS, bestSlip, fmtDuration, fmtPoints, slipWindows, type WindowStats } from './pagesModel';
 
-const QUICK = SITES.slice(0, 4);
 const SHORT: Record<string, string> = { im2: 'IM-2', shack: 'Ridge', malapert: 'Malapert', haworth: 'Haworth' };
 const EPOCH = Date.UTC(2027, 1, 8);
 const dateOf = (slip: number): string => new Date(EPOCH + slip * 86_400_000).toISOString().slice(0, 10);
@@ -63,6 +62,7 @@ export function SlipPage() {
   const best = useMemo(() => bestSlip(wins), [wins]);
   const cur = wins[slip];
   const base = wins[0];
+  const QUICK = SITES.slice(0, 4);
   const options: Site[] = QUICK.some((s) => s.id === site.id) ? [...QUICK] : [...QUICK, site];
 
   return (

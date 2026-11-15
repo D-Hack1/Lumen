@@ -373,8 +373,8 @@
   color: var(--amberT);
 }
 .lm-tag--mut {
-  background: var(--chipBg, rgba(255, 255, 255, 0.07));
-  color: var(--mut, #a39b8c);
+  background: var(--sunk);
+  color: var(--mut);
 }
 .lm-tag--bad {
   background: var(--badBg);

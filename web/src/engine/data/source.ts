@@ -1,6 +1,6 @@
 // Owner: Nived
 // The one place that decides where data comes from. Mock/real switch: VITE_LUMEN_DATA=mock|real
-// (default: mock until real data lands). No component or loader hard-codes /data or /data-mock.
+// (default: real; mock is opt-in). No component or loader hard-codes /data or /data-mock.
 
 export type DataMode = 'mock' | 'real';
 
@@ -14,7 +14,7 @@ export function setDataMode(mode: DataMode | null): void {
 export function dataMode(): DataMode {
   if (modeOverride) return modeOverride;
   const v = (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_LUMEN_DATA;
-  return v === 'real' ? 'real' : 'mock';
+  return v === 'mock' ? 'mock' : 'real';
 }
 
 function base(): string {

@@ -42,6 +42,18 @@ function useDataGate(): Gate {
 
 export function PagesApp() {
   const gate = useDataGate();
+  if (gate.state !== 'ready') {
+    return (
+      <div role="status" style={{ padding: 32, color: '#d8d2c4', font: '15px Inter, sans-serif' }}>
+        {gate.state === 'loading' ? 'Loading real ephemeris and terrain data…' : `Could not load the real data: ${gate.message}`}
+      </div>
+    );
+  }
+  return <PagesShell />;
+}
+
+/** Created only once the data is ready, so the shared state starts from the real site list. */
+function PagesShell() {
   const lumen = useLumenState();
   const [route, setRoute] = useState<Route>(read);
 
@@ -63,14 +75,6 @@ export function PagesApp() {
     };
     document.title = `${names[route]} · Lumen`;
   }, [route]);
-
-  if (gate.state !== 'ready') {
-    return (
-      <div role="status" style={{ padding: 32, color: '#d8d2c4', font: '15px Inter, sans-serif' }}>
-        {gate.state === 'loading' ? 'Loading real ephemeris and terrain data…' : `Could not load the real data: ${gate.message}`}
-      </div>
-    );
-  }
 
   return (
     <LumenContext.Provider value={lumen}>

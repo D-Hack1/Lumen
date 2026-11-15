@@ -161,11 +161,11 @@ export function parseCoord(str: string, pos: string, neg: string): number | null
 }
 
 /** Real-data mode: the Sun, Earth, DSN and terrain horizon come from the engine's data files, not the design's sample model. */
-const useReal = (): boolean => dataMode() === 'real' && realModelReady();
+const isRealActive = (): boolean => dataMode() === 'real' && realModelReady();
 
 /** Terrain horizon (degrees) at an azimuth for a site, lowered by the array height. Synthetic unless real data is loaded. */
 export function horizon(az: number, site: Site, mast: number): number {
-  if (useReal()) return realHorizon(az, site, mast);
+  if (isRealActive()) return realHorizon(az, site, mast);
   const s = site.seed;
   const r = (az * Math.PI) / 180;
   const d = (az - (205 + s * 25)) / 16;
@@ -190,7 +190,7 @@ export interface Snapshot {
 }
 
 export function model(t: number, site: Site, mast: number): Snapshot {
-  if (useReal()) return realSnapshot(t, site, mast);
+  if (isRealActive()) return realSnapshot(t, site, mast);
   const sunAz = (((180 - (360 * (t + SUN_PHASE_OFFSET_H)) / MONTH_HOURS + site.seed * 8) % 360) + 360) % 360;
   const sunEl = 1.3 + site.lift + 0.4 * Math.sin((2 * Math.PI * t) / 2600);
   const dd = (sunEl - horizon(sunAz, site, mast)) / 0.27;

@@ -9,9 +9,11 @@ import { pwaOptions, type LumenDataMode } from './pwa.config';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const dataMode: LumenDataMode = env.VITE_LUMEN_DATA === 'real' ? 'real' : 'mock';
+  const dataMode: LumenDataMode = env.VITE_LUMEN_DATA === 'mock' ? 'mock' : 'real';
   return {
     plugins: [react(), ...(process.env.VITEST ? [] : [VitePWA(pwaOptions(dataMode))])],
+    // Unit tests run on the mock fixtures unless a test switches to real mode itself (setDataMode).
+    define: process.env.VITEST ? { 'import.meta.env.VITE_LUMEN_DATA': JSON.stringify('mock') } : {},
     server: { port: 5173 },
     test: {
       include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
