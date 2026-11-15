@@ -6,7 +6,7 @@
 // per viewport: every chip and the agency filter inside the search slot, the card list as the column's only scroller.
 // Screenshots → e2e/screens/phase-<PHASE>/<viewport>-<view>.png
 import { expect, test, type Page } from '@playwright/test';
-import { colBudget, pickCols, pickDensity, sideBudget, slotBudget } from '../src/ui/tokens';
+import { colBudget, pickCols, pickDensity, sideBudget, slotBudget } from '../../src/ui/tokens';
 
 const PHASE = 4;
 const VIEWPORTS = [

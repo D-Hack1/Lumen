@@ -6,7 +6,8 @@ const PORT = 5179;
 
 export default defineConfig({
   testDir: '.',
-  testIgnore: '**/*.real.spec.ts', // real-data checks: playwright.real.config.ts (npm run e2e:real)
+  // legacy/ = specs for the old cockpit shell (no longer mounted); real-data checks: playwright.real.config.ts
+  testIgnore: ['**/*.real.spec.ts', '**/legacy/**'],
   outputDir: '../test-results',
   fullyParallel: true,
   reporter: [['list']],

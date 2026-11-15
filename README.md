@@ -35,8 +35,8 @@ npm install
 npm run dev            # http://localhost:5173 (mock data by default: VITE_LUMEN_DATA=mock|real)
 npm test               # Vitest unit tests
 npm run e2e:install    # once: Playwright Chromium
-npm run e2e            # LEGACY: targets the unmounted old shell, fails against the live app; zero-scroll (V1–V4b, worst-case fixture) + Phase 3 and Phase 4 behaviour, mock data
-npm run e2e:real       # checks that need real data (CY-3 + ISRO preset → Answer Strip ops state)
+npm run e2e            # live app smoke: the four pages × 5 viewports (loads, no errors, no horizontal scroll) + routing, theme, slip
+npm run e2e:real       # LEGACY shell only (web/e2e/legacy/): checks that need real data (CY-3 + ISRO preset → Answer Strip ops state)
 npm run lint && npm run typecheck
 ```
 
