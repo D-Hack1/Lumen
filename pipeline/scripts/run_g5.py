@@ -48,6 +48,21 @@ def _horizon(site_id: str, height_m: float = 2.0) -> Horizon:
                    d_min_m=meta.get("d_min_m"), observer_height_m=height_m, range_extrema=FiniteSegmentTree.from_elevations(row))
 
 
+def _bias_sweep(site_id: str, lat: float, lon: float, eph, e0, days) -> dict[str, float]:
+    """How the multi-year sunlit share moves if the whole terrain horizon is off by a constant angle (a way to see whether a DEM bias could explain a gap)."""
+    root = S.default_terrain_root() / "masks"
+    meta = json.loads((root / f"{site_id}.json").read_text(encoding="utf-8"))
+    payload = (root / f"{site_id}.bin").read_bytes()
+    base = np.asarray(np.frombuffer(payload, dtype="<f4", count=4 * 3600, offset=64).reshape(4, 3600)[meta["heights_m"].index(2.0)], dtype=float)
+    out = {}
+    for bias in (-0.5, -0.2, 0.0, 0.2, 0.5):
+        row = base + bias
+        h = Horizon(row, bin_width_deg=meta["bin_width_deg"], slope_deg=meta.get("slope_deg"), uphill_azimuth_deg=meta.get("uphill_azimuth_deg"),
+                    d_min_m=meta.get("d_min_m"), observer_height_m=2.0, range_extrema=FiniteSegmentTree.from_elevations(row))
+        out[f"{bias:+.1f}"] = float(np.mean([S._daily_percentages(eph, lat, lon, h, day, e0)[0] for day in days[::8]]))
+    return out
+
+
 def _pgda(url: str, lat: float, lon: float) -> dict:
     with rasterio.open(url) as ds:
         x, y = Transformer.from_crs(LUNAR_SPHERICAL_CRS, ds.crs, always_xy=True).transform(lon, lat)
@@ -94,6 +109,7 @@ def main() -> None:
             "lumen_yearly_spread_pct_points": float(max(yearly.values()) - min(yearly.values())),
             "lumen_any_part_of_disk_pct": float(any_part.mean()),
             "lumen_by_observer_height_pct": by_height,
+            "lumen_by_horizon_bias_deg_pct": _bias_sweep(site_id, lat, lon, eph, e0, days),
             "pgda_layer": LAYERS[layer], "pgda_url": products[LAYERS[layer]]["url"], "pgda": pgda,
             "abs_difference_vs_centre_pct_points": abs(lumen - pgda["centre_pct"]),
             "abs_difference_vs_3x3_mean_pct_points": abs(lumen - pgda["mean_3x3_pct"]),

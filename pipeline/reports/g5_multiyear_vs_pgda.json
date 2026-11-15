@@ -2,8 +2,8 @@
   "gate": "G5",
   "description": "Multi-year averages versus independent PGDA map pixels",
   "criterion_pct_points": 5.0,
-  "recorded_utc": "2026-11-15T16:46:03Z",
-  "git_commit": "776577ad189daf4e3ccf5a93ed49a1a3cbc9fe4d",
+  "recorded_utc": "2026-11-15T17:45:11Z",
+  "git_commit": "fb87cad5ba503230b3585014a13d60f2d764dd25",
   "command": "python pipeline/scripts/run_g5.py",
   "sites": [
     {
@@ -30,6 +30,13 @@
         "2.0": 44.5958904109589,
         "5.0": 44.636986301369866,
         "10.0": 44.68493150684932
+      },
+      "lumen_by_horizon_bias_deg_pct": {
+        "-0.5": 46.1972602739726,
+        "-0.2": 45.347945205479455,
+        "+0.0": 44.78082191780822,
+        "+0.2": 43.92328767123288,
+        "+0.5": 42.961643835616435
       },
       "pgda_layer": "avg_illumination_65S_240m_pgda_69",
       "pgda_url": "https://pgda.gsfc.nasa.gov/data/MoonIllumination/AVGVISIB_65S_240M_201608.TIF",
@@ -69,6 +76,13 @@
         "5.0": 47.92328767123288,
         "10.0": 48.21917808219178
       },
+      "lumen_by_horizon_bias_deg_pct": {
+        "-0.5": 48.53972602739726,
+        "-0.2": 47.97808219178082,
+        "+0.0": 47.61917808219178,
+        "+0.2": 47.26849315068493,
+        "+0.5": 46.794520547945204
+      },
       "pgda_layer": "avg_illumination_65S_240m_pgda_69",
       "pgda_url": "https://pgda.gsfc.nasa.gov/data/MoonIllumination/AVGVISIB_65S_240M_201608.TIF",
       "pgda": {
@@ -107,6 +121,13 @@
         "5.0": 50.12602739726027,
         "10.0": 50.1958904109589
       },
+      "lumen_by_horizon_bias_deg_pct": {
+        "-0.5": 41.37534246575343,
+        "-0.2": 40.18904109589041,
+        "+0.0": 39.47397260273973,
+        "+0.2": 38.413698630136984,
+        "+0.5": 36.74520547945205
+      },
       "pgda_layer": "avg_illumination_85S_60m_pgda_69",
       "pgda_url": "https://pgda.gsfc.nasa.gov/data/MoonIllumination/AVGVISIB_85S_060M_201608.TIF",
       "pgda": {
@@ -144,6 +165,13 @@
         "2.0": 0.0,
         "5.0": 0.0,
         "10.0": 0.0
+      },
+      "lumen_by_horizon_bias_deg_pct": {
+        "-0.5": 0.0,
+        "-0.2": 0.0,
+        "+0.0": 0.0,
+        "+0.2": 0.0,
+        "+0.5": 0.0
       },
       "pgda_layer": "avg_illumination_85S_60m_pgda_69",
       "pgda_url": "https://pgda.gsfc.nasa.gov/data/MoonIllumination/AVGVISIB_85S_060M_201608.TIF",

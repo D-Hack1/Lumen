@@ -520,6 +520,7 @@ def _g5_gate(path: Path) -> dict[str, Any]:
                 "pgda_3x3_range_pct": [round(r["pgda"]["min_3x3_pct"], 1), round(r["pgda"]["max_3x3_pct"], 1)],
                 "difference_points": round(r["abs_difference_vs_centre_pct_points"], 1), "lumen_yearly_spread_points": round(r["lumen_yearly_spread_pct_points"], 1),
                 "lumen_by_observer_height_pct": {k: round(v, 1) for k, v in r.get("lumen_by_observer_height_pct", {}).items()},
+                "lumen_by_horizon_bias_deg_pct": {k: round(v, 1) for k, v in r.get("lumen_by_horizon_bias_deg_pct", {}).items()},
             }
             for r in rows
         }
@@ -528,7 +529,8 @@ def _g5_gate(path: Path) -> dict[str, Any]:
             extra["reason"] = (
                 "Outside the " + f"{tolerance:g}-point tolerance: " + ", ".join(f"{site} ({diffs[site]:.1f} points)" for site in outside)
                 + ". Not explained away: the neighbouring map pixels there span a wide range and the result moves with observer height (see value), "
-                "but no reading of those facts brings the mask within tolerance."
+                "and a constant horizon bias of +/-0.5 degrees moves it only a few points (see value), so a small DEM bias does not explain it either; "
+                "the cause is not established and the site's mask needs a terrain-owner review."
             )
         return _gate(
             "G5", G5_DESCRIPTION, "PASS" if meets else "FAIL", criterion=G5_CRITERION + f" (read as <= {G5_TOLERANCE_POINTS:g} percentage points)",
