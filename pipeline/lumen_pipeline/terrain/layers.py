@@ -69,6 +69,12 @@ EXTENT_COLATITUDE_DEG = {
     "85_90S": 5.0,
 }
 
+# South latitude of the extent's equator-ward boundary (negative, matching
+# this project's MOON_ME south-negative convention): 90 - colatitude.
+EXTENT_LAT_LIMIT_DEG = {
+    extent: -(90.0 - colatitude) for extent, colatitude in EXTENT_COLATITUDE_DEG.items()
+}
+
 # Contract §5.3 slope-hazard classes (degrees). "Exceeded" has no finite
 # upper bound; 90.0 is used only as an inclusive sentinel since a plane-fit
 # slope angle cannot exceed 90 degrees by construction (atan domain).
@@ -377,6 +383,8 @@ def _write_layer_sidecar(
     extra: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     radius_m = extent_radius_m(extent)
+    width_px = int(source.values.shape[1])
+    height_px = int(source.values.shape[0])
     sidecar: dict[str, Any] = {
         "version": "0.1.0",
         "producer": "lumen_pipeline.terrain.layers",
@@ -392,11 +400,29 @@ def _write_layer_sidecar(
             "central_meridian_deg": 0.0,
             "scale_factor_at_pole": 1.0,
             "proj4": "+proj=stere +lat_0=-90 +lat_ts=-90 +lon_0=0 +R=1737400 +units=m +no_defs",
+            # Frontend loader contract (web/src/engine/data/layers.ts
+            # RawProjection): size_px uses this module's [height, width]
+            # shape convention (matching _validate_metadata's size_px ==
+            # spatial shape rule below); centre_px is the pixel-edge centre
+            # of the square crop (matches web/src/mocks/make_mock.py's
+            # [size/2, size/2]); lat_limit_deg is the extent's equator-ward
+            # boundary in this project's south-negative convention;
+            # half_extent_km is the crop's own half-width (radius_m/1000,
+            # exact for the square window actually read, not re-derived
+            # from size_px); metres_per_px is the raster's own exact pixel
+            # spacing (resolution_m), not approximated from half_extent_km
+            # and size_px (which differ very slightly because half_px is
+            # ceil()-rounded when the window is cropped).
+            "size_px": [height_px, width_px],
+            "centre_px": [width_px / 2.0, height_px / 2.0],
+            "lat_limit_deg": EXTENT_LAT_LIMIT_DEG[extent],
+            "half_extent_km": radius_m / 1000.0,
+            "metres_per_px": source.resolution_m,
         },
         "radius_m": radius_m,
         "resolution_m": source.resolution_m,
-        "width_px": int(source.values.shape[1]),
-        "height_px": int(source.values.shape[0]),
+        "width_px": width_px,
+        "height_px": height_px,
         "nodata_encoding": "fully transparent alpha channel (RGBA PNG); never encoded as a visible class or value",
         "source": {
             "product_key": source.product.key,
@@ -652,31 +678,14 @@ def write_layers_index(artifacts: list[LayerArtifact], *, output_root: Path | No
         index = {"version": "0.1.0", "layers": []}
     existing = {(entry["layer_id"], entry["extent"]): i for i, entry in enumerate(index["layers"])}
     for artifact in artifacts:
-        sidecar = artifact.sidecar
-        filename = sidecar["filename"]
-        if filename.startswith("layers/"):
-            filename = filename[len("layers/"):]
-        w = sidecar["width_px"]
-        h = sidecar["height_px"]
-        r_m = sidecar["radius_m"]
-        res_m = sidecar["resolution_m"]
-        ext = sidecar["extent"]
-        lat_lim = -80 if ext == "80_90S" else -85
-        proj = dict(sidecar["projection"])
-        proj["size_px"] = [w, h]
-        proj["centre_px"] = [w / 2.0, h / 2.0]
-        proj["lat_limit_deg"] = lat_lim
-        proj["half_extent_km"] = r_m / 1000.0
-        proj["metres_per_px"] = res_m
         entry = {
-            "available": True,
             "layer_id": artifact.layer_id,
             "name": artifact.layer_id.replace("_", " ").title(),
             "extent": artifact.extent,
-            "filename": filename,
-            "projection": proj,
-            "legend_stops": sidecar["legend_stops"],
-            "source_citation": sidecar["source"]["citation"],
+            "filename": artifact.sidecar["filename"],
+            "projection": artifact.sidecar["projection"],
+            "legend_stops": artifact.sidecar["legend_stops"],
+            "source_citation": artifact.sidecar["source"]["citation"],
         }
         key = (artifact.layer_id, artifact.extent)
         if key in existing:
