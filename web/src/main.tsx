@@ -1,58 +1,29 @@
 // Owner: Abhinav
-// Entry: fonts → tokens → density attributes → glossary binding → scenario from URL (+ optional e2e fixture) →
-// render → URL sync.
-import '@fontsource/ibm-plex-sans/400.css';
-import '@fontsource/ibm-plex-sans/500.css';
-import '@fontsource/ibm-plex-sans/600.css';
-import '@fontsource/ibm-plex-mono/400.css';
-import '@fontsource/ibm-plex-mono/500.css';
-import './ui/global.css';
-import './ui/kit.css';
-import './app/layout/layout.css';
-import './app/missionBar.css';
+// Entry: fonts → the four Lumen pages (Orbit, Stand here, Compare, Slip explorer), routed by URL hash.
+// This replaced the previous app shell (App.tsx and its views, which are still in the tree but no longer mounted).
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/500.css';
+import '@fontsource/inter/600.css';
+import '@fontsource/dm-sans/300.css';
+import '@fontsource/dm-sans/400.css';
+import '@fontsource/jetbrains-mono/400.css';
+import '@fontsource/jetbrains-mono/500.css';
 
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { App } from './App';
-import { FixtureContext, type Fixture } from './app/layout/fixture';
-import { installViewportWatcher } from './app/layout/viewport';
-import { createMonitors } from './engine/perfMonitors';
-import { installPerf, perf } from './engine/perf';
-import { PerfHud } from './perf/PerfHud';
-import { PerfProfiler } from './perf/PerfProfiler';
-import { installGlossaryBinding } from './features/guidance/InfoBadgeBinding';
-import { useScenario } from './state/scenarioStore';
-import { readScenarioFromUrl, startUrlSync } from './state/urlSync';
-import { installTokens } from './ui/tokens';
+import { PagesApp } from './features/pages/PagesApp';
 
-async function boot() {
-  installTokens();
-  installViewportWatcher();
-  void installGlossaryBinding(); // every <InfoBadge term> resolves from glossary.json (interim spec text until it lands)
+document.body.style.margin = '0';
+document.body.style.background = '#0E0D0B';
 
-  const params = new URLSearchParams(window.location.search);
-  let fixture: Fixture | null = null;
-  if (params.get('fixture') === 'worst-case') {
-    fixture = (await import('./app/dev/worstCase')).worstCaseFixture;
-  }
-
-  useScenario.getState().hydrate({ ...readScenarioFromUrl(), ...fixture?.scenario });
-  installPerf(window, perf, createMonitors()); // window.__lumenPerf for automated G8 checks (cheap: nothing runs until start())
-
-  createRoot(document.getElementById('root')!).render(
+const root = document.getElementById('root');
+if (root) {
+  createRoot(root).render(
     <StrictMode>
-      <FixtureContext.Provider value={fixture}>
-        <PerfProfiler>
-          <App />
-        </PerfProfiler>
-        {(import.meta.env.DEV || params.has('perf')) && <PerfHud />}
-      </FixtureContext.Provider>
+      <PagesApp />
     </StrictMode>,
   );
-
-  startUrlSync();
-  await document.fonts.ready;
-  document.documentElement.dataset.ready = 'true';
 }
-
-void boot();
+void document.fonts.ready.then(() => {
+  document.documentElement.dataset.ready = 'true';
+});

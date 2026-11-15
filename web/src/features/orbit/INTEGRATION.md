@@ -1,7 +1,7 @@
 # Lumen pages — integration notes
 
 Status: **all four pages converted from the approved design (Orbit v5), not mounted anywhere.** Nothing outside
-`features/orbit/` and `features/pages/` imports them. Preview: `npm run dev`, open `/orbit-preview.html`
+`features/orbit/` and `features/pages/` imports them. Run `npm run dev` and open `/`
 (`#orbit`, `#stand-here`, `#compare`, `#slip`). `orbit-preview.html` and `orbit/preview.tsx` are dev-only.
 
 ## Layout
