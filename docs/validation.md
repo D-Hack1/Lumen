@@ -4,6 +4,30 @@ _Owner: Gowri_
 
 Human-readable gate results, scope statement.
 
+## G1 - DE421 lunar frame validation
+
+- Result: PASS for the checked thresholds. The comparison uses SpiceyPy 8.4.0
+  `pxform` and Skyfield 1.55 `PlanetaryConstants` at
+  `2023-01-01T00:00:00Z`, `2025-03-06T17:28:50Z`, and
+  `2030-12-31T23:00:00Z`.
+- Frames: `MOON_PA_DE421` to `MOON_ME_DE421` and the reverse. The DE421
+  mean-Earth frame is fixed to the principal-axis frame by the 3-2-1 Euler
+  rotation in `moon_080317.tf`.
+- Maximum matrix absolute error: `3.480837840186268e-11` (limit `< 1e-9`).
+  Maximum angular direction error: `3.57755385468222e-11 rad`
+  (limit `< 1e-6 rad`).
+- Maximum PA-to-ME angular residual: `4.239636467986046e-15 deg`;
+  maximum ME-to-PA residual: `4.412742011943044e-15 deg`. Maximum
+  orthogonality error: `6.661338147750939e-16` (limit `<= 1e-9`);
+  minimum determinant: `0.9999999999999996`.
+- PA-ME surface offset: `874.7474688514714 m` (about `874.75 m`).
+  Round-trip vector error is `1.149714193796099e-9 m`; R3 defines no
+  separate round-trip tolerance.
+- Both implementations use the same DE421 kernel inputs but independently
+  compute the transformations. Kernel filenames, sizes, SHA-256 identifiers,
+  frame metadata, epoch results, and software versions are recorded in
+  [the machine-readable G1 evidence](../pipeline/reports/g1_lunar_frames.json).
+
 ## G2 - Hourly ephemeris Hermite validation
 
 - Epochs: 10000 (deterministic seed 421)
