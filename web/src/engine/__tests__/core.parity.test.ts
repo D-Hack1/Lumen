@@ -31,6 +31,8 @@ describe('parity data present', () => {
 
 interface GoldenCase {
   id: string;
+  link_metric_source: string;
+  unavailable: string[];
   input: { latitude_deg: number; longitude_deg_east: number; start_utc: string; duration_days: number; observer_height_m: number; definitions: Record<string, number | null> };
   events: Array<{ type: string; utc: string }>;
   windows: Array<{ type: string; start_utc: string; end_utc: string; duration_h: number; peak_elevation_deg: number; flags: { partial_start: boolean; partial_end: boolean } }>;
@@ -42,6 +44,7 @@ interface GoldenCase {
   }>;
 }
 interface Golden {
+  metric_method: string;
   tolerances: { azimuth_deg: number; elevation_deg: number; event_time_s: number; metric_percent: number };
   cases: GoldenCase[];
 }
@@ -137,13 +140,16 @@ describe.skipIf(!run)('golden set 1: IM-2, smooth sphere, 30 days (real data)', 
       });
     });
 
-    it('merges the same windows, with the same partial-endpoint flags', () => {
-      expect(ev.windows.length).toBe(c.windows.length);
-      ev.windows.forEach((w, i) => {
+    // Golden Set 1 v2 (version 2.0.0, method `event_refined_windows`) is the REFINED result: Sun, Earth and ops windows with ~10 s endpoints, and metrics taken from
+    // the window durations. So it is replayed against `ev.refined` (what the app shows), not the sample-based first pass that v1 was generated with.
+    it('merges the same refined windows (sun, earth, ops), with the same partial-endpoint flags', () => {
+      expect(golden.metric_method).toBe('event_refined_windows');
+      expect(ev.refined.windows.length).toBe(c.windows.length);
+      ev.refined.windows.forEach((w, i) => {
         const g = c.windows[i];
-        expect(w.type).toBe(g.type);
-        expect(Math.abs(w.startMs - Date.parse(g.start_utc)) / 1000).toBeLessThan(2);
-        expect(Math.abs(w.endMs - Date.parse(g.end_utc)) / 1000).toBeLessThan(2);
+        expect(w.type, `window ${i}`).toBe(g.type);
+        expect(Math.abs(w.startMs - Date.parse(g.start_utc)) / 1000, `${g.type} start`).toBeLessThan(golden.tolerances.event_time_s);
+        expect(Math.abs(w.endMs - Date.parse(g.end_utc)) / 1000, `${g.type} end`).toBeLessThan(golden.tolerances.event_time_s);
         expect(w.partialStart).toBe(g.flags.partial_start);
         expect(w.partialEnd).toBe(g.flags.partial_end);
         expect(Math.abs(w.peakElevationDeg - g.peak_elevation_deg)).toBeLessThan(golden.tolerances.elevation_deg);
@@ -151,19 +157,20 @@ describe.skipIf(!run)('golden set 1: IM-2, smooth sphere, 30 days (real data)', 
       });
     });
 
-    it('computes the same first-pass metrics, and leaves the unavailable ones null', () => {
-      const m = ev.metrics;
+    it('computes the same refined metrics (link = Earth visibility: the golden has no DSN), and leaves the unavailable ones null', () => {
+      const m = ev.refined.metrics;
       const want = c.metrics;
-      const pct = golden.tolerances.metric_percent;
-      expect(Math.abs(m.sunlitPct.value! - want.sunlitPct!.value!)).toBeLessThan(pct);
-      expect(Math.abs(m.earthVisiblePct.value! - want.earthVisiblePct!.value!)).toBeLessThan(pct);
-      expect(Math.abs(m.longestNightH.value! - want.longestNightH!.value!)).toBeLessThan(0.1);
-      expect(Math.abs(m.sunElevationDeg.value! - want.sunElevationDeg!.value!)).toBeLessThan(golden.tolerances.elevation_deg);
-      expect(Math.abs(m.dteMarginDeg.value! - want.dteMarginDeg!.value!)).toBeLessThan(golden.tolerances.elevation_deg);
-      for (const k of ['linkPct', 'longestCommGapH', 'opsHours', 'energyPerDayWh'] as const) {
-        expect(m[k].value, k).toBeNull();
-        expect(want[k]!.value, `golden ${k}`).toBeNull();
-      }
+      expect(c.link_metric_source).toBe('earth_visibility_fallback_no_dsn');
+      expect(c.unavailable).toEqual(expect.arrayContaining(['dsn', 'link_windows', 'power', 'terrain_mask', 'terrain_sigma']));
+      // Refined percentages and hours agree to well inside one event-bisection bracket (10 s of 30 days = 0.0004 %), so the tolerance is 0.01, not the loose 1 %.
+      for (const k of ['sunlitPct', 'earthVisiblePct', 'linkPct'] as const) expect(Math.abs(m[k] - want[k]!.value!), k).toBeLessThan(0.01);
+      for (const k of ['longestNightH', 'longestCommGapH', 'opsHours'] as const) expect(Math.abs(m[k] - want[k]!.value!), k).toBeLessThan(0.01);
+      expect(m.linkPct).toBe(m.earthVisiblePct); // no DSN rule: the link is Earth visibility
+      const first = ev.metrics;
+      expect(Math.abs(first.sunElevationDeg.value! - want.sunElevationDeg!.value!)).toBeLessThan(golden.tolerances.elevation_deg);
+      expect(Math.abs(first.dteMarginDeg.value! - want.dteMarginDeg!.value!)).toBeLessThan(golden.tolerances.elevation_deg);
+      expect(want.energyPerDayWh!.value, 'golden energyPerDayWh').toBeNull(); // no power model in the golden
+      expect(first.energyPerDayWh.value).toBeNull();
     });
   });
 });

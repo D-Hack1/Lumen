@@ -2,7 +2,7 @@
 // Seam: the shared Compare store (subscribeCompare / getCompare) driven by the scenario store's compareRows.
 // Oracle for the numbers: Gowri's golden set 1 (IM-2 sunlit 49.2963 %) and the Blue Ghost fact (Earth is always up there, so the link is exactly the
 // DSN rule: 97.7963 % over these 30 days, computed independently with numpy on dsn.bin: >= 1 complex above 10 deg, 2-minute grid, interval-weighted).
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { getCompare, subscribeCompare } from '../compareStore';
@@ -37,7 +37,6 @@ function until(pred: () => boolean, ms = 8000): Promise<void> {
 }
 
 describe.skipIf(!run)('compare store (real data)', () => {
-  const golden = run ? JSON.parse(readFileSync(GOLDEN, 'utf8')).cases[0].metrics : null;
   beforeAll(() => {
     setDataMode('real');
     stubFetch();
@@ -60,10 +59,18 @@ describe.skipIf(!run)('compare store (real data)', () => {
     await until(() => getCompare().status === 'ready' && getCompare().rows.length === 2);
     const c = getCompare();
     expect(c.baselineId).toBe('A');
-    expect(c.rows[0].result.metrics!.sunlitPct.value!).toBeCloseTo(IM2_REFINED.sunlitPct, 3);
+    // IM-2 now has a real terrain mask (data/terrain/masks/im2_athena), so the app evaluates it on terrain, not on the smooth sphere Golden Set 1 was generated on.
+    // A mask can lower the horizon below the smooth sphere as well as raise it, so the result is NOT bounded by the golden value in either direction: it only has to
+    // differ from it, be labelled as terrain, and stay a sane percentage. Exact smooth-sphere parity against the golden lives in core.parity.test.ts.
+    const im2 = c.rows[0].result;
+    expect(im2.meta!.tierBadge).toBe('Terrain mask · σ pending');
+    expect(Math.abs(im2.metrics!.sunlitPct.value! - IM2_REFINED.sunlitPct)).toBeGreaterThan(0.001);
+    expect(im2.metrics!.sunlitPct.value!).toBeGreaterThanOrEqual(0);
+    expect(im2.metrics!.sunlitPct.value!).toBeLessThanOrEqual(100);
     const BLUE_GHOST_LINK = REFINED.blue_ghost_m1.linkPct;
     expect(c.rows[1].result.metrics!.linkPct.value!).toBeCloseTo(BLUE_GHOST_LINK, 2);
-    expect(c.rows[0].result.metrics!.linkPct.value!).toBeLessThanOrEqual(golden.earthVisiblePct.value + 1e-9); // the DSN rule can only remove link time
+    expect(im2.metrics!.linkPct.value!).toBeGreaterThan(0);
+    expect(im2.metrics!.linkPct.value!).toBeLessThanOrEqual(100);
     expect(c.rows[1].deltaVsBaseline.linkPct!).toBeCloseTo(BLUE_GHOST_LINK - c.rows[0].result.metrics!.linkPct.value!, 2);
     expect(c.rows[0].deltaVsBaseline).toEqual({});
   });
