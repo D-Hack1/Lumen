@@ -48,10 +48,11 @@ def _growth_factor() -> float:
     return float(config["tier_a"]["raycaster"]["geometric_growth_factor"])
 
 
-def _read_window(ds: rasterio.DatasetReader, lat: float, lon_east: float) -> tuple[np.ndarray, Affine]:
+def _read_window(ds: rasterio.DatasetReader, lat: float, lon_east: float) -> tuple[np.ndarray, Affine, CRS]:
     """Heights (m, NaN for no data) in the source's own simple-cylindrical grid around the site, wrapping across the 0/360 meridian."""
     half_lat = HALF_KM / KM_PER_DEG
-    half_lon = min(170.0, half_lat / max(0.05, math.cos(math.radians(lat))))
+    far_lat = min(89.0, abs(lat) + half_lat)  # the window is widest (in degrees of longitude) at its poleward edge
+    half_lon = min(170.0, half_lat / max(0.05, math.cos(math.radians(far_lat))) * 1.02)
     width, height = ds.width, ds.height
     r0 = int(math.floor((90.0 - (lat + half_lat)) * PPD))
     r1 = int(math.ceil((90.0 - (lat - half_lat)) * PPD))
@@ -71,12 +72,16 @@ def _read_window(ds: rasterio.DatasetReader, lat: float, lon_east: float) -> tup
     raw = np.concatenate(pieces, axis=1).astype("float64")
     raw[raw == ds.nodata] = np.nan
     heights = raw * ds.scales[0]  # offset == the reference radius, so this IS the height above the 1,737.4 km sphere
-    base = ds.transform
-    return heights, Affine(base.a, 0.0, base.c + c0 * base.a, 0.0, base.e, base.f + r0 * base.e)
+    # Describe the window in a simple-cylindrical grid centred on the SITE longitude, so columns west of the 0/360 meridian continue smoothly (x is linear in longitude).
+    metres_per_pixel = MOON_R_M * math.pi / 180.0 / PPD
+    src_crs = CRS.from_proj4(f"+proj=eqc +lat_ts=0 +lat_0=0 +lon_0={lon_east} +R={MOON_R_M} +units=m +no_defs")
+    x0 = MOON_R_M * math.radians(c0 / PPD - lon_east)
+    y0 = MOON_R_M * math.radians(90.0 - r0 / PPD)
+    return heights, Affine(metres_per_pixel, 0.0, x0, 0.0, -metres_per_pixel, y0), src_crs
 
 
 def build_crops(ds: rasterio.DatasetReader, site_id: str, lat: float, lon_east: float) -> TerrainCrops:
-    heights, src_transform = _read_window(ds, lat, lon_east)
+    heights, src_transform, src_crs = _read_window(ds, lat, lon_east)
     if not np.isfinite(heights).all():
         raise ValueError(f"{site_id}: the elevation window has {int((~np.isfinite(heights)).sum())} missing pixels")
     pixel = abs(ds.transform.a)
@@ -84,12 +89,15 @@ def build_crops(ds: rasterio.DatasetReader, site_id: str, lat: float, lon_east: 
     dst_crs = CRS.from_proj4(f"+proj=stere +lat_0={lat} +lon_0={lon_east} +R={MOON_R_M} +units=m +no_defs")
     dst_transform = Affine(pixel, 0.0, -n * pixel / 2.0, 0.0, -pixel, n * pixel / 2.0)
     out = np.full((n, n), np.nan, dtype="float64")
-    reproject(heights, out, src_transform=src_transform, src_crs=ds.crs, dst_transform=dst_transform, dst_crs=dst_crs, resampling=Resampling.bilinear,
+    reproject(heights, out, src_transform=src_transform, src_crs=src_crs, dst_transform=dst_transform, dst_crs=dst_crs, resampling=Resampling.bilinear,
               src_nodata=np.nan, dst_nodata=np.nan)
     valid = np.isfinite(out)
-    if valid.mean() < 0.999:
-        raise ValueError(f"{site_id}: only {valid.mean():.3f} of the local grid was filled from the source window")
-    out = np.where(valid, out, np.nanmedian(out))  # a handful of corner pixels beyond the source window; they are outside the 250 km ray range
+    yy, xx = np.indices(out.shape)
+    radius_km = np.hypot(xx - n / 2.0 + 0.5, yy - n / 2.0 + 0.5) * pixel / 1000.0
+    # Pixels the source window did not reach may only lie beyond the ray range (the square grid's far corners); anything missing inside it stops the site.
+    if (~valid & (radius_km <= RANGE_KM + 5.0)).any():
+        raise ValueError(f"{site_id}: {int((~valid & (radius_km <= RANGE_KM + 5.0)).sum())} pixels inside the 250 km ray range were not filled from the source window")
+    out = np.where(valid, out, np.nanmedian(out))  # only pixels beyond the ray range; they are never sampled
     window = DemWindow(
         elevation=out, valid=np.ones_like(valid, dtype=bool), transform=dst_transform, crs=dst_crs,
         bounds=(-n * pixel / 2.0, -n * pixel / 2.0, n * pixel / 2.0, n * pixel / 2.0), resolution_m=(pixel, pixel), source=SOURCE_KEY,

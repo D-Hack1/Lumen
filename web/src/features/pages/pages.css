@@ -149,7 +149,7 @@
   border: 1px solid var(--line2);
   border-radius: 18px;
   overflow: hidden;
-  background: #0a0908;
+  background: #050505;
   color: var(--fg);
 }
 .lm-pano__svg {
@@ -168,7 +168,7 @@
 .lm-overlay--soft {
   font-size: 12px;
   color: var(--fg2);
-  background: rgba(18, 17, 16, 0.9);
+  background: rgba(10, 10, 10, 0.9);
   border: 1px solid var(--line2);
   border-radius: 8px;
   padding: 6px 10px;
@@ -185,7 +185,7 @@
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 12px;
   color: var(--fg);
-  background: rgba(18, 17, 16, 0.94);
+  background: rgba(10, 10, 10, 0.94);
   border: 1px solid var(--line5);
   border-radius: 8px;
   padding: 6px 10px;

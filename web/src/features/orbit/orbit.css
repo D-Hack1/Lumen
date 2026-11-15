@@ -1,21 +1,21 @@
 /* Owner: Abhinav — Orbit page. Converted from the approved design; its warm palettes are scoped to .lm-page so nothing else is affected. */
 .lm-theme-dark,
 .lm-dark {
-  --bg: #0e0d0b;
-  --panel: #121110;
-  --raise: #181614;
-  --line: #26221d;
-  --line2: #2a2622;
-  --line3: #2e2924;
-  --line4: #211e1a;
-  --line5: #3a332c;
-  --line6: #4a4036;
-  --sunk: #1c1916;
-  --sel: #201c18;
-  --fg: #ede7db;
-  --fg2: #d2cabc;
-  --mut: #a39b8e;
-  --mut3: #7c7468;
+  --bg: #000000;
+  --panel: #0a0a0a;
+  --raise: #141414;
+  --line: #222222;
+  --line2: #262626;
+  --line3: #2b2b2b;
+  --line4: #1c1c1c;
+  --line5: #383838;
+  --line6: #4a4a4a;
+  --sunk: #161616;
+  --sel: #1c1c1c;
+  --fg: #ededed;
+  --fg2: #cfcfcf;
+  --mut: #9b9b9b;
+  --mut3: #757575;
   --amber: #f2b04a;
   --amberT: #f2c46b;
   --amberBg: #33270f;
@@ -462,7 +462,7 @@
   flex: 1;
   min-height: 700px;
   overflow: hidden;
-  background: #070605;
+  background: #000000;
   color: var(--fg); /* the stage is always dark, even in light mode */
 }
 .lm-star {
@@ -497,7 +497,7 @@
   height: 100%;
   padding: 0;
   border: 0;
-  background: #0a0908;
+  background: #050505;
   border-radius: 50%;
   overflow: hidden;
   cursor: crosshair;
@@ -513,14 +513,14 @@
 }
 .lm-pole__ring {
   position: absolute;
-  border: 1px dashed rgba(237, 231, 219, 0.4);
+  border: 1px dashed rgba(237, 237, 237, 0.4);
   border-radius: 50%;
 }
 .lm-pole__vignette {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background: radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0) 70%, rgba(5, 4, 3, 0.55) 100%);
+  background: radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0) 70%, rgba(0, 0, 0, 0.55) 100%);
 }
 .lm-pole__sun {
   position: absolute;
@@ -539,7 +539,7 @@
   z-index: 8;
   pointer-events: none;
   width: 240px;
-  background: rgba(18, 17, 16, 0.96);
+  background: rgba(10, 10, 10, 0.96);
   border: 1px solid var(--line5);
   border-radius: 10px;
   padding: 8px 12px;
@@ -594,7 +594,7 @@
   top: 16px;
   font-size: 12px;
   color: var(--fg2);
-  background: rgba(18, 17, 16, 0.9);
+  background: rgba(10, 10, 10, 0.9);
   border: 1px solid var(--line2);
   border-radius: 8px;
   padding: 6px 10px;
@@ -602,7 +602,7 @@
 .lm-seg {
   display: flex;
   gap: 4px;
-  background: rgba(18, 17, 16, 0.92);
+  background: rgba(10, 10, 10, 0.92);
   border: 1px solid var(--line2);
   border-radius: 12px;
   padding: 4px;
@@ -635,7 +635,7 @@
   cursor: pointer;
   font-size: 13px;
   font-weight: 600;
-  background: rgba(18, 17, 16, 0.92);
+  background: rgba(10, 10, 10, 0.92);
   border: 1px solid var(--line2);
   color: var(--fg);
 }
@@ -650,7 +650,7 @@
   background: #7e4e9a;
 }
 .lm-card {
-  background: rgba(18, 17, 16, 0.9);
+  background: rgba(10, 10, 10, 0.9);
   border: 1px solid var(--line2);
   border-radius: 10px;
   padding: 8px 12px;
@@ -680,7 +680,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  background: rgba(18, 17, 16, 0.9);
+  background: rgba(10, 10, 10, 0.9);
   border: 1px solid var(--line2);
   border-radius: 10px;
   padding: 8px 12px;
@@ -708,7 +708,7 @@
   font-size: 13px;
   line-height: 1.5;
   color: var(--fg2);
-  background: rgba(18, 17, 16, 0.9);
+  background: rgba(10, 10, 10, 0.9);
   border: 1px solid var(--line2);
   border-radius: 10px;
   padding: 8px 12px;
@@ -726,7 +726,7 @@
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: rgba(18, 17, 16, 0.92);
+  background: rgba(10, 10, 10, 0.92);
   border: 1px solid var(--line2);
   color: var(--fg);
   font-size: 20px;
@@ -811,7 +811,7 @@
   top: -4px;
   bottom: 0;
   width: 2px;
-  background: rgba(237, 231, 219, 0.55);
+  background: rgba(237, 237, 237, 0.55);
   pointer-events: none;
 }
 .lm-ticks {

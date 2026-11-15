@@ -8,7 +8,7 @@
   justify-content: center;
   align-items: flex-start;
   padding-top: 12vh;
-  background: rgba(8, 7, 6, 0.55);
+  background: rgba(0, 0, 0, 0.55);
   font-family: Inter, system-ui, sans-serif;
 }
 .ask__panel {
@@ -16,9 +16,9 @@
   max-height: 76vh;
   display: flex;
   flex-direction: column;
-  background: var(--panel, #121110);
-  color: var(--fg, #ede7db);
-  border: 1px solid var(--line5, #3a332c);
+  background: var(--panel, #0a0a0a);
+  color: var(--fg, #ededed);
+  border: 1px solid var(--line5, #383838);
   border-radius: 12px;
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.5);
   overflow: hidden;
@@ -38,15 +38,15 @@
   flex: 1;
   min-width: 0;
   font-size: 12px;
-  color: var(--mut, #a39b8e);
+  color: var(--mut, #9b9b9b);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .ask__esc {
   font: 11px 'JetBrains Mono', monospace;
-  color: var(--mut, #a39b8e);
-  border: 1px solid var(--line5, #3a332c);
+  color: var(--mut, #9b9b9b);
+  border: 1px solid var(--line5, #383838);
   border-radius: 4px;
   padding: 1px 5px;
 }
@@ -54,9 +54,9 @@
   margin: 10px 16px 12px;
   padding: 11px 13px;
   font: 15px Inter, system-ui, sans-serif;
-  color: var(--fg, #ede7db);
-  background: var(--sunk, #1c1916);
-  border: 1px solid var(--line5, #3a332c);
+  color: var(--fg, #ededed);
+  background: var(--sunk, #161616);
+  border: 1px solid var(--line5, #383838);
   border-radius: 8px;
   outline: none;
 }
@@ -77,7 +77,7 @@
 }
 .ask__helplabel {
   font-size: 12px;
-  color: var(--mut, #a39b8e);
+  color: var(--mut, #9b9b9b);
   margin-bottom: 6px;
 }
 .ask__chips {
@@ -87,15 +87,15 @@
 }
 .ask__chip {
   font: 13px Inter, system-ui, sans-serif;
-  color: var(--fg2, #d2cabc);
-  background: var(--raise, #181614);
-  border: 1px solid var(--line3, #2e2924);
+  color: var(--fg2, #cfcfcf);
+  background: var(--raise, #141414);
+  border: 1px solid var(--line3, #2b2b2b);
   border-radius: 999px;
   padding: 5px 11px;
   cursor: pointer;
 }
 .ask__chip:hover {
-  border-color: var(--line6, #4a4036);
+  border-color: var(--line6, #4a4a4a);
 }
 .ask__row {
   display: flex;
@@ -103,9 +103,9 @@
   gap: 10px;
   text-align: left;
   font: 14px Inter, system-ui, sans-serif;
-  color: var(--fg, #ede7db);
-  background: var(--raise, #181614);
-  border: 1px solid var(--line3, #2e2924);
+  color: var(--fg, #ededed);
+  background: var(--raise, #141414);
+  border: 1px solid var(--line3, #2b2b2b);
   border-radius: 8px;
   padding: 9px 12px;
   cursor: pointer;
@@ -121,11 +121,11 @@
 .ask__note {
   font-size: 13px;
   line-height: 1.45;
-  color: var(--mut, #a39b8e);
+  color: var(--mut, #9b9b9b);
 }
 .ask__card {
-  background: var(--raise, #181614);
-  border: 1px solid var(--line3, #2e2924);
+  background: var(--raise, #141414);
+  border: 1px solid var(--line3, #2b2b2b);
   border-radius: 8px;
   padding: 11px 13px;
 }
@@ -152,22 +152,22 @@
 }
 .ask__ctx {
   font: 12px 'JetBrains Mono', monospace;
-  color: var(--mut, #a39b8e);
+  color: var(--mut, #9b9b9b);
   margin-bottom: 6px;
 }
 .ask__text {
   margin: 4px 0 0;
   font-size: 13.5px;
   line-height: 1.5;
-  color: var(--fg2, #d2cabc);
+  color: var(--fg2, #cfcfcf);
 }
 .ask__text--value {
-  color: var(--fg, #ede7db);
+  color: var(--fg, #ededed);
   font-weight: 500;
 }
 .ask__text--basis,
 .ask__text--verdict {
-  color: var(--mut, #a39b8e);
+  color: var(--mut, #9b9b9b);
 }
 .ask__src {
   margin-top: 8px;

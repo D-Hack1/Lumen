@@ -58,3 +58,17 @@ describe.skipIf(!have)('real-mode loaders', () => {
   });
   it('dispersion: a site with no grid (Blue Ghost, Tier C) is a 404, so no slope statistics are invented for it', async () => { await expect(loadDispersion('blue_ghost_m1')).rejects.toThrow(/404/); });
 });
+
+// Sites outside the polar DEM products have a COARSE mask from NASA's global LOLA elevation model (≈237 m per pixel).
+describe.skipIf(!have)('coarse masks from the global elevation model', () => {
+  beforeAll(() => { stubFetch(); setDataMode('real'); });
+  it.each(['apollo_11', 'apollo_12', 'apollo_14', 'apollo_15', 'apollo_16', 'apollo_17', 'slim_shioli', 'change6_apollo_basin', 'blue_ghost_m1'])('mask %s: valid, coarse, and finite', async (id) => {
+    const m = await loadMask(id);
+    expect(m.meta.demSource).toBe('lola_gdr_ldem_128_pds');
+    expect(m.meta.nearFieldResolutionM).toBeGreaterThan(200);
+    let finite = 0;
+    for (let i = 0; i < m.elevDeg.length; i++) if (Number.isFinite(m.elevDeg[i])) finite++;
+    expect(finite / m.elevDeg.length).toBeGreaterThan(0.99);
+    expect(await loadSigma(id).then(() => 'has σ', () => 'no σ')).toBe('no σ'); // no σ is invented for them
+  });
+});

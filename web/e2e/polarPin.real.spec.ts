@@ -42,8 +42,10 @@ test.describe('the site list tags (real data)', () => {
   test('tags come from the engine and say why a site cannot be judged', async ({ page }) => {
     await page.goto('/#orbit');
     const tag = (name: RegExp) => page.locator('.lm-site').filter({ hasText: name }).locator('.lm-tag');
-    await expect(tag(/Apollo 11/)).toHaveText('No terrain data', { timeout: 60_000 });
-    await expect(tag(/Chang'e-6/)).not.toHaveText('Checking', { timeout: 60_000 });
+    // sites outside the polar products now have a coarse mask from NASA's global elevation model, but no σ yet
+    for (const n of [/Apollo 11/, /Apollo 17/, /SLIM/, /Chang'e-6/, /Blue Ghost/]) {
+      await expect(tag(n)).toHaveText('σ pending', { timeout: 60_000 });
+    }
     await expect(tag(/Rim|Shackleton-de Gerlache/)).toHaveText('σ pending', { timeout: 60_000 });
     // sites with terrain AND σ are judged for real: never "Unconfirmed" any more
     for (const n of [/IM-2/, /Chandrayaan-3/, /Shackleton conne/]) {

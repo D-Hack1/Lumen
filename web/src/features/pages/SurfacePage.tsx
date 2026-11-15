@@ -112,14 +112,14 @@ export function SurfacePage() {
         >
           <defs>
             <linearGradient id="lm-sky" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#050403" />
-              <stop offset="1" stopColor="#241C14" />
+              <stop offset="0" stopColor="#000000" />
+              <stop offset="1" stopColor="#1A1A1A" />
             </linearGradient>
           </defs>
           <rect x="0" y="0" width={PANO_W} height={PANO_H} fill="url(#lm-sky)" />
           <path d={sunTrack} fill="none" stroke="#F2B04A" strokeWidth="1.5" strokeDasharray="5 5" opacity="0.75" />
           <path d={earthTrack} fill="none" stroke="#7FB5A3" strokeWidth="1.5" strokeDasharray="5 5" opacity="0.85" />
-          <path d={path} fill="#171411" stroke="#6B5E4E" strokeWidth="1.5" />
+          <path d={path} fill="#111111" stroke="#6A6A6A" strokeWidth="1.5" />
           <line
             ref={cross}
             x1="0"
