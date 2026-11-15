@@ -108,6 +108,7 @@ if (planFile) {
 }
 
 const out = { version: '1', generated: 'by web/scripts/build-knowledge.mjs', count: entries.length, entries };
-writeFileSync(join(web, 'public/content/knowledge.json'), JSON.stringify(out, null, 1) + '\n');
+// KNOWLEDGE_OUT lets the "is knowledge.json up to date?" test build into a temp file without touching the real one.
+writeFileSync(process.env.KNOWLEDGE_OUT ?? join(web, 'public/content/knowledge.json'), JSON.stringify(out, null, 1) + '\n');
 const byKind = entries.reduce((a, e) => ({ ...a, [e.kind]: (a[e.kind] ?? 0) + 1 }), {});
 console.log(`knowledge.json: ${entries.length} entries`, byKind);
