@@ -15,7 +15,12 @@ from lumen_pipeline.reference.uncertainty import (
     three_pass_bounds,
     total_clearance_rate_deg_per_hour,
 )
-from lumen_pipeline.reference.visibility import Horizon
+from lumen_pipeline.reference.visibility import (
+    FiniteSegmentTree,
+    Horizon,
+    availability,
+    disk_fraction,
+)
 
 
 def test_total_clearance_rate_includes_mask_azimuth_motion():
@@ -87,6 +92,31 @@ def test_shifted_horizon_three_passes_and_numeric_bounds_preserve_near_zone():
         shift_horizon_mask(Horizon(), 0.2, direction=1)
 
 
+def test_shifted_indexed_horizon_rebuilds_extrema_with_nan_and_wraparound():
+    elevations = np.array([0.0, np.nan, 2.0, -1.0])
+    horizon = Horizon(elevations, bin_width_deg=90.0, range_extrema=FiniteSegmentTree.from_elevations(elevations))
+
+    lower = shift_horizon_mask(horizon, 0.5, direction=-1)
+    upper = shift_horizon_mask(horizon, 0.5, direction=1)
+
+    assert lower.range_extrema is not horizon.range_extrema
+    assert upper.range_extrema is not horizon.range_extrema
+    assert np.isnan(lower.elevations_deg[1])
+    assert lower.extrema(0.0, 90.0) == pytest.approx((-1.5, -0.5))
+    assert upper.extrema(0.0, 90.0) == pytest.approx((-0.5, 0.5))
+
+
+def test_shifted_indexed_horizon_uses_shifted_extrema_for_disk_short_circuits():
+    elevations = np.zeros(360)
+    horizon = Horizon(elevations, bin_width_deg=1.0, range_extrema=FiniteSegmentTree.from_elevations(elevations))
+
+    lower = shift_horizon_mask(horizon, 1.0, direction=-1)
+    upper = shift_horizon_mask(horizon, 1.0, direction=1)
+
+    assert availability("sun", 0.0, 0.0, 149_597_870.7, lower, disk_threshold=0.5)[0] == 1.0
+    assert availability("sun", 0.0, 0.0, 149_597_870.7, upper, disk_threshold=0.5)[0] == 0.0
+
+
 def test_exact_event_time_half_spread_vanishing_and_annotation():
     nominal = Event("sunset", 1000.0)
     exact = exact_event_uncertainty(nominal, Event("sunset", 800.0), Event("sunset", 1300.0))
@@ -132,4 +162,26 @@ def test_exact_path_resolves_both_shifted_masks():
 
     exact = exact_event_uncertainty_from_masks(nominal, horizon, 0.2, resolve)
     assert exact.delta_t_seconds == pytest.approx(20.0)
+    assert exact.dt_method == "exact"
+
+
+def test_exact_path_resolves_events_against_shifted_indexed_horizons():
+    elevations = np.zeros(360)
+    horizon = Horizon(elevations, bin_width_deg=1.0, range_extrema=FiniteSegmentTree.from_elevations(elevations))
+
+    def resolve(current):
+        events = detect_events(
+            0.0,
+            3600.0,
+            lambda et: disk_fraction("sun", et / 3600.0 - 0.5, 0.0, 149_597_870.7, current) == 1.0,
+            down="sunset",
+            up="shadowExit",
+        )
+        return events[0] if events else None
+
+    nominal = resolve(horizon)
+    assert nominal is not None
+    exact = exact_event_uncertainty_from_masks(nominal, horizon, 0.2, resolve)
+
+    assert exact.delta_t_seconds == pytest.approx(720.0, abs=10.0)
     assert exact.dt_method == "exact"
