@@ -172,12 +172,168 @@
       "status": "PENDING"
     },
     {
+      "blockers": [
+        "No independent LUMEN multi-year average values are available for the sampled pixels.",
+        "The G5 criterion says 'within a few percent' but gives no numeric tolerance.",
+        "PGDA documents an hourly average over an approximately 18.6-year lunar nutation cycle; the matching LUMEN aggregation interval is unresolved.",
+        "The shared observer-height and solar-disc conventions are unresolved; PGDA Earth visibility counts any part of the Earth disc above local LOLA topography.",
+        "The local Tier-A mask has no 0 m observer-height horizon for a surface-pixel comparison."
+      ],
+      "comparisons": [
+        {
+          "absolute_error_fraction": null,
+          "computed_fraction": null,
+          "latitude_deg": -89.54,
+          "longitude_deg_east": 129.0,
+          "product": "average_solar_illumination",
+          "reference_fraction": 0.0,
+          "reference_sample": {
+            "crs": "PROJCS[\"Moon2000_spole\",GEOGCS[\"GCS_Moon\",DATUM[\"D_Moon_2000\",SPHEROID[\"Moon_2000_IAU_IAG\",1737400,0]],PRIMEM[\"Reference_Meridian\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Polar_Stereographic\"],PARAMETER[\"latitude_of_origin\",-90],PARAMETER[\"central_meridian\",0],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1],AXIS[\"Easting\",NORTH],AXIS[\"Northing\",NORTH]]",
+            "data_set_id": "\"LRO-L-LOLA-4-GDR-V1.0\"",
+            "fraction": 0.0,
+            "nodata": -32768.0,
+            "offset": 0.0,
+            "path": "pipeline/data/validation/pgda/AVGVISIB_85S_060M_201608.tiff",
+            "pixel": {
+              "center_offset_m": 15.584686348864988,
+              "center_x_m": 10830.0,
+              "center_y_m": -8790.0,
+              "column": 2709,
+              "row": 2675,
+              "site_x_m": 10840.266114877395,
+              "site_y_m": -8778.274415412585
+            },
+            "product_id": "\"AVGVISIB_85S_060M_201608\"",
+            "raw_value": 0,
+            "scale": 4e-05,
+            "sha256": "ccf67d4f39e0a970c111196da7d6551ffcf50d075470b93067fb3904c0b05806",
+            "shape": [
+              5058,
+              5058
+            ],
+            "status": "SAMPLED",
+            "transform": [
+              60.0,
+              0.0,
+              -151740.0,
+              0.0,
+              -60.0,
+              151740.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          },
+          "site_id": "shackleton_ridge",
+          "status": "BLOCKED",
+          "terrain_mask_heights_m": [
+            1.0,
+            2.0,
+            5.0,
+            10.0
+          ]
+        },
+        {
+          "absolute_error_fraction": null,
+          "computed_fraction": null,
+          "latitude_deg": -89.54,
+          "longitude_deg_east": 129.0,
+          "product": "earth_visibility",
+          "reference_fraction": 0.0,
+          "reference_sample": {
+            "crs": "PROJCS[\"Moon2000_spole\",GEOGCS[\"GCS_Moon\",DATUM[\"D_Moon_2000\",SPHEROID[\"Moon_2000_IAU_IAG\",1737400,0]],PRIMEM[\"Reference_Meridian\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Polar_Stereographic\"],PARAMETER[\"latitude_of_origin\",-90],PARAMETER[\"central_meridian\",0],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1],AXIS[\"Easting\",NORTH],AXIS[\"Northing\",NORTH]]",
+            "data_set_id": "\"LRO-L-LOLA-4-GDR-V1.0\"",
+            "fraction": 0.0,
+            "nodata": -32768.0,
+            "offset": 0.0,
+            "path": "pipeline/data/validation/pgda/AVGVISIB_85S_060M_201608_EARTH.tiff",
+            "pixel": {
+              "center_offset_m": 15.584686348864988,
+              "center_x_m": 10830.0,
+              "center_y_m": -8790.0,
+              "column": 2709,
+              "row": 2675,
+              "site_x_m": 10840.266114877395,
+              "site_y_m": -8778.274415412585
+            },
+            "product_id": "\"AVGVISIB_85S_060M_201608_EARTH\"",
+            "raw_value": 0,
+            "scale": 4e-05,
+            "sha256": "d71dc5adfff653e0e924e0a4cbf03795b996caa30b4ace3d5843a70a5ab2f3d2",
+            "shape": [
+              5058,
+              5058
+            ],
+            "status": "SAMPLED",
+            "transform": [
+              60.0,
+              0.0,
+              -151740.0,
+              0.0,
+              -60.0,
+              151740.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          },
+          "site_id": "shackleton_ridge",
+          "status": "BLOCKED",
+          "terrain_mask_heights_m": [
+            1.0,
+            2.0,
+            5.0,
+            10.0
+          ]
+        }
+      ],
       "criterion": "within a few percent; differences explained",
       "description": "Multi-year averages versus independent PGDA map pixels",
       "id": "G5",
-      "reason": "Independent documented PGDA map-pixel references have not been supplied.",
+      "missing_inputs": [],
+      "reason": "PGDA reference samples are recorded, but no defensible LUMEN comparison can be evaluated yet.",
+      "reference_maps": {
+        "average_solar_illumination": {
+          "path": "pipeline/data/validation/pgda/AVGVISIB_85S_060M_201608.tiff",
+          "sha256": "ccf67d4f39e0a970c111196da7d6551ffcf50d075470b93067fb3904c0b05806",
+          "source_metadata": {
+            "citation": "Mazarico, E., et al. (2011), Icarus, Vol. 211, pp. 1066-1081, doi:10.1016/j.icarus.2010.10.030",
+            "crs": "south-polar stereographic, R=1737400 m, true scale at pole (+proj=stere +lat_0=-90 +lat_ts=-90 +lon_0=0 +R=1737400 +units=m)",
+            "latitude_coverage": "85S-90S",
+            "nodata": -32768,
+            "offset": 0.0,
+            "product_id": 69,
+            "provider": "PGDA",
+            "resolution_m": 60.0,
+            "scale": 4e-05,
+            "source_page": "https://pgda.gsfc.nasa.gov/products/69",
+            "url": "https://pgda.gsfc.nasa.gov/data/MoonIllumination/AVGVISIB_85S_060M_201608.TIF",
+            "value_meaning": "fraction of time illuminated by the Sun, in [0, 1], averaged hourly over an 18.6-year lunar nutation cycle (centred ~2016-08 per filename)"
+          }
+        },
+        "earth_visibility": {
+          "path": "pipeline/data/validation/pgda/AVGVISIB_85S_060M_201608_EARTH.tiff",
+          "sha256": "d71dc5adfff653e0e924e0a4cbf03795b996caa30b4ace3d5843a70a5ab2f3d2",
+          "source_metadata": {
+            "citation": "Mazarico, E., et al. (2011), Icarus, Vol. 211, pp. 1066-1081, doi:10.1016/j.icarus.2010.10.030",
+            "crs": "south-polar stereographic, R=1737400 m, true scale at pole (+proj=stere +lat_0=-90 +lat_ts=-90 +lon_0=0 +R=1737400 +units=m)",
+            "latitude_coverage": "85S-90S",
+            "nodata": -32768,
+            "offset": 0.0,
+            "product_id": 69,
+            "provider": "PGDA",
+            "resolution_m": 60.0,
+            "scale": 4e-05,
+            "source_page": "https://pgda.gsfc.nasa.gov/products/69",
+            "url": "https://pgda.gsfc.nasa.gov/data/MoonIllumination/AVGVISIB_85S_060M_201608_EARTH.TIF",
+            "value_meaning": "fraction of time any part of the Earth disc is above the local LOLA-topography horizon, in [0, 1], averaged hourly over an 18.6-year lunar nutation cycle"
+          }
+        }
+      },
       "required_artifacts": [
-        "pipeline/data/validation/pgda_reference.json"
+        "Independent LUMEN average-illumination and Earth-visibility values at matching map pixels",
+        "A contract-defined temporal window and visibility convention",
+        "A numeric G5 tolerance"
       ],
       "status": "BLOCKED"
     },
@@ -276,7 +432,7 @@
   ],
   "limitations": [
     "No gate is promoted to PASS solely because a unit test exists or passes.",
-    "G5 requires independent PGDA map-pixel references, not synthetic records.",
+    "G5 remains BLOCKED until matching independent LUMEN averages and an approved numerical comparison contract are available.",
     "G7 numerical agreement does not establish the source provenance of the 8.75-degree claim.",
     "G10 requires terrain-owner Monte Carlo sigma and Tier-B calibration artifacts."
   ],

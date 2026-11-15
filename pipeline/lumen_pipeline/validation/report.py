@@ -22,6 +22,7 @@ from lumen_pipeline.validation.horizons_client import (
     run_g3,
     run_g3b,
 )
+from lumen_pipeline.validation.pgda_map_compare import build_g5_gate
 
 REPORT_VERSION = 1
 G2_TOLERANCE_DEG = 0.001
@@ -79,14 +80,6 @@ def _pending_gates() -> list[dict[str, Any]]:
             criterion="elevation < 0.005 deg; events +/-1 min; dt +/-5%; metrics +/-1%",
             reason="Python synthetic vectors exist, but no browser-engine parity result is available.",
             artifact_paths=["pipeline/tests/gowri/test_golden_synthetic.py"],
-        ),
-        _gate(
-            "G5",
-            "Multi-year averages versus independent PGDA map pixels",
-            "BLOCKED",
-            criterion="within a few percent; differences explained",
-            reason="Independent documented PGDA map-pixel references have not been supplied.",
-            required_artifacts=["pipeline/data/validation/pgda_reference.json"],
         ),
         _gate(
             "G6",
@@ -301,7 +294,13 @@ def build_validation_report(
     fixture_directory = Path(fixtures_dir) if fixtures_dir is not None else default_fixture_dir()
     g7_path = Path(g7_report_path) if g7_report_path is not None else default_g7_report_path()
     g2_path = Path(validation_doc_path) if validation_doc_path is not None else default_validation_doc_path()
-    gates = _pending_gates() + [_g2_gate(g2_path), _g3_gate(fixture_directory), _g3b_gate(fixture_directory), _g7_gate(g7_path)]
+    gates = _pending_gates() + [
+        _g2_gate(g2_path),
+        _g3_gate(fixture_directory),
+        _g3b_gate(fixture_directory),
+        build_g5_gate(),
+        _g7_gate(g7_path),
+    ]
     gates.sort(key=lambda gate: (int(gate["id"][1:]) if gate["id"] != "G3b" else 3, gate["id"]))
     non_pass = [gate["id"] for gate in gates if gate["status"] != "PASS"]
     return {
@@ -339,7 +338,7 @@ def build_validation_report(
         ],
         "limitations": [
             "No gate is promoted to PASS solely because a unit test exists or passes.",
-            "G5 requires independent PGDA map-pixel references, not synthetic records.",
+            "G5 remains BLOCKED until matching independent LUMEN averages and an approved numerical comparison contract are available.",
             "G7 numerical agreement does not establish the source provenance of the 8.75-degree claim.",
             "G10 requires terrain-owner Monte Carlo sigma and Tier-B calibration artifacts.",
         ],

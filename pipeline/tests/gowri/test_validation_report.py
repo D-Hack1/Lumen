@@ -1,5 +1,6 @@
 import json
 import math
+from pathlib import Path
 
 from lumen_pipeline.validation.horizons_client import (
     AZIMUTH_TOLERANCE_DEG,
@@ -55,7 +56,22 @@ def test_validation_report_truthfully_aggregates_pending_blocked_and_open_eviden
         "BLOCKED",
         "SOURCE_UNVERIFIED",
     }
-    assert _gate(report, "G5")["status"] == "BLOCKED"
+    g5 = _gate(report, "G5")
+    assert g5["status"] == "BLOCKED"
+    assert all(item["computed_fraction"] is None for item in g5["comparisons"])
+    assert any("numeric tolerance" in blocker for blocker in g5["blockers"])
+    assert any("matching LUMEN aggregation interval is unresolved" in blocker for blocker in g5["blockers"])
+    report_paths = [
+        reference["path"]
+        for reference in g5["reference_maps"].values()
+        if "path" in reference
+    ] + g5["missing_inputs"]
+    report_paths.extend(
+        comparison["reference_sample"]["path"]
+        for comparison in g5["comparisons"]
+        if "reference_sample" in comparison
+    )
+    assert all(not Path(path).is_absolute() for path in report_paths)
     assert _gate(report, "G10")["status"] == "BLOCKED"
     assert _gate(report, "G4")["status"] == "PENDING"
     assert _gate(report, "G11")["status"] == "PENDING"
