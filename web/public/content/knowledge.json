@@ -1,7 +1,7 @@
 {
  "version": "1",
  "generated": "by web/scripts/build-knowledge.mjs",
- "count": 79,
+ "count": 90,
  "entries": [
   {
    "id": "term:sun-elevation",
@@ -342,6 +342,10 @@
     "what is lumen",
     "what does it do",
     "who is it for",
+    "who",
+    "tool",
+    "audience",
+    "users",
     "use cases",
     "goal"
    ]
@@ -557,7 +561,13 @@
     "type",
     "shortcut",
     "delay days",
-    "move days"
+    "move days",
+    "reset slip",
+    "back to on time",
+    "on time",
+    "undo slip",
+    "no delay",
+    "zero"
    ]
   },
   {
@@ -654,11 +664,9 @@
    "tags": [
     "good",
     "marginal",
-    "no dte",
     "tag",
     "badge",
-    "verdict",
-    "rating",
+    "site rating",
     "status",
     "go no go"
    ]
@@ -828,7 +836,11 @@
     "latency",
     "how far",
     "signal delay",
-    "speed of light"
+    "speed of light",
+    "how long does the signal take",
+    "travel time",
+    "one way",
+    "seconds"
    ]
   },
   {
@@ -1161,6 +1173,243 @@
     "change definition",
     "what counts as sunlit",
     "assumptions"
+   ]
+  },
+  {
+   "id": "help:how-do-i-get-back-to-landing-on-time",
+   "kind": "howto",
+   "title": "How do I get back to landing on time?",
+   "summary": "On the Slip explorer, choose the first bar (zero days) — the \"on time\" baseline is marked with a dashed line — or press / and type \"slip 0\" or \"reset slip\".",
+   "body": "On the Slip explorer, choose the first bar (zero days) — the \"on time\" baseline is marked with a dashed line — or press / and type \"slip 0\" or \"reset slip\".",
+   "source": "live pages (Slip explorer) and Ask LUMEN",
+   "anchor": "how-do-i-get-back-to-landing-on-time",
+   "metrics": [],
+   "tags": [
+    "on time",
+    "reset",
+    "undo",
+    "zero slip",
+    "no delay",
+    "back to start",
+    "clear slip",
+    "baseline",
+    "original date"
+   ]
+  },
+  {
+   "id": "help:how-are-the-results-calculated-overall",
+   "kind": "method",
+   "title": "How are the results calculated, overall?",
+   "summary": "In short: the heavy work is done once, ahead of time, and the app only does light vector maths. Ahead of time, LUMEN computes the Sun's and Earth's positions from NASA ephemeris data (SPICE kernels) and turns terrain elevation maps into horizon masks — the height of the skyline in every compass direction — for each site. In the browser, for any site and time, it interpolates the Sun and Earth positions, rotates them into the site's frame, compares them with the horizon mask, works out how much of each disk is visible, finds the exact moments things change, and then adds up windows, percentages and a ± from the horizon's uncertainty. A verdict is the last step. Every browser calculation has a Python twin, and the two are checked against each other with golden test cases.",
+   "body": "In short: the heavy work is done once, ahead of time, and the app only does light vector maths. Ahead of time, LUMEN computes the Sun's and Earth's positions from NASA ephemeris data (SPICE kernels) and turns terrain elevation maps into horizon masks — the height of the skyline in every compass direction — for each site. In the browser, for any site and time, it interpolates the Sun and Earth positions, rotates them into the site's frame, compares them with the horizon mask, works out how much of each disk is visible, finds the exact moments things change, and then adds up windows, percentages and a ± from the horizon's uncertainty. A verdict is the last step. Every browser calculation has a Python twin, and the two are checked against each other with golden test cases.",
+   "source": "PLAN_FINAL §3, §4, §5",
+   "anchor": "how-are-the-results-calculated-overall",
+   "metrics": [],
+   "tags": [
+    "overview",
+    "pipeline",
+    "how does it work",
+    "how it works",
+    "process",
+    "steps",
+    "summary",
+    "behind the scenes",
+    "engine",
+    "whole thing",
+    "results",
+    "how are results calculated"
+   ]
+  },
+  {
+   "id": "help:where-does-lumen-s-data-come-from",
+   "kind": "concept",
+   "title": "Where does LUMEN's data come from?",
+   "summary": "Sun and Earth positions come from NASA's SPICE ephemeris kernels, evaluated in a Moon-fixed frame consistent with the LOLA terrain data. Terrain comes from LRO LOLA elevation models, turned into horizon masks per site. The Deep Space Network visibility comes from station kernels: it is the Moon's elevation as seen from each Deep Space Network complex. All of this is computed ahead of time and shipped as data files; the app does not fetch anything live.",
+   "body": "Sun and Earth positions come from NASA's SPICE ephemeris kernels, evaluated in a Moon-fixed frame consistent with the LOLA terrain data. Terrain comes from LRO LOLA elevation models, turned into horizon masks per site. The Deep Space Network visibility comes from station kernels: it is the Moon's elevation as seen from each Deep Space Network complex. All of this is computed ahead of time and shipped as data files; the app does not fetch anything live.",
+   "source": "PLAN_FINAL §3, §4",
+   "anchor": "where-does-lumen-s-data-come-from",
+   "metrics": [],
+   "tags": [
+    "data",
+    "sources",
+    "ephemeris",
+    "spice",
+    "naif",
+    "lola",
+    "dem",
+    "terrain",
+    "where from",
+    "kernels",
+    "dsn data",
+    "nasa"
+   ]
+  },
+  {
+   "id": "help:does-lumen-need-an-internet-connection",
+   "kind": "concept",
+   "title": "Does LUMEN need an internet connection?",
+   "summary": "No. After the first load there are no network calls: the data files are cached and the calculations run in your browser, so it keeps working offline. Links to outside tools such as QuickMap, Moon Trek or JPL Horizons open in a new tab and are never needed.",
+   "body": "No. After the first load there are no network calls: the data files are cached and the calculations run in your browser, so it keeps working offline. Links to outside tools such as QuickMap, Moon Trek or JPL Horizons open in a new tab and are never needed.",
+   "source": "PLAN_FINAL §3 (design rules)",
+   "anchor": "does-lumen-need-an-internet-connection",
+   "metrics": [],
+   "tags": [
+    "offline",
+    "internet",
+    "network",
+    "connection",
+    "online",
+    "wifi",
+    "pwa",
+    "install",
+    "live data",
+    "api"
+   ]
+  },
+  {
+   "id": "help:what-is-a-horizon-mask",
+   "kind": "method",
+   "title": "What is a horizon mask?",
+   "summary": "A horizon mask is the height of the skyline, in degrees above flat, for every compass direction around a site. A Tier A site has bins 0.1° wide for four array heights (1, 2, 5 and 10 m) out to 250 km; Tier B has 0.5° bins. To decide whether the Sun is visible, LUMEN compares the Sun's elevation with the mask's value in the Sun's direction.",
+   "body": "A horizon mask is the height of the skyline, in degrees above flat, for every compass direction around a site. A Tier A site has bins 0.1° wide for four array heights (1, 2, 5 and 10 m) out to 250 km; Tier B has 0.5° bins. To decide whether the Sun is visible, LUMEN compares the Sun's elevation with the mask's value in the Sun's direction.",
+   "source": "PLAN_FINAL §4 (P5), §4.2",
+   "anchor": "what-is-a-horizon-mask",
+   "metrics": [],
+   "tags": [
+    "horizon mask",
+    "mask",
+    "skyline",
+    "terrain mask",
+    "elevation bins",
+    "horizon profile",
+    "azimuth bins",
+    "silhouette"
+   ]
+  },
+  {
+   "id": "help:how-does-lumen-handle-shadows",
+   "kind": "concept",
+   "title": "How does LUMEN handle shadows?",
+   "summary": "LUMEN does not paint shadows on the ground. At each moment it asks one question: does the terrain horizon in the Sun's direction hide the Sun's disk, fully or partly? That is what \"in shadow\" means for a site. Shadows are long because the Sun is so low (a 10 m object casts a shadow of about 380 m when the Sun is 1.5° up) and pitch black because there is no atmosphere. The Orbit page's polar view uses NASA LOLA terrain with real cast shadows for the picture.",
+   "body": "LUMEN does not paint shadows on the ground. At each moment it asks one question: does the terrain horizon in the Sun's direction hide the Sun's disk, fully or partly? That is what \"in shadow\" means for a site. Shadows are long because the Sun is so low (a 10 m object casts a shadow of about 380 m when the Sun is 1.5° up) and pitch black because there is no atmosphere. The Orbit page's polar view uses NASA LOLA terrain with real cast shadows for the picture.",
+   "source": "PLAN_FINAL §2, §5.4 and live pages (Orbit)",
+   "anchor": "how-does-lumen-handle-shadows",
+   "metrics": [],
+   "tags": [
+    "shadow",
+    "shadows",
+    "cast shadow",
+    "dark",
+    "shade",
+    "how are shadows computed",
+    "how do shadows work",
+    "blocked",
+    "ridge",
+    "long shadows"
+   ]
+  },
+  {
+   "id": "help:how-is-earth-elevation-calculated",
+   "kind": "method",
+   "title": "How is Earth elevation calculated?",
+   "summary": "Earth elevation is worked out the same way as the Sun's: Earth's position from the ephemeris is interpolated, the site's position is subtracted, and the direction is rotated into the site's frame to give an elevation and azimuth. Earth is a disk about 1.9° across, and it moves as the Moon rocks (libration), so near the pole it bobs by about ±7° near the horizon. Earth counts as visible when at least half its disk is above the terrain horizon.",
+   "body": "Earth elevation is worked out the same way as the Sun's: Earth's position from the ephemeris is interpolated, the site's position is subtracted, and the direction is rotated into the site's frame to give an elevation and azimuth. Earth is a disk about 1.9° across, and it moves as the Moon rocks (libration), so near the pole it bobs by about ±7° near the horizon. Earth counts as visible when at least half its disk is above the terrain horizon.",
+   "source": "PLAN_FINAL §5.2, §5.5",
+   "anchor": "how-is-earth-elevation-calculated",
+   "metrics": [],
+   "tags": [
+    "earth elevation",
+    "earth angle",
+    "how high is earth",
+    "earth altitude",
+    "earth position",
+    "earth in the sky",
+    "elevation of earth"
+   ]
+  },
+  {
+   "id": "help:what-is-dte-direct-to-earth",
+   "kind": "concept",
+   "title": "What is DTE (direct-to-Earth)?",
+   "summary": "DTE means direct-to-Earth: a lander talking to Earth straight from the surface, with no relay. DTE margin is how far Earth's disk sits above the effective horizon in Earth's direction. LUMEN needs it to be at least a threshold (default 1°) before it treats Earth as usable for contact.",
+   "body": "DTE means direct-to-Earth: a lander talking to Earth straight from the surface, with no relay. DTE margin is how far Earth's disk sits above the effective horizon in Earth's direction. LUMEN needs it to be at least a threshold (default 1°) before it treats Earth as usable for contact.",
+   "source": "glossary (DTE margin) and PLAN_FINAL §5.5",
+   "anchor": "what-is-dte-direct-to-earth",
+   "metrics": [],
+   "tags": [
+    "dte",
+    "direct to earth",
+    "direct-to-earth",
+    "dte margin",
+    "earth contact",
+    "line of sight to earth",
+    "what is dte"
+   ]
+  },
+  {
+   "id": "help:what-is-the-deep-space-network-dsn",
+   "kind": "concept",
+   "title": "What is the Deep Space Network (DSN)?",
+   "summary": "The Deep Space Network is the set of large ground antennas that talk to spacecraft. LUMEN uses its three complexes — Goldstone, Canberra and Madrid — placed around the world so that one is usually facing the Moon. With DSN awareness on, the link only counts as up when Earth is visible from the site AND at least one of those complexes can see the Moon above its own horizon (default 10°).",
+   "body": "The Deep Space Network is the set of large ground antennas that talk to spacecraft. LUMEN uses its three complexes — Goldstone, Canberra and Madrid — placed around the world so that one is usually facing the Moon. With DSN awareness on, the link only counts as up when Earth is visible from the site AND at least one of those complexes can see the Moon above its own horizon (default 10°).",
+   "source": "PLAN_FINAL §4 (P3b), §5.5",
+   "anchor": "what-is-the-deep-space-network-dsn",
+   "metrics": [],
+   "tags": [
+    "dsn",
+    "deep space network",
+    "goldstone",
+    "canberra",
+    "madrid",
+    "ground station",
+    "antenna",
+    "station",
+    "dss"
+   ]
+  },
+  {
+   "id": "help:what-is-a-permanently-shadowed-region-psr",
+   "kind": "concept",
+   "title": "What is a permanently shadowed region (PSR)?",
+   "summary": "A permanently shadowed region is ground that never receives sunlight. LUMEN reports the distance (and bearing) to the nearest one as science context next to the engineering numbers, and can show them as a map layer. The regions shown are derived from the illumination data (pixels with 0% average illumination) and are tagged \"derived\".",
+   "body": "A permanently shadowed region is ground that never receives sunlight. LUMEN reports the distance (and bearing) to the nearest one as science context next to the engineering numbers, and can show them as a map layer. The regions shown are derived from the illumination data (pixels with 0% average illumination) and are tagged \"derived\".",
+   "source": "PLAN_FINAL §4 (P11, P15), Revision 2 (R2-5)",
+   "anchor": "what-is-a-permanently-shadowed-region-psr",
+   "metrics": [],
+   "tags": [
+    "psr",
+    "permanently shadowed",
+    "shadowed region",
+    "ice",
+    "cold trap",
+    "crater floor",
+    "never sunlit",
+    "distance to psr",
+    "science"
+   ]
+  },
+  {
+   "id": "help:how-was-lumen-checked-and-how-do-i-know-it-is-right",
+   "kind": "concept",
+   "title": "How was LUMEN checked, and how do I know it is right?",
+   "summary": "LUMEN has a set of validation gates (G0 to G11) with results in the validation report. Examples recorded so far: the interpolation of Sun and Earth positions agrees with direct evaluation to far better than 0.001° (gate G2), and the Chandrayaan-3 touchdown Sun elevation was calculated and compared with the planned value (gate G7 — the numerical comparison passes, but the plan's reference value has no primary source yet, so the report marks G7 as not yet independently sourced). The browser calculations are also checked against their Python twins with golden test cases.",
+   "body": "LUMEN has a set of validation gates (G0 to G11) with results in the validation report. Examples recorded so far: the interpolation of Sun and Earth positions agrees with direct evaluation to far better than 0.001° (gate G2), and the Chandrayaan-3 touchdown Sun elevation was calculated and compared with the planned value (gate G7 — the numerical comparison passes, but the plan's reference value has no primary source yet, so the report marks G7 as not yet independently sourced). The browser calculations are also checked against their Python twins with golden test cases.",
+   "source": "docs/validation.md and PLAN_FINAL §10",
+   "anchor": "how-was-lumen-checked-and-how-do-i-know-it-is-right",
+   "metrics": [],
+   "tags": [
+    "validation",
+    "validated",
+    "tested",
+    "checks",
+    "gates",
+    "accurate",
+    "correct",
+    "trust",
+    "verified",
+    "proof",
+    "golden",
+    "how do you know"
    ]
   },
   {

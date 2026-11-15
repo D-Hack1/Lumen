@@ -16,7 +16,7 @@ Not yet. The four pages (Orbit, Stand here, Compare, Slip explorer) currently sh
 ## What questions can LUMEN answer?
 Kind: concept
 Source: PLAN_FINAL §1.3
-Tags: purpose, what is lumen, what does it do, who is it for, use cases, goal
+Tags: purpose, what is lumen, what does it do, who is it for, who, tool, audience, users, use cases, goal
 LUMEN answers five kinds of question for the lunar south pole. A planner: is the Sun up here at a given time, how much of it, and for how long? A comms engineer: when can we talk to Earth, where do we point, and is a Deep Space Network station listening? A planner after a delay: we slipped N days, which sites and dates still meet our profile? Anyone with a coordinate: just give me the numbers for this latitude, longitude and time. An educator or visitor: why is the south pole so different from Apollo, and from Earth?
 
 ## How do I move between pages?
@@ -76,7 +76,7 @@ Slip explorer answers "what if we slip?". Each bar is a 14-day window that start
 ## How do I slip the landing with the keyboard?
 Kind: howto
 Source: Ask LUMEN
-Tags: slip, keyboard, command, type, shortcut, delay days, move days
+Tags: slip, keyboard, command, type, shortcut, delay days, move days, reset slip, back to on time, on time, undo slip, no delay, zero
 Press / to open Ask LUMEN, then type for example "slip 9 days", "delay 3 days" or "slip 0" to go back to on time. The slip can be from 0 to 27 days; anything outside that is clamped and the box tells you.
 
 ## How do I use Ask LUMEN?
@@ -106,7 +106,7 @@ It is the time from the moment you have scrubbed to until the Sun (or Earth) nex
 ## What do the labels Good, Marginal and No DTE on a site mean?
 Kind: howto
 Source: live pages (site list) and glossary (DTE margin)
-Tags: good, marginal, no dte, tag, badge, verdict, rating, status, go no go
+Tags: good, marginal, tag, badge, site rating, status, go no go
 They are a quick rating shown on each site (sample values for now): Good, Marginal, or "No DTE", meaning no direct-to-Earth contact (for example on the far side). The full rule for LUMEN's GO / MARGINAL / NO-GO verdict is described under "How is the verdict decided?".
 
 ## What does LUMEN not calculate?
@@ -154,7 +154,7 @@ Earth counts as visible when at least 50% of its disk is above the terrain horiz
 ## What is the Earth–Moon light time and range?
 Kind: method
 Source: PLAN_FINAL §2, §5.5
-Tags: range, distance, light time, delay, latency, how far, signal delay, speed of light
+Tags: range, distance, light time, delay, latency, how far, signal delay, speed of light, how long does the signal take, travel time, one way, seconds
 Range is the distance from the site to Earth, and light time is that range divided by the speed of light — about 1.28 seconds one way on average.
 
 ## How is the longest night calculated?
@@ -252,3 +252,69 @@ Kind: decision
 Source: PLAN_FINAL Revision 2 (R2-11) and §5.4–§5.5
 Tags: definitions, threshold, settings, disk threshold, min elevation, ops, change definition, what counts as sunlit, assumptions
 Sunlit %, link %, longest night and operating hours all depend on definitions: how much of the Sun's disk must be above the horizon, the minimum Earth margin, whether a Deep Space Network station must also see the Moon, and (optionally) a minimum Sun elevation for operations. In LUMEN's full design, because results are meaningless without them, the definitions are kept visible and editable, and changing one recomputes the result. (The four current pages do not show the definitions editor yet.)
+
+## How do I get back to landing on time?
+Kind: howto
+Source: live pages (Slip explorer) and Ask LUMEN
+Tags: on time, reset, undo, zero slip, no delay, back to start, clear slip, baseline, original date
+On the Slip explorer, choose the first bar (zero days) — the "on time" baseline is marked with a dashed line — or press / and type "slip 0" or "reset slip".
+
+## How are the results calculated, overall?
+Kind: method
+Source: PLAN_FINAL §3, §4, §5
+Tags: overview, pipeline, how does it work, how it works, process, steps, summary, behind the scenes, engine, whole thing, results, how are results calculated
+In short: the heavy work is done once, ahead of time, and the app only does light vector maths. Ahead of time, LUMEN computes the Sun's and Earth's positions from NASA ephemeris data (SPICE kernels) and turns terrain elevation maps into horizon masks — the height of the skyline in every compass direction — for each site. In the browser, for any site and time, it interpolates the Sun and Earth positions, rotates them into the site's frame, compares them with the horizon mask, works out how much of each disk is visible, finds the exact moments things change, and then adds up windows, percentages and a ± from the horizon's uncertainty. A verdict is the last step. Every browser calculation has a Python twin, and the two are checked against each other with golden test cases.
+
+## Where does LUMEN's data come from?
+Kind: concept
+Source: PLAN_FINAL §3, §4
+Tags: data, sources, ephemeris, spice, naif, lola, dem, terrain, where from, kernels, dsn data, nasa
+Sun and Earth positions come from NASA's SPICE ephemeris kernels, evaluated in a Moon-fixed frame consistent with the LOLA terrain data. Terrain comes from LRO LOLA elevation models, turned into horizon masks per site. The Deep Space Network visibility comes from station kernels: it is the Moon's elevation as seen from each Deep Space Network complex. All of this is computed ahead of time and shipped as data files; the app does not fetch anything live.
+
+## Does LUMEN need an internet connection?
+Kind: concept
+Source: PLAN_FINAL §3 (design rules)
+Tags: offline, internet, network, connection, online, wifi, pwa, install, live data, api
+No. After the first load there are no network calls: the data files are cached and the calculations run in your browser, so it keeps working offline. Links to outside tools such as QuickMap, Moon Trek or JPL Horizons open in a new tab and are never needed.
+
+## What is a horizon mask?
+Kind: method
+Source: PLAN_FINAL §4 (P5), §4.2
+Tags: horizon mask, mask, skyline, terrain mask, elevation bins, horizon profile, azimuth bins, silhouette
+A horizon mask is the height of the skyline, in degrees above flat, for every compass direction around a site. A Tier A site has bins 0.1° wide for four array heights (1, 2, 5 and 10 m) out to 250 km; Tier B has 0.5° bins. To decide whether the Sun is visible, LUMEN compares the Sun's elevation with the mask's value in the Sun's direction.
+
+## How does LUMEN handle shadows?
+Kind: concept
+Source: PLAN_FINAL §2, §5.4 and live pages (Orbit)
+Tags: shadow, shadows, cast shadow, dark, shade, how are shadows computed, how do shadows work, blocked, ridge, long shadows
+LUMEN does not paint shadows on the ground. At each moment it asks one question: does the terrain horizon in the Sun's direction hide the Sun's disk, fully or partly? That is what "in shadow" means for a site. Shadows are long because the Sun is so low (a 10 m object casts a shadow of about 380 m when the Sun is 1.5° up) and pitch black because there is no atmosphere. The Orbit page's polar view uses NASA LOLA terrain with real cast shadows for the picture.
+
+## How is Earth elevation calculated?
+Kind: method
+Source: PLAN_FINAL §5.2, §5.5
+Tags: earth elevation, earth angle, how high is earth, earth altitude, earth position, earth in the sky, elevation of earth
+Earth elevation is worked out the same way as the Sun's: Earth's position from the ephemeris is interpolated, the site's position is subtracted, and the direction is rotated into the site's frame to give an elevation and azimuth. Earth is a disk about 1.9° across, and it moves as the Moon rocks (libration), so near the pole it bobs by about ±7° near the horizon. Earth counts as visible when at least half its disk is above the terrain horizon.
+
+## What is DTE (direct-to-Earth)?
+Kind: concept
+Source: glossary (DTE margin) and PLAN_FINAL §5.5
+Tags: dte, direct to earth, direct-to-earth, dte margin, earth contact, line of sight to earth, what is dte
+DTE means direct-to-Earth: a lander talking to Earth straight from the surface, with no relay. DTE margin is how far Earth's disk sits above the effective horizon in Earth's direction. LUMEN needs it to be at least a threshold (default 1°) before it treats Earth as usable for contact.
+
+## What is the Deep Space Network (DSN)?
+Kind: concept
+Source: PLAN_FINAL §4 (P3b), §5.5
+Tags: dsn, deep space network, goldstone, canberra, madrid, ground station, antenna, station, dss
+The Deep Space Network is the set of large ground antennas that talk to spacecraft. LUMEN uses its three complexes — Goldstone, Canberra and Madrid — placed around the world so that one is usually facing the Moon. With DSN awareness on, the link only counts as up when Earth is visible from the site AND at least one of those complexes can see the Moon above its own horizon (default 10°).
+
+## What is a permanently shadowed region (PSR)?
+Kind: concept
+Source: PLAN_FINAL §4 (P11, P15), Revision 2 (R2-5)
+Tags: psr, permanently shadowed, shadowed region, ice, cold trap, crater floor, never sunlit, distance to psr, science
+A permanently shadowed region is ground that never receives sunlight. LUMEN reports the distance (and bearing) to the nearest one as science context next to the engineering numbers, and can show them as a map layer. The regions shown are derived from the illumination data (pixels with 0% average illumination) and are tagged "derived".
+
+## How was LUMEN checked, and how do I know it is right?
+Kind: concept
+Source: docs/validation.md and PLAN_FINAL §10
+Tags: validation, validated, tested, checks, gates, accurate, correct, trust, verified, proof, golden, how do you know
+LUMEN has a set of validation gates (G0 to G11) with results in the validation report. Examples recorded so far: the interpolation of Sun and Earth positions agrees with direct evaluation to far better than 0.001° (gate G2), and the Chandrayaan-3 touchdown Sun elevation was calculated and compared with the planned value (gate G7 — the numerical comparison passes, but the plan's reference value has no primary source yet, so the report marks G7 as not yet independently sourced). The browser calculations are also checked against their Python twins with golden test cases.

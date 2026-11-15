@@ -126,13 +126,23 @@ export function matchSites(query: string, sites: readonly AskSite[]): AskSite[] 
   return exact.length ? exact : fuzzy;
 }
 
+/** Verbs that mean "change the landing date". Weak verbs need an explicit "N days" so ordinary phrases aren't misread. */
+const SLIP_STRONG = /\b(slip|slipping|delay|delayed|postpone|defer)\b/;
+const SLIP_WEAK = /\b(move|shift|push|pushed|land|landing|launch|launching|go)\b/;
+
 function parseSlip(text: string, min: number, max: number): { days: number; clamped: boolean } | 'reset' | null {
-  if (!/\b(slip|delay|postpone|push|launch delay)\b/.test(text)) return null;
-  if (/\b(reset|clear|no slip|on time|zero)\b/.test(text)) return 'reset';
-  const m = text.match(/([+-]?)\s*(\d{1,3})\s*(?:d\b|day|days)?/);
+  const strong = SLIP_STRONG.test(text);
+  const weak = SLIP_WEAK.test(text);
+  if (!strong && !weak) return null;
+  if (strong && /\b(reset|clear|no slip|on time|zero)\b/.test(text)) return 'reset';
+  const m = text.match(/([+-]?)\s*(\d{1,3})\s*(d\b|day|days)?/);
   if (!m) return null;
+  if (!strong && !m[3]) return null; // "move 2" alone is not a slip; "move 2 days" is
   let days = parseInt(m[2], 10);
-  if (m[1] === '-' || /\b(back|earlier|sooner|forward by)\b/.test(text)) days = -days;
+  // Direction. "push back 2 days" means DELAY in everyday speech; "slip/move back" and "earlier" mean sooner.
+  const later = /\b(later|forward|front|ahead|after|delay|delayed|postpone|defer|push|pushed)\b/.test(text);
+  const sooner = /\b(earlier|sooner|before|backward|backwards|back)\b/.test(text) && !/\bpush(ed)? back\b/.test(text) && !/\blater\b/.test(text);
+  if (m[1] === '-' || (sooner && !later)) days = -days;
   const clampedDays = Math.max(min, Math.min(max, days));
   return { days: clampedDays, clamped: clampedDays !== days };
 }

@@ -74,6 +74,19 @@ const USES_DEFINITIONS = new Set<WhyMetricKey>(['sunlitPct', 'linkPct', 'longest
 
 const HOUR_MS = 3_600_000;
 
+/** Which knowledge entry gives the plain-words meaning of each metric. Null = none exists yet (say nothing rather than guess). */
+const METRIC_ENTRY: Record<WhyMetricKey, string | null> = {
+  sunElevationDeg: 'term:sun-elevation',
+  sunClearanceDeg: 'term:sun-clearance-disk',
+  earthElevationDeg: 'help:how-is-earth-elevation-calculated',
+  sunlitPct: 'help:how-is-the-sunlit-percentage-calculated',
+  linkPct: 'help:how-is-the-link-to-earth-decided',
+  longestNightH: 'term:longest-night',
+  longestCommGapH: null,
+  opsHours: 'term:ops-hours',
+  psrDistanceKm: 'term:distance-to-psr',
+};
+
 /** Why there is no ±, from what the result itself says about its σ. Never invents a reason. */
 export function reasonNoPm(r: ScenarioResult): string {
   const src = r.meta?.sigmaSource?.trim();
@@ -218,13 +231,16 @@ export function explain(target: WhyTarget, r: ScenarioResult, knowledge: readonl
     why.lines.push({ kind: 'value', text: r.status === 'error' ? `The result failed to compute: ${r.error ?? 'unknown error'}.` : 'The result is still being computed — ask again in a moment.' });
     return why;
   }
-  why.context = `for ${r.meta.siteId}${r.meta.tierBadge ? ` · ${r.meta.tierBadge}` : ''}`;
+  why.context = `for ${r.meta.siteId}${r.meta.tierBadge ? ` · ${r.meta.tierBadge}` : ''}${r.meta.mock ? ' · MOCK DATA, not real results' : ''}`;
 
   if (target !== 'events') {
-    const term = knowledge.find((k) => k.kind === 'term' && k.metrics?.includes(target));
-    if (term) {
-      why.lines.push({ kind: 'what', text: term.summary });
-      why.sources.push(`${term.source} (glossary: ${term.title})`);
+    // Explicit metric → entry map. (The glossary lists some metrics under several terms — e.g. earthElevationDeg under
+    // "Libration" first — so "first entry that mentions the metric" gave the WRONG definition. Never search by metric.)
+    const id = METRIC_ENTRY[target];
+    const entry = id ? knowledge.find((k) => k.id === id) : undefined;
+    if (entry) {
+      why.lines.push({ kind: 'what', text: entry.kind === 'term' ? entry.summary : entry.body });
+      why.sources.push(entry.kind === 'term' ? `${entry.source} (glossary: ${entry.title})` : `${entry.source} (help: ${entry.title})`);
     }
   }
 

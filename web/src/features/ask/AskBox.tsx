@@ -12,7 +12,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ScenarioResult } from '../../engine/types';
 import { HELP_EXAMPLES, parseCommand, runCommand, type AskCommand, type AskPorts, type AskSite } from './commands';
-import { loadKnowledge, searchKnowledge, snippet, type KnowledgeIndex } from './knowledge';
+import { answerText, intentOf, loadKnowledge, searchKnowledge, type KnowledgeIndex, type KnowledgeKind } from './knowledge';
 import { OPEN_EVENT } from './askWhy';
 import { detectWhy, explain, explainGeneric, hasTemplate, type Why, type WhyRequest } from './why';
 import './ask.css';
@@ -38,9 +38,47 @@ type Item =
   | { id: string; kind: 'option'; command: AskCommand; label: string }
   | { id: string; kind: 'note'; text: string }
   | { id: string; kind: 'why'; why: Why }
-  | { id: string; kind: 'hit'; title: string; text: string; source: string; tag: string };
+  | { id: string; kind: 'hit'; title: string; text: string; source: string; tag: string; weak: boolean }
+  | { id: string; kind: 'examples' };
 
-const KIND_TAG = { term: 'Term', validation: 'Validation', limitation: 'Limit', decision: 'Why we decided' } as const;
+const KIND_TAG: Record<KnowledgeKind, string> = {
+  term: 'Term',
+  validation: 'Validation',
+  limitation: 'Limit',
+  decision: 'Why we decided',
+  howto: 'How to',
+  method: 'How it’s calculated',
+  concept: 'Background',
+  status: 'Status',
+};
+
+/** Ordinary-language starting points, by what people tend to want. Shown on an empty box and when nothing matched. */
+const QUESTION_EXAMPLES: readonly { label: string; items: readonly string[] }[] = [
+  { label: 'Using LUMEN', items: ['how do I compare sites?', 'how do I drop a pin?', 'what does the array height do?'] },
+  { label: 'How results are calculated', items: ['how are the results calculated?', 'how is sunlight calculated?', 'how is the link to Earth decided?'] },
+  { label: 'Why things are the way they are', items: ['why is the timing uncertain?', 'why does the sun stay so low?', 'why show a ± on everything?'] },
+];
+
+/** Clickable example questions grouped by what people want; clicking fills the box. */
+function ExampleChips({ onPick, withCommands }: { onPick: (q: string) => void; withCommands?: boolean }) {
+  const groups = withCommands ? [{ label: 'Do something', items: HELP_EXAMPLES.filter((e) => !e.includes('?')) }, ...QUESTION_EXAMPLES] : QUESTION_EXAMPLES;
+  return (
+    <div className="ask__help">
+      {groups.map((g) => (
+        <div key={g.label} className="ask__group">
+          <div className="ask__helplabel">{g.label}</div>
+          <div className="ask__chips">
+            {g.items.map((ex) => (
+              <button key={ex} type="button" className="ask__chip" onClick={() => onPick(ex)}>
+                {ex}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function isTypingTarget(t: EventTarget | null): boolean {
   const el = t as HTMLElement | null;
@@ -127,14 +165,24 @@ export function AskBox({ ports, sites, canSlip, slipRange, result, resultNote, l
 
     if (parsed.kind !== 'command') {
       const target = detectWhy(q);
-      if (target) out.push(whyFor(target));
-      if (index) {
-        for (const h of searchKnowledge(index, q, 3)) {
-          out.push({ id: `hit:${h.entry.id}`, kind: 'hit', title: h.entry.title, text: snippet(h.entry), source: h.entry.source, tag: KIND_TAG[h.entry.kind] });
-        }
+      const hits = index ? searchKnowledge(index, q, 4) : [];
+      const toItem = (h: (typeof hits)[number], weak: boolean): Item => ({ id: `hit:${h.entry.id}`, kind: 'hit', title: h.entry.title, text: answerText(h.entry), source: h.entry.source, tag: KIND_TAG[h.entry.kind], weak });
+      const strong = hits.filter((h) => h.confidence === 'strong').slice(0, 3);
+      const weak = strong.length === 0 ? hits.slice(0, 2) : [];
+      // "how is X calculated?" → the written method first, then the live numbers. "why is this ± so big?" → live numbers first.
+      const methodFirst = intentOf(q).method;
+      const whyItem = target ? whyFor(target) : null;
+      if (whyItem && !methodFirst) out.push(whyItem);
+      out.push(...strong.map((h) => toItem(h, false)));
+      if (whyItem && methodFirst) out.push(whyItem);
+      if (weak.length > 0 && !whyItem) {
+        out.push({ id: 'weak', kind: 'note', text: 'Closest I have — I’m not sure these answer your question:' });
+        out.push(...weak.map((h) => toItem(h, true)));
       }
-      if (out.length === 0 || (out.length === 1 && out[0].kind === 'note' && parsed.kind === 'unavailable')) {
-        if (parsed.kind === 'none' && out.length === 0) out.push({ id: 'none', kind: 'note', text: index ? 'I don’t have an answer for that. I only know what is in LUMEN’s glossary, validation report and decision log — try a term, or one of the examples.' : 'Loading what I know…' });
+      const answered = out.some((i) => i.kind === 'hit' || i.kind === 'why');
+      if (!answered && parsed.kind === 'none') {
+        out.push({ id: 'none', kind: 'note', text: index ? 'I don’t have an answer for that. I can help with using LUMEN, how the results are calculated, and why things were decided — and only from what is written down in LUMEN. Try asking one of these:' : 'Loading what I know…' });
+        if (index) out.push({ id: 'examples', kind: 'examples' });
       }
     }
     return out;
@@ -191,19 +239,9 @@ export function AskBox({ ports, sites, canSlip, slipRange, result, resultNote, l
         />
         <div className="ask__list" id={listId} role="listbox" aria-label="Results" aria-live="polite">
           {feedback && <div className="ask__feedback">{feedback}</div>}
-          {items.length === 0 && !query.trim() && (
-            <div className="ask__help">
-              <div className="ask__helplabel">Try</div>
-              <div className="ask__chips">
-                {HELP_EXAMPLES.map((ex) => (
-                  <button key={ex} type="button" className="ask__chip" onClick={() => setQuery(ex)}>
-                    {ex}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          {items.length === 0 && !query.trim() && <ExampleChips onPick={setQuery} withCommands />}
           {items.map((it) => {
+            if (it.kind === 'examples') return <ExampleChips key={it.id} onPick={setQuery} />;
             if (it.kind === 'command' || it.kind === 'option') {
               const isActive = runnable[active]?.id === it.id;
               return (
@@ -216,7 +254,7 @@ export function AskBox({ ports, sites, canSlip, slipRange, result, resultNote, l
             if (it.kind === 'note') return <div key={it.id} className="ask__note">{it.text}</div>;
             if (it.kind === 'hit')
               return (
-                <div key={it.id} className="ask__card">
+                <div key={it.id} className={`ask__card${it.weak ? ' ask__card--weak' : ''}`}>
                   <div className="ask__cardhead">
                     <span className="ask__tag">{it.tag}</span>
                     <span className="ask__cardtitle">{it.title}</span>
