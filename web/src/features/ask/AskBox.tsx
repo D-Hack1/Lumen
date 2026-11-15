@@ -22,6 +22,8 @@ export interface AskBoxProps {
   sites: readonly AskSite[];
   /** True once the live pages expose a slip state (so "slip 9 days" can act). */
   canSlip: boolean;
+  /** Range the live slip state accepts; commands outside it are clamped and the box says so. */
+  slipRange?: { min: number; max: number };
   /** The result to explain. Null = nothing to explain yet. */
   result: ScenarioResult | null;
   /** Shown under every explanation when the result is not what the page on screen is showing. */
@@ -47,7 +49,7 @@ function isTypingTarget(t: EventTarget | null): boolean {
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable === true;
 }
 
-export function AskBox({ ports, sites, canSlip, result, resultNote, light, onOpenChange }: AskBoxProps) {
+export function AskBox({ ports, sites, canSlip, slipRange, result, resultNote, light, onOpenChange }: AskBoxProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
@@ -115,7 +117,7 @@ export function AskBox({ ports, sites, canSlip, result, resultNote, light, onOpe
     const q = query.trim();
     if (!q) return out;
 
-    const parsed = parseCommand(q, { sites, canSlip });
+    const parsed = parseCommand(q, { sites, canSlip, slipMin: slipRange?.min, slipMax: slipRange?.max });
     if (parsed.kind === 'command') out.push({ id: 'cmd', kind: 'command', command: parsed.command, label: parsed.label });
     else if (parsed.kind === 'unavailable') out.push({ id: 'unavail', kind: 'note', text: parsed.reason });
     else if (parsed.kind === 'ambiguous') {
@@ -136,7 +138,7 @@ export function AskBox({ ports, sites, canSlip, result, resultNote, light, onOpe
       }
     }
     return out;
-  }, [query, forced, sites, canSlip, result, index]);
+  }, [query, forced, sites, canSlip, slipRange, result, index]);
 
   const runnable = items.filter((i) => i.kind === 'command' || i.kind === 'option');
   useEffect(() => setActive(0), [query, forced]);

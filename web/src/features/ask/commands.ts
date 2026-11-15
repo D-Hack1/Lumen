@@ -24,6 +24,9 @@ export interface AskContext {
   sites: readonly AskSite[];
   /** False until the live pages expose a slip state — then "slip 9 days" answers honestly that it can't act yet. */
   canSlip: boolean;
+  /** The range the live slip state accepts (the Slip explorer is 0…27 d). Defaults to ±30 d. Out-of-range input is clamped AND SAID. */
+  slipMin?: number;
+  slipMax?: number;
 }
 
 export type AskCommand =
@@ -123,14 +126,14 @@ export function matchSites(query: string, sites: readonly AskSite[]): AskSite[] 
   return exact.length ? exact : fuzzy;
 }
 
-function parseSlip(text: string): { days: number; clamped: boolean } | 'reset' | null {
+function parseSlip(text: string, min: number, max: number): { days: number; clamped: boolean } | 'reset' | null {
   if (!/\b(slip|delay|postpone|push|launch delay)\b/.test(text)) return null;
   if (/\b(reset|clear|no slip|on time|zero)\b/.test(text)) return 'reset';
   const m = text.match(/([+-]?)\s*(\d{1,3})\s*(?:d\b|day|days)?/);
   if (!m) return null;
   let days = parseInt(m[2], 10);
   if (m[1] === '-' || /\b(back|earlier|sooner|forward by)\b/.test(text)) days = -days;
-  const clampedDays = Math.max(-SLIP_LIMIT_DAYS, Math.min(SLIP_LIMIT_DAYS, days));
+  const clampedDays = Math.max(min, Math.min(max, days));
   return { days: clampedDays, clamped: clampedDays !== days };
 }
 
@@ -148,12 +151,15 @@ export function parseCommand(input: string, ctx: AskContext): ParseResult {
 
   if (/^(help|\?|what can you do|commands|how do i)\b/.test(text)) return { kind: 'command', command: { kind: 'help' }, label: 'Show what I can do' };
 
-  const slip = parseSlip(text);
+  const slipMin = ctx.slipMin ?? -SLIP_LIMIT_DAYS;
+  const slipMax = ctx.slipMax ?? SLIP_LIMIT_DAYS;
+  const slip = parseSlip(text, slipMin, slipMax);
   if (slip) {
     if (!ctx.canSlip) return { kind: 'unavailable', reason: 'Slip can’t be set from here yet — open the Slip explorer page and use its slider.' };
     const days = slip === 'reset' ? 0 : slip.days;
     const clamped = slip === 'reset' ? false : slip.clamped;
-    const label = days === 0 ? 'Reset slip to on time' : `Slip ${days > 0 ? '+' : ''}${days} d${clamped ? ` (limit ±${SLIP_LIMIT_DAYS} d)` : ''}`;
+    const sign = days > 0 ? '+' : '';
+    const label = clamped ? `Slip ${sign}${days} d (allowed: ${slipMin} to ${slipMax} d)` : days === 0 ? 'Reset slip to on time' : `Slip ${sign}${days} d`;
     return { kind: 'command', command: { kind: 'slip', days, clamped }, label };
   }
 

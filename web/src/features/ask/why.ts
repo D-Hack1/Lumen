@@ -47,7 +47,7 @@ export interface WhyLine {
 export interface Why {
   target: WhyTarget;
   title: string;
-  /** "for im2_athena · Tier A…" so the reader knows WHICH result this explains. */
+  /** "for <siteId> · <tierBadge>" so the reader knows WHICH result this explains. */
   context: string | null;
   lines: WhyLine[];
   /** Where each statement comes from (result fields / glossary) — shown under the answer. */

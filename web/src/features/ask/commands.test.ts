@@ -70,11 +70,26 @@ describe('slip', () => {
   it('clamps to ±30 and says so', () => {
     const r = parseCommand('slip 45 days', ctx);
     expect(r).toMatchObject({ kind: 'command', command: { kind: 'slip', days: 30, clamped: true } });
-    expect(r.kind === 'command' && r.label).toContain('limit');
+    expect(r.kind === 'command' && r.label).toContain('allowed: -30 to 30 d');
   });
   it('reset', () => expect(cmd('reset slip')).toMatchObject({ kind: 'slip', days: 0 }));
   it('is honest when the live pages cannot slip yet', () => {
     expect(parseCommand('slip 9 days', { ...ctx, canSlip: false }).kind).toBe('unavailable');
+  });
+});
+
+describe('slip range of the live pages (0…27)', () => {
+  const live: AskContext = { ...ctx, slipMin: 0, slipMax: 27 };
+  it('accepts values inside the range unchanged', () => expect(cmd('slip 9 days', live)).toMatchObject({ kind: 'slip', days: 9, clamped: false }));
+  it('clamps a too-large slip and says the allowed range', () => {
+    const r = parseCommand('slip 40 days', live);
+    expect(r).toMatchObject({ kind: 'command', command: { kind: 'slip', days: 27, clamped: true } });
+    expect(r.kind === 'command' && r.label).toContain('allowed: 0 to 27 d');
+  });
+  it('"slip back 2 days" cannot go below on time — clamped to 0 and said so, never silently', () => {
+    const r = parseCommand('slip back 2 days', live);
+    expect(r).toMatchObject({ kind: 'command', command: { kind: 'slip', days: 0, clamped: true } });
+    expect(r.kind === 'command' && r.label).toContain('allowed: 0 to 27 d');
   });
 });
 
