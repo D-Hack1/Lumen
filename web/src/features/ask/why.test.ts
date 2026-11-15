@@ -149,9 +149,9 @@ describe('not ready', () => {
 });
 
 describe('reasonNoPm', () => {
-  it('distinguishes pending-σ from the smooth-Moon bound', () => {
+  it('distinguishes pending-σ from a smooth-sphere estimate', () => {
     expect(reasonNoPm(result({ sigmaSource: 'terrain mask, σ pending' }))).toContain("isn't available");
-    expect(reasonNoPm(result({ sigmaSource: 'smooth-Moon bound' }))).toContain('smooth-Moon bound, which has no terrain σ');
+    expect(reasonNoPm(result({ sigmaSource: 'smooth-sphere estimate; terrain unavailable' }))).toContain('smooth-sphere estimate because terrain data is unavailable');
   });
 });
 

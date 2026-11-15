@@ -162,7 +162,7 @@ around the same Numba raycaster for exact custom points
 |---|---|---|---|
 | **A** | Dedicated multi-res crop, 0.1° bins, 4 heights, pad slope, dispersion grid | 0.1° (replaced by MC σ per bin when P9 lands) | "Tier A · near-field 5 m" |
 | **B** | Snap to nearest 80–90°S grid node (2 km / 4 km), 0.5° bins, 1 m; slope-plane occluder active | 0.5° (replaced by P9b calibration) | "Tier B · snapped 0.8 km" |
-| **C** | Smooth sphere, no terrain (outside coverage, e.g., Apollo, SLIM) | n/a — times labelled "no terrain: earliest-possible sunrise / latest sunset" | "Tier C · no terrain" |
+| **C** | Smooth sphere, no terrain (outside coverage, e.g., Apollo, SLIM) | n/a — times labelled "smooth-sphere estimate; terrain unavailable" | "Tier C · no terrain" |
 
 ---
 
@@ -213,7 +213,7 @@ Chord quadrature (Sun 24, Earth 32), chord width scaled by 1/cos(el), against th
 - **Event times:** δt = σ_h(az_event) ÷ |d(clearance)/dt| at the refined event, where σ_h is the mask uncertainty in that azimuth bin (tier default → P9 MC σ → P9b calibration). Display "Sunset in 41 h ± 5 h".
 - **Grazing events:** if |d(clearance)/dt| is below a floor (default 0.005°/h) or δt exceeds 12 h, label the event **"grazing — timing poorly constrained"** and show the range instead of ±.
 - **Percentages and durations:** evaluate the window three times (mask − σ, nominal, mask + σ) → sunlit %, DTE %, longest night reported as nominal with [low, high] bounds. Cost is ~3× a cheap computation.
-- **Tier C:** no terrain ± is shown; label "smooth-Moon bound" instead.
+- **Tier C:** no terrain ± is shown; label "smooth-sphere estimate; terrain unavailable" instead. It is not a terrain bound.
 - σ source is shown in every tooltip ("default", "Monte-Carlo, 30 clones", "calibrated vs Tier A").
 
 ### 5.9 Earth Twin (Educator, Tier 1)

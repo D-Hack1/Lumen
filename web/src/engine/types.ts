@@ -174,14 +174,14 @@ export interface ResultMeta {
   siteId: string;
   tier: Tier;
   tierBadge: string; // e.g. "Tier A · near-field 5 m"
-  sigmaSource: string; // "default" | "Monte-Carlo, 30 clones" | "calibrated vs Tier A" | "smooth-Moon bound"
+  sigmaSource: string; // "default" | "Monte-Carlo, 30 clones" | "calibrated vs Tier A" | "smooth-sphere estimate; terrain unavailable"
   snapDistanceKm: number | null; // Tier B only
   definitionsSummary: string;
   dataVersions: Record<string, number | string>;
   mock: boolean;
 }
 
-/** One Mission Profile requirement as the verdict judged it (the engine's own answer, so the UI never re-derives it). 'unknown' = no data or only an optimistic bound. */
+/** One Mission Profile requirement as the verdict judged it (the engine's own answer, so the UI never re-derives it). 'unknown' = missing data or insufficient terrain evidence. */
 export interface VerdictRequirement {
   id: 'sunlit' | 'link' | 'night' | 'slope';
   status: 'pass' | 'marginal' | 'fail' | 'unknown';

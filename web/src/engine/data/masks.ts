@@ -142,7 +142,7 @@ const absent = new Set<string>();
 
 /**
  * The site's real terrain mask, or null when there is none to use: no site id, mock data mode (mock masks are fake terrain), or a mask that is
- * missing/invalid (the engine then keeps the smooth-Moon bound and says so). A missing mask is remembered so it is not re-fetched every evaluation.
+ * missing/invalid (the engine then uses a smooth-sphere estimate and says so). A missing mask is remembered so it is not re-fetched every evaluation.
  */
 export async function loadMaskOrNull(siteId: string | null | undefined): Promise<Mask | null> {
   if (!siteId || dataMode() !== 'real') return null;

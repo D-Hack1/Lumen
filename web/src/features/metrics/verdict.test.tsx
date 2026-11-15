@@ -54,9 +54,9 @@ describe('MetricDeck states and verdict reasons', () => {
     expect(t).toContain('Longest night 102.0 h is above the maximum (96 h).');
   });
   it('PENDING says what is missing, in plain words', () => {
-    const html = renderToStaticMarkup(<MetricDeck result={ready({ verdict: 'PENDING', verdictReasons: ['Sunlit time passes only on the smooth-Moon bound; terrain data is needed to confirm.'] })} />);
+    const html = renderToStaticMarkup(<MetricDeck result={ready({ verdict: 'PENDING', verdictReasons: ['Sunlit time is a smooth-sphere estimate; terrain data is needed to determine pass or fail.'] })} />);
     expect(text(html)).toContain('Needs terrain data');
-    expect(text(html)).toContain('terrain data is needed to confirm');
+    expect(text(html)).toContain('terrain data is needed to determine pass or fail');
   });
   it('a GO verdict shows the headline but no empty reasons list', () => {
     const html = renderToStaticMarkup(<MetricDeck result={ready({ verdict: 'GO', verdictReasons: [] })} />);

@@ -1,5 +1,5 @@
 // Owner: Nived
-// The engine uses a site's real terrain mask when one exists, and otherwise behaves exactly as before (smooth-Moon bound, labelled).
+// The engine uses a site's real terrain mask when one exists, and otherwise uses a labelled smooth-sphere estimate.
 // Shackleton is the case: its published mask has the Sun visible in 0 of 21,601 samples over 2025-12-01..31, while the smooth Moon says 100% sunlit.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { evaluateScenario } from '../client';
@@ -29,10 +29,10 @@ describe('terrain mask wiring (real Shackleton mask)', () => {
   });
   afterAll(() => setDataMode(null));
 
-  it('without a mask the result is the unchanged smooth-Moon bound', () => {
+  it('without a mask the result is the labelled smooth-sphere estimate', () => {
     const r = buildScenarioResult(eph, shackleton());
     expect(r.meta!.tierBadge).toBe('Smooth-Moon horizon · terrain pending');
-    expect(r.meta!.sigmaSource).toBe('smooth-Moon bound');
+    expect(r.meta!.sigmaSource).toBe('smooth-sphere estimate; terrain unavailable');
     expect(r.metrics!.sunlitPct.value).toBe(100);
   });
 
@@ -47,10 +47,10 @@ describe('terrain mask wiring (real Shackleton mask)', () => {
     expect(r.meta!.tierBadge).toBe('Terrain mask · σ pending');
     expect(r.meta!.sigmaSource).toBe('terrain mask, σ pending');
     expect(r.verdict).not.toBe('GO');
-    expect(r.verdictReasons.join(' ')).not.toMatch(/smooth-Moon bound; terrain data/);
+    expect(r.verdictReasons.join(' ')).not.toMatch(/smooth-Moon/);
   });
 
-  it('a height the mask was not built for keeps the smooth-Moon bound (heights are never snapped or interpolated)', () => {
+  it('a height the mask was not built for uses the smooth-sphere estimate (heights are never snapped or interpolated)', () => {
     expect(horizonFromMask(mask, 3)).toBeNull();
     const r = buildScenarioResult(eph, shackleton({ heightM: 3 }), null, mask);
     expect(r.meta!.tierBadge).toBe('Smooth-Moon horizon · terrain pending');

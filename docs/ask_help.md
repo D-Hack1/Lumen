@@ -191,7 +191,7 @@ Each event time carries a ± from the horizon's uncertainty: δt = σ ÷ |how fa
 Kind: method
 Source: PLAN_FINAL §4.2
 Tags: tier, tier a, tier b, tier c, fidelity, accuracy level, detail, terrain data, badge, resolution
-Tier A is a dedicated high-resolution terrain crop for a site (0.1° bins, several heights, pad slope), with a default horizon uncertainty of 0.1°. Tier B snaps to the nearest 80–90°S grid node (2 km inside 85°S, 4 km for 80–85°S) with 0.5° bins and a default uncertainty of 0.5°. Tier C is a smooth sphere with no terrain (outside coverage, such as Apollo or SLIM sites), so times are labelled "no terrain: earliest-possible sunrise / latest sunset".
+Tier C is a smooth sphere with no terrain (outside coverage, such as Apollo or SLIM sites), so its times are labelled "smooth-sphere estimate; terrain unavailable" and are not terrain-bounded predictions.
 
 ## Why does the Sun skim the horizon at the poles?
 Kind: concept
@@ -299,7 +299,7 @@ Earth elevation is worked out the same way as the Sun's: Earth's position from t
 Kind: concept
 Source: glossary (DTE margin) and PLAN_FINAL §5.5
 Tags: dte, direct to earth, direct-to-earth, dte margin, earth contact, line of sight to earth, what is dte
-DTE means direct-to-Earth: a lander talking to Earth straight from the surface, with no relay. DTE margin is how far Earth's disk sits above the effective horizon in Earth's direction. LUMEN needs it to be at least a threshold (default 1°) before it treats Earth as usable for contact.
+DTE means direct-to-Earth: a lander talking to Earth straight from the surface, with no relay. DTE margin is Earth-centre elevation above the effective horizon in Earth's direction. LUMEN needs it to be at least a threshold (default 1°) before it treats Earth as usable for contact.
 
 ## What is the Deep Space Network (DSN), and what is a DSN station?
 Kind: concept
@@ -341,4 +341,4 @@ Tags: sigma pending, σ pending, terrain mask, no plus minus, uncertainty missin
 Kind: concept
 Source: live pages (Stand here) and PLAN_FINAL §4.2
 Tags: smooth moon, smooth-moon, no terrain, tier c, flat horizon, no skyline, sphere, no terrain data
-"Smooth Moon" means there is no terrain data for that site or array height, so LUMEN treats the Moon as a smooth sphere with no skyline. The Sun and Earth are then blocked only by the curvature of the Moon, so times are the earliest-possible sunrise and latest-possible sunset, not a real skyline. Stand here says so on the page.
+"Smooth Moon" means there is no terrain data for that site or array height, so LUMEN treats the Moon as a smooth sphere with no skyline. The Sun and Earth are then blocked only by the curvature of the Moon. These are smooth-sphere estimates, not terrain-bounded sunrise, sunset, or visibility predictions. Stand here says so on the page.

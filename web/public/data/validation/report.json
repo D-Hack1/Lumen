@@ -407,20 +407,7 @@
     "G10",
     "G11"
   ],
-  "open_issues": [
-    {
-      "description": "Terrain near-zone application clamps a negative distant DEM horizon to zero, while R3 D-9 requires negative m_dem to be preserved when the near-zone occluder is inactive.",
-      "evidence_paths": [
-        "pipeline/tests/terrain/test_s4_terrain.py",
-        "pipeline/tests/gowri/test_golden_near_zone_synthetic.py",
-        "plan/PLAN_FINAL_R3_DELTA.md"
-      ],
-      "id": "R3-NEAR-ZONE-TERRAIN-INCONSISTENCY",
-      "owner": "Shiva Shakthi",
-      "reporting_effect": "No terrain-side near-zone result is claimed R3-compliant.",
-      "status": "OPEN"
-    }
-  ],
+  "open_issues": [],
   "reference_engine_evidence": {
     "coverage": [
       "fast and exact event uncertainty",

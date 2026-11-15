@@ -7,7 +7,7 @@ uses only what is listed here.
 
 ## Conventions
 - Times: epoch **milliseconds, UTC** (`number`). Angles: degrees. Distances: km unless the name ends `M` (metres). Durations: hours unless `Ms`.
-- Uncertainty: `Bounded = { value, lo, hi }` (any may be `null`). For Tier C `lo === hi === value` (no terrain ±: show "smooth-Moon bound").
+- Uncertainty: `Bounded = { value, lo, hi }` (any may be `null`). For Tier C `lo === hi === value` (no terrain uncertainty: label as a smooth-sphere estimate, not a terrain bound).
 - Event/window `±` is `dtMs` / `startPmMs` / `endPmMs` (half-width, ms). `null` = not applicable (Tier C).
 - Every visible label comes from Abhinav's `useCopy`; the engine returns **numbers and enums, never display strings**
   (exceptions: `meta.tierBadge`, `meta.definitionsSummary`, `QuickAnswerResult.text`).

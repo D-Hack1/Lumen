@@ -59,7 +59,7 @@ export const planner: CopyTable = {
   'verdict.GO.long': 'GO — every hard threshold passes on the conservative bound',
   'verdict.MARGINAL.long': 'MARGINAL — passes on the nominal value but not on the conservative bound',
   'verdict.NO-GO.long': 'NO-GO — at least one hard threshold fails',
-  'verdict.PENDING.long': 'PENDING — cannot be judged yet (missing data or only a smooth-Moon bound); see reasons',
+  'verdict.PENDING.long': 'PENDING — cannot be judged yet (missing data or insufficient terrain evidence); see reasons',
   'verdict.provisional.long': 'Provisional — uncertainty bounds still computing; GO needs the conservative bound',
 
   // ---- Mission Profile popover (verdict chip). Placeholder until the Phase 4 form. ----
@@ -218,7 +218,7 @@ export const planner: CopyTable = {
   'answer.earth.noChange': 'No change before window end',
   'answer.grazing': '{t} (grazing)',
   'answer.grazingFull': 'grazing \u2014 timing poorly constrained',
-  'answer.smoothMoon': 'smooth-Moon bound',
+  'answer.smoothMoon': 'smooth-sphere estimate · terrain unavailable',
 
   // ---- shared panel states (Nived) ----
   'state.loading': 'Calculating\u2026',

@@ -63,11 +63,11 @@ describe.skipIf(!run)('12-month calendar (real data, stage 1)', () => {
     expect(cells[16].landingUtc).toBe(Date.UTC(2030, 11, 17));
   });
 
-  it('the verdict per cell follows the profile (permissive => PENDING best case; impossible => NO-GO)', () => {
+  it('the verdict per cell remains PENDING until terrain evidence qualifies the geometry)', () => {
     const loose = buildCalendar(eph, { request: req(), days: 3 });
     expect(loose.every((c) => c.verdict === 'PENDING')).toBe(true);
     const strict = buildCalendar(eph, { request: req({ profile: { minSunlitPct: 99.9, minLinkHours: 0, maxLongestNightH: 1e9, maxPadSlopeDeg: 90 } }), days: 3 });
-    expect(strict.every((c) => c.verdict === 'NO-GO')).toBe(true);
+    expect(strict.every((c) => c.verdict === 'PENDING')).toBe(true);
   });
 
   it('a full year for one site computes in the background-friendly budget (<= 2 s, CI slack via LUMEN_PERF_SLACK)', () => {

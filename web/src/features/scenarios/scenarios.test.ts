@@ -241,10 +241,10 @@ describe('requirement rows at the conservative bound', () => {
     expect(rows.map((r) => r.status)).toEqual(['pass', 'fail', 'unknown', 'marginal']);
     expect(rows[1].conservative).toBe(252); // display values are still computed here
   });
-  it('smooth-Moon (optimistic) bounds never confirm a pass; no metrics → all unknown', () => {
-    const rows = requirementRows(metrics, DEFAULT_SCENARIO.profile, DEFAULT_SCENARIO.weights, 336, 'optimistic');
+  it('insufficient terrain evidence never confirms a geometry requirement; no metrics → all unknown', () => {
+    const rows = requirementRows(metrics, DEFAULT_SCENARIO.profile, DEFAULT_SCENARIO.weights, 336, 'insufficient');
     expect(rows.find((r) => r.id === 'link')!.status).toBe('unknown');
-    expect(rows.find((r) => r.id === 'slope')!.status).toBe('fail'); // a nominal failure is still a failure
+    expect(rows.find((r) => r.id === 'slope')!.status).toBe('unknown');
     expect(requirementRows(null, DEFAULT_SCENARIO.profile, DEFAULT_SCENARIO.weights, 336, 'bounded').every((r) => r.status === 'unknown')).toBe(true);
   });
 });

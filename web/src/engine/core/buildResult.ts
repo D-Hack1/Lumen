@@ -80,8 +80,7 @@ export function buildScenarioResult(eph: Ephemeris, req: ScenarioRequest, dsn: D
   if (!inEphemerisRange(eph, req.startMs) || !inEphemerisRange(eph, endMs)) {
     return emptyError(`The ephemeris covers ${new Date(eph.startMs).toISOString().slice(0, 10)} to ${new Date(eph.endMs).toISOString().slice(0, 10)}; this window is outside it.`);
   }
-  // A site with a usable terrain mask (right height, no gaps) is evaluated on it. Everything else keeps the smooth-Moon horizon
-  // (an optimistic bound, labelled as such). Either way no sigma exists yet, so there are never +/- values and a pass stays PENDING.
+  // A site with a usable terrain mask (right height, no gaps) is evaluated on it. Everything else uses the smooth-sphere model.
   const site = makeSite(req.latDeg, req.lonDegEast, req.heightM, req.rotation ?? undefined);
   const terrainHorizon = horizonFromMask(mask, req.heightM);
   const horizon = terrainHorizon ?? new Horizon({ observerHeightM: req.heightM });
@@ -134,15 +133,15 @@ export function buildScenarioResult(eph: Ephemeris, req: ScenarioRequest, dsn: D
     psrDistanceKm: req.psr ? { km: req.psr.distanceKm, bearingDeg: req.psr.bearingDeg, areaKm2: req.psr.areaKm2, source: req.psr.source } : null,
   };
 
-  // No sigma yet => the values are nominal on the mask (or a smooth-Moon best case without one): a failure is certain, a pass is only PENDING (see verdict.ts).
-  const verdict = evaluateVerdict({ metrics, windowHours: req.durationDays * 24, profile: req.profile, weights: req.weights, boundsKind: bw ? 'bounded' : 'optimistic', basis: terrainHorizon ? 'mask' : 'smooth-moon' });
+  // Without terrain and sigma-qualified bounds, geometry metrics remain nominal and cannot confirm either pass or failure.
+  const verdict = evaluateVerdict({ metrics, windowHours: req.durationDays * 24, profile: req.profile, weights: req.weights, boundsKind: bw ? 'bounded' : 'insufficient', basis: terrainHorizon ? 'mask' : 'smooth-moon', verifiedRequirements: req.padSlopeDeg == null ? [] : ['slope'] });
 
   return {
     status: 'ready', error: null,
     meta: {
       siteId: req.siteId ?? 'custom', tier: req.tier,
       tierBadge: bw && sigma ? `Terrain mask · σ ${sigmaSourceLabel(sigma)}` : terrainHorizon ? 'Terrain mask · σ pending' : 'Smooth-Moon horizon · terrain pending',
-      sigmaSource: bw && sigma ? sigmaSourceLabel(sigma) : terrainHorizon ? 'terrain mask, σ pending' : 'smooth-Moon bound', snapDistanceKm: null,
+      sigmaSource: bw && sigma ? sigmaSourceLabel(sigma) : terrainHorizon ? 'terrain mask, σ pending' : 'smooth-sphere estimate; terrain unavailable', snapDistanceKm: null,
       definitionsSummary: `Sun available = ≥${Math.round(d.sunDiskThreshold * 100)}% disk above the horizon${d.minSunElevationOpsDeg > 0 ? ` and ≥${d.minSunElevationOpsDeg}° elevation` : ''} @${req.heightM} m · Link = Earth ≥${d.earthMarginDeg}° above the horizon${ev.dsnApplied ? ` + DSN ≥${d.dsnMaskDeg}°` : ' (DSN not applied)'}`,
       dataVersions: req.dataVersions, mock: eph.mock,
     },

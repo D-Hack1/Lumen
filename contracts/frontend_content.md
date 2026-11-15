@@ -148,7 +148,7 @@ state has a Planner string and a different Educator string, and that Educator ke
 | `verdict.GO.long` | GO — every hard threshold passes on the conservative bound | Looks good — passes every must-have, even in the cautious case |
 | `verdict.MARGINAL.long` | MARGINAL — passes on the nominal value but not on the conservative bound | Borderline — passes on the best guess, but not in the cautious case |
 | `verdict.NO-GO.long` | NO-GO — at least one hard threshold fails | Not viable — at least one must-have fails |
-| `verdict.PENDING.long` | PENDING — cannot be judged yet (missing data or only a smooth-Moon bound); see reasons | Not sure yet — some data is still missing, so this cannot be judged |
+| `verdict.PENDING.long` | PENDING — cannot be judged yet (missing data or insufficient terrain evidence); see reasons | Not sure yet — some data is still missing, so this cannot be judged |
 | `verdict.provisional.long` | Provisional — uncertainty bounds still computing; GO needs the conservative bound | First guess — the give-or-take is still being worked out |
 | `verdict.headline.GO` | Meets the profile | Looks promising |
 | `verdict.headline.MARGINAL` | Borderline | Close call |
@@ -279,7 +279,7 @@ state has a Planner string and a different Educator string, and that Educator ke
 | `answer.earth.noChange` | No change before window end | No change before the window ends |
 | `answer.grazing` | {t} (grazing) | {t} (skims the horizon) |
 | `answer.grazingFull` | grazing — timing poorly constrained | skims the horizon — timing is hard to pin down |
-| `answer.smoothMoon` | smooth-Moon bound | flat-Moon estimate |
+| `answer.smoothMoon` | smooth-sphere estimate · terrain unavailable | flat-Moon estimate |
 
 ### `metric.*` · Metric Deck · used by Nived
 

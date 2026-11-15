@@ -80,7 +80,7 @@ async function doLoad(): Promise<Catalog> {
       lastContactUtc: s.last_contact_utc ? Date.parse(s.last_contact_utc) : null,
       tier: s.tier,
       nearFieldResM: t.near_field_res_m ?? null,
-      sigmaSource: t.sigma?.source ?? (s.tier === 'C' ? 'smooth-Moon bound' : 'pending'),
+      sigmaSource: t.sigma?.source ?? (s.tier === 'C' ? 'smooth-sphere estimate; terrain unavailable' : 'pending'),
       sigmaDefaultDeg: t.sigma?.default_deg ?? null,
       padSlopeDeg: t.pad?.slope_deg ?? null,
       psr: t.psr ? { distanceKm: t.psr.distance_km, bearingDeg: t.psr.bearing_deg, areaKm2: t.psr.nearest_psr_area_km2, source: t.psr.source } : null,

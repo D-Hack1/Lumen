@@ -157,7 +157,8 @@ def build_sparklines(
 ) -> dict[str, Any]:
     """Write daily UTC-boundary catalog series for the requested half-open range.
 
-    Site rows without a verified, matching mask use smooth-Moon bounds.  The
+    Site rows without a verified, matching mask use smooth-sphere estimates;
+    they are not terrain bounds. The
     Shackleton preliminary artifact is never included in a final publication.
     """
     start = _utc_day(start_utc)
@@ -187,7 +188,7 @@ def build_sparklines(
         horizon = _mask_horizon(site, terrain)
         if horizon is None:
             horizon = Horizon(observer_height_m=OBSERVER_HEIGHT_M)
-            provenance[site_id] = "smooth-Moon bounds"
+            provenance[site_id] = "smooth-sphere estimate; terrain unavailable"
         else:
             provenance[site_id] = "verified site-matched terrain mask"
         row = np.empty((2, days), dtype=np.uint8)

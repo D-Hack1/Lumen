@@ -56,7 +56,7 @@ describe('Answer Strip, D-14 states (Planner copy)', () => {
     expect(t).toContain('No sunrise before window end (+60 d)');
     expect(t).toContain('Earthrise in ~');
     expect(t).toContain('(grazing)');
-    expect(t).toContain('smooth-Moon bound');
+    expect(t).toContain('smooth-sphere estimate');
     expect(html).toContain('grazing — timing poorly constrained'); // full wording in the tooltip
   });
 });

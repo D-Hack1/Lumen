@@ -1,7 +1,7 @@
 // Owner: Nived
 // Quick Answer (PLAN_FINAL 8.5): one point, one time, one duration, one observer height -> one card.
 // Built on exactly the same evaluation as the Cockpit (buildScenarioResult), so the two can never disagree.
-// No terrain mask exists yet, so every answer is a smooth-Moon best case and says so (Tier C numbers, "terrain pending").
+// No terrain mask exists yet, so every answer is a smooth-sphere estimate labelled "terrain unavailable".
 import type { Ephemeris } from '../data/ephem';
 import { fmtDeg } from '../format';
 import type { EventRecord, QuickAnswerInput, QuickAnswerResult, SiteRecord } from '../types';
@@ -80,7 +80,7 @@ export function buildQuickAnswer(eph: Ephemeris, input: QuickAnswerInput, sites:
       `${match ? `Site: ${match.name}. ` : ''}${tierBadge}.`,
       `Sun ${fmtDeg(a.sun.elevDeg)} (${a.sun.up ? 'up' : 'down'}), Earth ${fmtDeg(a.earth.elevDeg)}, link ${a.earth.linkUp ? 'yes' : 'no'}, Earth range ${Math.round(now.earth.distanceKm).toLocaleString('en-US')} km.`,
       `Next sunset ${iso(sunset)}; next earthset ${iso(next('earthset'))}; next shadow exit ${iso(next('shadowExit'))}.`,
-      `Sunlit ${Math.round(m.sunlitPct.value ?? 0)}% and Earth visible ${Math.round(m.linkPct.value ?? 0)}% of the window (best case: no terrain used).`,
+      `Sunlit ${Math.round(m.sunlitPct.value ?? 0)}% and Earth visible ${Math.round(m.linkPct.value ?? 0)}% of the window (smooth-sphere estimate; terrain unavailable).`,
     ].join('\n'),
   };
 }

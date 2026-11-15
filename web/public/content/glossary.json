@@ -92,7 +92,7 @@
       "formula": "Tier A/B/C as defined by the terrain coverage and evaluator path",
       "impact": "It indicates how strongly terrain timing and horizon conclusions can be relied upon.",
       "source": "PLAN_FINAL.md §4.2, §8.10",
-      "uncertainty": "Tier C has no terrain-mask uncertainty; its times are labelled as smooth-Moon bounds rather than terrain predictions.",
+      "uncertainty": "Tier C has no terrain-mask uncertainty; its times are labelled as smooth-sphere estimates with terrain unavailable, not as terrain-bounded predictions.",
       "related_metric_ids": [],
       "learn_more_anchor": "fidelity-tier"
     },

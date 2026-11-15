@@ -11,7 +11,7 @@ const fill = (s: string, v: Record<string, string | number>) => s.replace(/\{(\w
 
 const planner: Table = {
   'ribbon.vtag': 'V ×{n} · not to scale',
-  'ribbon.noMask': 'no terrain mask (Tier C / smooth-Moon bound)',
+  'ribbon.noMask': 'no terrain mask (Tier C / smooth-sphere estimate)',
   'ribbon.sun': 'Sun',
   'ribbon.earth': 'Earth',
   'lens.scale': 'true scale · clipped by terrain',

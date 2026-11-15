@@ -105,10 +105,10 @@ const REQ: { id: RequirementKey; field: ProfileKey; kind: 'min' | 'max'; unit: s
   { id: 'slope', field: 'maxPadSlopeDeg', kind: 'max', unit: '°' },
 ];
 
-/** A result whose bounds are smooth-Moon best cases (no terrain) can never confirm a pass: same rule as the engine. */
-export function boundsKindOf(r: Pick<ScenarioResult, 'meta'>): 'bounded' | 'optimistic' {
+/** A result without terrain and sigma-qualified bounds cannot confirm a geometry requirement. */
+export function boundsKindOf(r: Pick<ScenarioResult, 'meta'>): 'bounded' | 'insufficient' {
   const src = r.meta?.sigmaSource?.toLowerCase() ?? '';
-  return r.meta?.tier === 'C' || src.includes('smooth') ? 'optimistic' : 'bounded';
+  return r.meta?.tier === 'C' || src.includes('smooth') || src.includes('pending') ? 'insufficient' : 'bounded';
 }
 
 export function requirementRows(
@@ -116,7 +116,7 @@ export function requirementRows(
   profile: ProfileThresholds,
   weights: Weights,
   windowHours: number,
-  boundsKind: 'bounded' | 'optimistic',
+  boundsKind: 'bounded' | 'insufficient',
   /** The engine's own per-requirement statuses (`result.verdictRequirements`). Absent on mock results: recomputed then. */
   engineStatuses?: ReadonlyArray<{ id: RequirementKey; status: RequirementStatus }>,
 ): RequirementRow[] {
