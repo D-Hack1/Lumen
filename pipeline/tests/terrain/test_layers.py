@@ -17,9 +17,12 @@ from rasterio.transform import from_origin
 
 from lumen_pipeline.terrain.layers import (
     EXTENT_COLATITUDE_DEG,
+    EXTENT_LAT_LIMIT_DEG,
     SLOPE_HAZARD_NODATA_CODE,
     LayerUnavailable,
     RegionalLayerProduct,
+    RegionalRaster,
+    _write_layer_sidecar,
     classify_slope_hazard,
     extent_radius_m,
     polar_stereographic_scale_factor,
@@ -272,3 +275,113 @@ regional_layer_products:
     products = load_fn(config_path)
     assert "verified_one" in products
     assert "unverified_one" not in products
+
+
+# ---------------------------------------------------------------------------
+# Sidecar/index projection fields (size_px, centre_px, lat_limit_deg,
+# half_extent_km, metres_per_px) consumed by web/src/engine/data/layers.ts
+# ---------------------------------------------------------------------------
+
+
+def _synthetic_source(*, width_px: int, height_px: int, resolution_m: float) -> RegionalRaster:
+    product = RegionalLayerProduct(
+        key="test_product",
+        name="Test product",
+        url="https://example.invalid/test.tif",
+        resolution_m=resolution_m,
+        latitude_coverage="60S-90S",
+        scale=1.0,
+        offset=0.0,
+        nodata=-32768,
+        value_meaning="test",
+        citation="test citation",
+        source_page="https://example.invalid",
+        availability_status="verified_product",
+        verification_status="live_opened_and_inspected",
+    )
+    return RegionalRaster(
+        values=np.zeros((height_px, width_px), dtype=np.float32),
+        valid=np.ones((height_px, width_px), dtype=bool),
+        resolution_m=resolution_m,
+        transform=from_origin(0.0, 0.0, resolution_m, resolution_m),
+        crs=None,
+        product=product,
+    )
+
+
+@pytest.mark.parametrize(
+    ("extent", "width_px", "height_px", "resolution_m"),
+    [
+        ("80_90S", 2534, 2534, 240.0),
+        ("85_90S", 5058, 5058, 60.0),
+        # A layer can use a coarser native raster than its siblings at the
+        # same extent (e.g. the real slope_hazard_85_90S.png is 1266x1266
+        # at 240 m/px, not 5058x5058 at 60 m/px) -- the five fields must be
+        # derived per-entry, never assumed shared across an extent.
+        ("85_90S", 1266, 1266, 240.0),
+    ],
+)
+def test_write_layer_sidecar_populates_all_five_frontend_projection_fields(
+    tmp_path, extent, width_px, height_px, resolution_m
+):
+    source = _synthetic_source(width_px=width_px, height_px=height_px, resolution_m=resolution_m)
+    (tmp_path / "layers").mkdir(parents=True, exist_ok=True)
+    sidecar = _write_layer_sidecar(
+        layer_id="slope_hazard",
+        extent=extent,
+        png_path=tmp_path / "layers" / f"slope_hazard_{extent}.png",
+        terrain_root=tmp_path,
+        source=source,
+        legend_stops=[],
+        classification=None,
+        method="test",
+    )
+    projection = sidecar["projection"]
+    for field in ("size_px", "centre_px", "lat_limit_deg", "half_extent_km", "metres_per_px"):
+        assert field in projection, f"missing required projection field: {field}"
+
+    # size_px: [height, width] (matches this module's spatial "shape"
+    # convention; the real rasters are square so this is also verifiable
+    # independent of axis order).
+    assert projection["size_px"] == [height_px, width_px]
+
+    # centre_px: pixel-edge centre of the square crop (matches
+    # web/src/mocks/make_mock.py's established [size/2, size/2]
+    # convention), not an off-by-half-pixel "pixel centre" convention.
+    assert projection["centre_px"] == [width_px / 2.0, height_px / 2.0]
+
+    # lat_limit_deg: south-negative, matching this project's MOON_ME
+    # convention (sites.yaml, dem_sources.yaml all use negative south
+    # latitudes).
+    assert projection["lat_limit_deg"] == EXTENT_LAT_LIMIT_DEG[extent]
+    assert projection["lat_limit_deg"] < 0.0
+
+    # half_extent_km: the crop's own actual half-width (radius_m / 1000),
+    # not re-derived from width_px/resolution_m (which would differ
+    # slightly from the true extent_radius_m because the crop's half-pixel
+    # count is ceil()-rounded when the window is read).
+    expected_half_extent_km = extent_radius_m(extent) / 1000.0
+    assert projection["half_extent_km"] == pytest.approx(expected_half_extent_km)
+
+    # metres_per_px: the raster's own exact pixel spacing, not an
+    # approximation back-derived from half_extent_km and size_px.
+    assert projection["metres_per_px"] == resolution_m
+
+
+def test_write_layer_sidecar_rejects_unknown_extent(tmp_path):
+    source = _synthetic_source(width_px=100, height_px=100, resolution_m=240.0)
+    with pytest.raises(ValueError, match="unknown extent"):
+        _write_layer_sidecar(
+            layer_id="slope_hazard",
+            extent="60_90S",
+            png_path=tmp_path / "layers" / "slope_hazard_60_90S.png",
+            terrain_root=tmp_path,
+            source=source,
+            legend_stops=[],
+            classification=None,
+            method="test",
+        )
+
+
+def test_extent_lat_limit_deg_matches_the_two_contract_extents():
+    assert EXTENT_LAT_LIMIT_DEG == {"80_90S": -80.0, "85_90S": -85.0}
