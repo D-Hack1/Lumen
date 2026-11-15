@@ -4,6 +4,7 @@
 // (see orbitModel.ts); until `loadRealModel()` resolves nothing here may be called.
 import { DEFAULT_DEFINITIONS, stateAt, type Definitions } from '../../engine/core/evaluate';
 import { makeSite, type Site as EngineSite } from '../../engine/core/geometry';
+import { evaluateVerdict } from '../../engine/core/verdict';
 import { horizonFromMask } from '../../engine/core/terrainHorizon';
 import { Horizon } from '../../engine/core/visibility';
 import { loadCatalog } from '../../engine/data/catalog';
@@ -13,6 +14,7 @@ import { loadMaskOrNull, type Mask } from '../../engine/data/masks';
 import { dataMode } from '../../engine/data/source';
 import type { SiteRecord } from '../../engine/types';
 import type { Site, Snapshot } from './orbitModel';
+import { windowStats } from '../pages/pagesModel';
 
 /** Hours-since-epoch of the design's t = 0 (2027-02-08 00:00 UTC); duplicated from orbitModel to avoid a runtime import cycle. */
 const BASE_UTC = Date.UTC(2027, 1, 8, 0, 0, 0);
@@ -101,4 +103,52 @@ export function realSnapshot(t: number, site: Site, mast: number): Snapshot {
 
 export function realHorizon(az: number, site: Site, mast: number): number {
   return prepare(site, mast).horizon.effectiveAt(az);
+}
+
+// ---- Verdict tags (the curated-site list) ----------------------------------------------------------------------------------
+// The engine's own go / no-go rule (core/verdict.ts) on the same 14-day window Compare shows, against the default Mission Profile.
+// No terrain uncertainty (sigma) exists yet, so a pass can only be "unconfirmed": the engine never says GO on an optimistic bound.
+import type { Verdict } from '../../engine/types';
+
+const PROFILE = { minSunlitPct: 50, minLinkHours: 100, maxLongestNightH: 72, maxPadSlopeDeg: 10 };
+const WEIGHTS = { sunlit: 0.4, link: 0.3, night: 0.2, slope: 0.1 };
+const WINDOW_H = 336;
+
+export interface SiteTag {
+  verdict: Verdict;
+  label: string;
+  tone: 'good' | 'warn' | 'bad' | 'mut';
+  /** First reason the engine gave, for a tooltip. */
+  reason: string;
+}
+
+const TAG: Record<Verdict, { label: string; tone: SiteTag['tone'] }> = {
+  GO: { label: 'Go', tone: 'good' },
+  MARGINAL: { label: 'Marginal', tone: 'warn' },
+  'NO-GO': { label: 'No-go', tone: 'bad' },
+  PENDING: { label: 'Unconfirmed', tone: 'mut' },
+};
+
+const tagCache = new Map<string, SiteTag>();
+
+export function realSiteTag(site: Site, mast: number): SiteTag {
+  const key = `${site.id}|${site.lat}|${site.lon}|${mast}`;
+  let tag = tagCache.get(key);
+  if (!tag) {
+    const L = loaded as Loaded;
+    const w = windowStats(site, mast);
+    const slope = L.records.get(TERRAIN_ID[site.id] ?? '')?.padSlopeDeg ?? null;
+    const b = (v: number | null) => ({ value: v, lo: null, hi: null });
+    const r = evaluateVerdict({
+      metrics: { sunlitPct: b(w.sun), linkPct: b(w.dsn), longestNightH: b(w.dark), padSlopeDeg: slope === null ? null : b(slope) } as never,
+      windowHours: WINDOW_H,
+      profile: PROFILE,
+      weights: WEIGHTS,
+      boundsKind: 'optimistic',
+      basis: prepare(site, mast).terrain ? 'mask' : 'smooth-moon',
+    });
+    tag = { ...TAG[r.verdict], verdict: r.verdict, reason: r.reasons[0] ?? '' };
+    tagCache.set(key, tag);
+  }
+  return tag;
 }
