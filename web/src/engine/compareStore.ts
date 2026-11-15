@@ -9,7 +9,7 @@ import { loadCatalog } from './data/catalog';
 import { dataMode } from './data/source';
 import { makeRequest, padNormalFor } from './requests';
 import { mockCompare } from '../mocks/mockResult';
-import { getScenario, useScenario } from '../state/scenarioStore';
+import { getScenario, rowLandingUtc, useScenario } from '../state/scenarioStore';
 import type { CompareResults } from './types';
 
 const DEBOUNCE_MS = 30;
@@ -40,10 +40,10 @@ async function run(): Promise<void> {
   try {
     if (s.compareRows.length === 0) return publish(IDLE);
     const { sites } = await loadCatalog();
-    if (dataMode() === 'mock') return publish(mockCompare(sites));
+    if (dataMode() === 'mock') return publish(mockCompare(sites, s.compareRows, s.slipDays));
     const reqs = await Promise.all(s.compareRows.map(async (r) => ({
       id: r.id,
-      req: makeRequest(s, sites, { siteRef: r.site, landingUtc: r.landingUtc, heightM: r.heightM, scrubUtc: r.landingUtc + s.slipDays * 86_400_000, panel: { preset: r.panelPreset, yawDeg: r.yawDeg, tilt: r.tilt }, groundNormal: await padNormalFor(r.site) }),
+      req: makeRequest(s, sites, { siteRef: r.site, landingUtc: rowLandingUtc(r, 0), heightM: r.heightM, scrubUtc: rowLandingUtc(r, s.slipDays), panel: { preset: r.panelPreset, yawDeg: r.yawDeg, tilt: r.tilt }, groundNormal: await padNormalFor(r.site) }),
     })));
     const evaluated = await evaluateBatch(reqs);
     if (evaluated) publish(assembleCompare(evaluated, s.compareRows.find((r) => r.baseline)?.id ?? null));

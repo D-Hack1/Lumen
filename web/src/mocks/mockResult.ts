@@ -172,13 +172,36 @@ export function mockScenarioResult(
   };
 }
 
-export function mockCompare(sites: SiteRecord[]): CompareResults {
-  const rows = sites.slice(0, 3).map((site, i) => {
-    const result = mockScenarioResult(site, MOCK_LANDING, 14, MOCK_LANDING + 2 * D, i * 0.8);
-    return { scenarioId: 'ABCD'[i], result, deltaVsBaseline: {} as CompareResults['rows'][number]['deltaVsBaseline'] };
-  });
-  const base = rows[0]?.result.metrics;
-  for (const r of rows) {
+/** The row fields the mock needs (structural, so this file does not import the store). */
+interface MockCompareRow {
+  id: string;
+  site: { kind: 'site'; id: string } | { kind: 'point'; lat: number; lon: number };
+  landingUtc: number;
+  slipDays?: number;
+  baseline: boolean;
+}
+
+/**
+ * Fake compare set. With no `rows` it is the legacy three-site set. With rows it follows them (one result per row, in order, at the row's effective landing =
+ * landing + global slip + row slip), so adding a 4th row, removing one, slipping a row or moving the baseline all change what the UI shows in mock mode.
+ */
+export function mockCompare(sites: SiteRecord[], rows?: readonly MockCompareRow[], globalSlipDays = 0): CompareResults {
+  const picked: Array<{ id: string; site: SiteRecord; landing: number; baseline: boolean }> = rows
+    ? rows.map((r, i) => ({
+        id: r.id,
+        site: (r.site.kind === 'site' ? sites.find((x) => x.id === (r.site as { id: string }).id) : undefined) ?? sites[i % sites.length],
+        landing: r.landingUtc + (globalSlipDays + (r.slipDays ?? 0)) * D,
+        baseline: r.baseline,
+      }))
+    : sites.slice(0, 3).map((site, i) => ({ id: 'ABCD'[i], site, landing: MOCK_LANDING, baseline: i === 0 }));
+  const out = picked.map((p, i) => ({
+    scenarioId: p.id,
+    result: mockScenarioResult(p.site, p.landing, 14, p.landing + 2 * D, i * 0.8),
+    deltaVsBaseline: {} as CompareResults['rows'][number]['deltaVsBaseline'],
+  }));
+  const baselineId = picked.find((p) => p.baseline)?.id ?? out[0]?.scenarioId ?? null;
+  const base = out.find((r) => r.scenarioId === baselineId)?.result.metrics;
+  for (const r of out) {
     const m = r.result.metrics;
     if (m && base) {
       r.deltaVsBaseline = {
@@ -188,7 +211,7 @@ export function mockCompare(sites: SiteRecord[]): CompareResults {
       };
     }
   }
-  return { status: 'ready', rows, baselineId: rows[0]?.scenarioId ?? null };
+  return { status: 'ready', rows: out, baselineId };
 }
 
 export function mockScan(params: ScanParams, sites: SiteRecord[]): ScanCandidate[] {
