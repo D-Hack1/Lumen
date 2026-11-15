@@ -51,6 +51,23 @@ Human-readable gate results, scope statement.
   Sun-centre/limb convention. G7 is not a complete independently sourced mission-value
   validation until that document is identified.
 
+## G3b - DSN Moon elevation
+
+- The locked direct-geometry check remains `< 0.1 deg` against Horizons.
+- The published `dsn.bin` stores elevations quantized in 0.5-degree steps. Its
+  decoded samples are compared separately at the same Horizons epochs; the
+  artifact tolerance proposal is `< 0.35 deg` (the locked 0.1-degree geometry
+  allowance plus the maximum 0.25-degree half-step quantization error). This
+  proposal does not change the locked G3b criterion.
+
+## G7 - IM-2 touchdown geometry
+
+- The G7 report deterministically evaluates Sun and Earth centre elevations at
+  `2025-03-06T17:28:50Z`, `84.7906 S, 29.1957 E` using the catalog landing
+  coordinate. These are calculation outputs, not independently sourced mission
+  conditions; their status remains `SOURCE_UNVERIFIED` until primary evidence
+  establishes the timestamp, coordinate, and claimed touchdown conditions.
+
 ## Aggregate G0-G11 report
 
 `web/public/data/validation/report.json` is generated offline by

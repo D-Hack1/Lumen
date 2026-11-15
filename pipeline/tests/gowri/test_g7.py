@@ -75,6 +75,13 @@ def test_g7_report_reproduces_touchdown_reference_and_provenance(tmp_path):
     assert report["calculation_assumptions"]["sun_elevation_definition"][
         "reported_claim_limb_convention"
     ] == "SOURCE_UNVERIFIED"
+    im2 = report["im2_touchdown_conditions"]
+    assert im2["status"] == "SOURCE_UNVERIFIED"
+    assert im2["timestamp_utc"] == "2025-03-06T17:28:50Z"
+    assert im2["coordinates"]["latitude_deg"] == pytest.approx(-84.7906)
+    assert im2["coordinates"]["longitude_deg_east"] == pytest.approx(29.1957)
+    assert -90.0 <= im2["computed"]["sun_elevation_deg"] <= 90.0
+    assert -90.0 <= im2["computed"]["earth_elevation_deg"] <= 90.0
 
 
 def test_g7_uses_landing_coordinates_not_prelanding_target():

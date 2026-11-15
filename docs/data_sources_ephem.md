@@ -19,3 +19,11 @@ The calculation assumptions are traceable in the G7 JSON report. Its implementat
 2023-08-23T12:33:00Z, 69.373 degrees S, 32.319 degrees E, 0 m, `MOON_ME_DE421`, and the
 Sun-centre topocentric direction. The published reference's time precision, landing fix,
 and Sun-centre versus upper-limb convention remain source-unverified.
+
+## G7 IM-2 source status
+
+The G7 report evaluates catalog input `2025-03-06T17:28:50Z`, 84.7906 degrees
+S, 29.1957 degrees E for IM-2. It does not treat the resulting Sun or Earth
+elevation as an independently verified mission condition: an authoritative
+primary source for the touchdown condition, timestamp, and landing fix remains
+required.

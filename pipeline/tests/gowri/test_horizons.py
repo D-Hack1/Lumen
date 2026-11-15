@@ -2,12 +2,15 @@ import json
 import math
 
 import pytest
+import yaml
 
 from lumen_pipeline.ephem.dsn import STATIONS
 from lumen_pipeline.ephem.kernels import loaded_kernels
 from lumen_pipeline.validation.horizons_client import (
     AZIMUTH_TOLERANCE_DEG,
+    DSN_ARTIFACT_TOLERANCE_PROPOSAL_DEG,
     DSN_ELEVATION_TOLERANCE_DEG,
+    DSN_QUANTIZATION_HALF_STEP_DEG,
     ELEVATION_TOLERANCE_DEG,
     EPOCHS_PER_SITE,
     RANGE_TOLERANCE_KM,
@@ -18,16 +21,19 @@ from lumen_pipeline.validation.horizons_client import (
     _spice_observation,
     assert_g3_tolerances,
     assert_g3b_tolerances,
+    assert_site_cases_match_config,
     dsn_fixture_path,
     fixture_path,
     load_dsn_fixture,
     load_fixture,
     run_g3,
     run_g3b,
+    run_g3b_artifact,
 )
 
 
 def test_horizons_fixtures_are_traceable_and_complete():
+    assert_site_cases_match_config()
     for site in SITE_CASES:
         for body in ("sun", "earth"):
             fixture_site, fixture_body, records = load_fixture(fixture_path(site, body))
@@ -64,6 +70,22 @@ def test_g3_exact_pole_skips_undefined_true_azimuth():
     assert math.isnan(azimuth)
     assert -90.0 <= elevation <= 90.0
     assert distance > 0.0
+
+
+def test_g3_site_cases_reject_config_coordinate_drift(tmp_path):
+    source = {
+        "sites": [
+            {"id": site.id, "latitude_deg": site.latitude_deg, "longitude_deg_east": site.longitude_deg_east}
+            for site in SITE_CASES
+            if site.id != "equator_zero"
+        ]
+    }
+    source["sites"][0]["latitude_deg"] = 0.0
+    path = tmp_path / "sites.yaml"
+    path.write_text(yaml.safe_dump(source), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="coordinates differ"):
+        assert_site_cases_match_config(path)
 
 
 def test_g3_fixtures_reject_missing_provenance_and_frame_mismatch(tmp_path):
@@ -105,6 +127,15 @@ def test_g3b_fixtures_are_traceable_complete_and_within_tolerance():
     assert len(comparisons) == len(STATIONS) * 15
     assert_g3b_tolerances(comparisons)
     assert max(result.elevation_error_deg for result in comparisons) < DSN_ELEVATION_TOLERANCE_DEG
+
+
+def test_g3b_published_dsn_artifact_records_quantization_separately():
+    comparisons = run_g3b_artifact()
+
+    assert len(comparisons) == len(STATIONS) * 15
+    assert max(item.direct_elevation_error_deg for item in comparisons) < DSN_ELEVATION_TOLERANCE_DEG
+    assert max(item.quantization_error_deg for item in comparisons) <= DSN_QUANTIZATION_HALF_STEP_DEG
+    assert max(item.decoded_elevation_error_deg for item in comparisons) < DSN_ARTIFACT_TOLERANCE_PROPOSAL_DEG
 
 
 def test_g3b_fixture_provenance_and_tolerance_boundary(tmp_path):
