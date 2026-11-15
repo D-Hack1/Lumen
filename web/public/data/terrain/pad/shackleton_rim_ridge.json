@@ -1,0 +1,35 @@
+{
+  "created_utc": "2026-11-15T15:58:46.018173Z",
+  "d_min_m": 30.0,
+  "dispersion_slope_stats": {
+    "available": false,
+    "reason": "dispersion_radius_m and slope_tolerance_deg are unresolved project defaults (pad_statistics in pipeline/config/terrain.yaml); no value is invented"
+  },
+  "downhill_aspect_deg": 171.8662890016426,
+  "ground_normal_me": [
+    -0.10582555113909367,
+    0.012794596523099774,
+    -0.9943023941567868
+  ],
+  "near_field_resolution_m": 10.0,
+  "plane_fit": {
+    "baseline_m": 60.0,
+    "dem_source": "polar_10m_lola_pgda_90",
+    "k": 3,
+    "window_dim_m": [
+      70.0,
+      70.0
+    ],
+    "window_px": [
+      7,
+      7
+    ]
+  },
+  "producer": "lumen_pipeline.terrain.pad",
+  "site_id": "shackleton_rim_ridge",
+  "slope_deg": 5.83101069550598,
+  "under_resolved": null,
+  "uphill_az_deg": 351.86628900164266,
+  "version": "0.1.0",
+  "z0_m": 1726.6217896486223
+}
