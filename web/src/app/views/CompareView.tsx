@@ -6,9 +6,6 @@
 //   Right  : ScanPanel (Nived, scrolls) · WindowsTable for the selected row (Ebin, scrolls)
 // Teammate imports — all present:
 //   Nived: ScanPanel, DeltaTable, useCompareResults · Ebin: AlignedBarcodes, SeasonStrip, FeasibilityCalendar, WindowsTable
-// Gaps reported (not worked around in their files): WindowsTable has no per-row input (shows the Cockpit result);
-// ScanPanel does not report its stage (bridged below from its data-stage attribute → state/scanStatus).
-import { useEffect } from 'react';
 import { DeltaTable } from '../../features/compareResults/DeltaTable';
 import { ScanPanel } from '../../features/compareResults/ScanPanel';
 import { AlignedBarcodes } from '../../features/compareVisuals/AlignedBarcodes';
@@ -21,32 +18,10 @@ import { ScenarioRows } from '../../features/scenarios/ScenarioRows';
 import { fill } from '../../engine/format';
 import { useCompareResults } from '../../engine/hooks';
 import { useCopyFn } from '../../state/copy';
-import { reportScanStage, type ScanStage } from '../../state/scanStatus';
 import { useScenario, type CompareCentreTab } from '../../state/scenarioStore';
 import { Segmented } from '../../ui/Segmented';
 import { BentoColumn, BentoGrid } from '../layout/BentoGrid';
 import { Slot } from '../layout/Slot';
-
-/** Bridge: ScanPanel's `data-stage` (1 | 2) → scanStatus, at stage-boundary rate. Removed once Nived reports it. */
-function useScanStageBridge() {
-  useEffect(() => {
-    const root = document.querySelector<HTMLElement>('[data-slot="scan"]');
-    if (!root) return;
-    const read = () => {
-      const el = root.querySelector<HTMLElement>('[data-stage], .scan');
-      const st = Number(el?.dataset.stage ?? 0);
-      const stage = (st === 1 || st === 2 ? st : 0) as ScanStage;
-      reportScanStage(stage, el?.getAttribute('aria-busy') === 'false');
-    };
-    read();
-    const mo = new MutationObserver(read);
-    mo.observe(root, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-stage', 'aria-busy'] });
-    return () => {
-      mo.disconnect();
-      reportScanStage(0);
-    };
-  }, []);
-}
 
 export function CompareView() {
   const tab = useScenario((s) => s.compareTab);
@@ -54,10 +29,11 @@ export function CompareView() {
   const selected = useScenario((s) => s.compareSelected);
   const compare = useCompareResults();
   const t = useCopyFn();
-  useScanStageBridge();
 
   const selResult = compare.rows.find((r) => r.scenarioId === selected)?.result ?? null;
   const night = selResult?.metrics?.longestNightH ?? null;
+  /** Per-row Windows Table input: only a settled result (loading/idle rows fall back to the Cockpit's, labelled). */
+  const rowResult = selResult?.status === 'ready' ? selResult : null;
 
   return (
     <BentoGrid view="compare">
@@ -106,15 +82,17 @@ export function CompareView() {
         </Slot>
         <Slot id="compareWindows">
           <div className="cmp-win__cap" data-testid="compare-windows-caption">
-            {/* WindowsTable reads the Cockpit result (no per-row input yet) — say so rather than mislabel it. */}
-            <span className="cmp-win__title">{t('compare.windows.cockpit')}</span>
-            {selected && (
+            {/* The selected row's own result when it is ready; otherwise the Cockpit result, labelled as such. */}
+            <span className="cmp-win__title">
+              {rowResult ? fill(t('compare.windows.row'), { id: selected! }) : t('compare.windows.cockpit')}
+            </span>
+            {selected && !rowResult && (
               <span className="cmp-win__note truncate" title={t('compare.windows.pending.long')}>
                 {fill(t('compare.windows.pending'), { id: selected })}
               </span>
             )}
           </div>
-          <WindowsTable />
+          <WindowsTable result={rowResult ?? undefined} />
         </Slot>
       </BentoColumn>
     </BentoGrid>

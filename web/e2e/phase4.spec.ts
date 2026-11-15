@@ -23,6 +23,7 @@ async function open(page: Page, partial: Record<string, unknown> = {}, extra = '
 const row = (page: Page, id: string) => page.locator(`.sc-row[data-row="${id}"]:not([data-leaving])`);
 const rowIds = (page: Page) => page.locator('.sc-row:not([data-leaving])').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.row));
 /** Decode the share token in the address bar (urlSync writes it 250 ms after a change). */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function urlScenario(page: Page): Promise<Record<string, any>> {
   await page.waitForTimeout(400);
   const tok = new URL(page.url()).searchParams.get('s')!;

@@ -1,6 +1,6 @@
 # frontend_state_api.md
 
-_Owner: Abhinav_ · Status: **implemented (Phase 1; Phase 4 additions marked P4)**. Any change goes through `#lumen-changes` before the code changes.
+_Owner: Abhinav_ · **Note: the scenario store described here backs the legacy shell, which is no longer mounted; the live pages use `LumenState` (`features/orbit/lumenState.ts`).** Status: **implemented (Phase 1; Phase 4 additions marked P4)**. Any change goes through `#lumen-changes` before the code changes.
 Source of truth (if this file and the code disagree, the code wins and this file gets fixed):
 `web/src/state/scenarioStore.ts`, `buses.ts`, `frameBus.ts`, `crosshairStore.ts`, `urlSync.ts`, `copy.ts`.
 
@@ -186,20 +186,13 @@ syntax are in `frontend_content.md`.
 
 ## 9. Open points
 
-**Phase 4 (raised in `#lumen-changes`):**
-- **Nived — per-row slip in the engine.** `compareStore.run()` passes `landingUtc: r.landingUtc`; it should pass
-  `rowLandingUtc(r, 0)` (i.e. `r.landingUtc + (r.slipDays ?? 0) × 1 d`) — `makeRequest` already adds the global slip.
-  Until then a "selected row" slip is stored, shown in the row and shared in the URL, but not yet evaluated.
-- **Nived — `mockCompare` ignores the rows.** It always returns sites[0..2] as A–C with baseline A, so in mock mode a
-  4th row has no result, a baseline swap does not move the Delta Table's ★, and per-row changes do not show.
-- **Nived — scan stage.** Please call `reportScanStage(stage, done)` (`state/scanStatus.ts`) from ScanPanel's
-  `onUpdate`; CompareView bridges it from the panel's `data-stage` attribute until then.
-- **Nived — requirements + battery in the result.** Expose `evaluateVerdict(...).requirements` on `ScenarioResult`
-  (the popover re-runs the same pure rule today) and decide whether the battery check joins the verdict.
-- **Ebin — per-row Windows Table.** `WindowsTable` reads `useResult()`; the Compare right column needs
-  `WindowsTable({ result })` (or a row id) for the selected row. The caption says "Cockpit scenario" until then.
-- **Ebin — live slip in Compare visuals.** `AlignedBarcodes` subscribes to `crosshairBus` only; it should also window
-  its rows from `slipBus` (`rowId` null = every row, else only that row) during a drag (Fast Lane rule 5).
+**Phase 4: all raised items are resolved.**
+- Per-row slip is applied by `compareStore` (`rowLandingUtc(r, 0)` as landing, `rowLandingUtc(r, global)` as scrub). `mockCompare` follows the rows and the baseline.
+- `ScanPanel` reports its stage through `reportScanStage` (`state/scanStatus.ts`); the verdict popover reads it for "provisional" (D-15).
+- `ScenarioResult.verdictRequirements` carries the engine's per-requirement statuses (absent on mock results; the popover recomputes then). The battery check stays UI-side and advisory: a pure function of the profile and `longestNightH`.
+- `WindowsTable` takes `result`; the Compare view passes the selected row's result once it is `ready` (otherwise the Cockpit's, labelled). `AlignedBarcodes` follows `slipBus` during a drag.
+- `LumenState` (the four live pages) has `slip` / `setSlip` (0…27) shared by the Slip explorer.
+
 
 1. **`useResult()` input:** Nived's engine should read `site`, `landingUtc + slipDays × 1 day` (effective landing), `durationDays`, `heightM`,
    `panelPreset`, `yawDeg`, `tilt` and `definitions` from this store. `scrubUtc` drives `answer`. Confirm that

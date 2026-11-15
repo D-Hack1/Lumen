@@ -230,6 +230,17 @@ describe('requirement rows at the conservative bound', () => {
     ]);
     expect(rows[0]).toMatchObject({ op: '≥', limit: 50, nominal: 60 });
   });
+  it("uses the engine's own statuses when the result carries them (real mode)", () => {
+    const eng = [
+      { id: 'sunlit', status: 'pass' },
+      { id: 'link', status: 'fail' },
+      { id: 'night', status: 'unknown' },
+      { id: 'slope', status: 'marginal' },
+    ] as const;
+    const rows = requirementRows(metrics, DEFAULT_SCENARIO.profile, DEFAULT_SCENARIO.weights, 336, 'bounded', eng);
+    expect(rows.map((r) => r.status)).toEqual(['pass', 'fail', 'unknown', 'marginal']);
+    expect(rows[1].conservative).toBe(252); // display values are still computed here
+  });
   it('smooth-Moon (optimistic) bounds never confirm a pass; no metrics → all unknown', () => {
     const rows = requirementRows(metrics, DEFAULT_SCENARIO.profile, DEFAULT_SCENARIO.weights, 336, 'optimistic');
     expect(rows.find((r) => r.id === 'link')!.status).toBe('unknown');

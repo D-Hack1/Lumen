@@ -155,9 +155,10 @@ export const planner: CopyTable = {
   'slip.reset': 'reset',
   'slip.chip': 'slipped {d} d',
   'slip.none': 'no slip',
+  'compare.windows.row': 'Windows — row {id}',
   'compare.windows.cockpit': 'Windows — Cockpit scenario',
-  'compare.windows.pending': 'row {id} view pending',
-  'compare.windows.pending.long': 'The Windows Table shows the Cockpit result until it accepts a per-row result. Load the row into the Cockpit (↗) to see its windows.',
+  'compare.windows.pending': 'row {id} still computing',
+  'compare.windows.pending.long': "This row has no settled result yet, so the table shows the Cockpit scenario's windows. It switches to the row as soon as its result is ready.",
 
   'slot.search': 'Site search & filters',
   'slot.map': 'South Pole Basemap',
@@ -502,8 +503,9 @@ export const educator: CopyTable = {
   'slip.target.selected': 'Picked plan',
   'slip.chip': 'moved {d} d',
   'slip.none': 'on time',
+  'compare.windows.row': 'Time windows — plan {id}',
   'compare.windows.cockpit': 'Time windows — Cockpit plan',
-  'compare.windows.pending': 'plan {id} coming soon',
+  'compare.windows.pending': 'plan {id} still computing',
 
   // ---- Answer Strip: all 9 D-14 states (index of keys per state: content/answerStates.ts) ----
   'answer.sunNow': 'The Sun right now',
