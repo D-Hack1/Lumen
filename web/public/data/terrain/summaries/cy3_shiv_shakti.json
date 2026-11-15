@@ -4,14 +4,14 @@
   "files_present": {
     "dispersion_bin": null,
     "dispersion_json": null,
-    "mask_bin": null,
-    "mask_json": null,
+    "mask_bin": "terrain/masks/cy3_shiv_shakti.bin",
+    "mask_json": "terrain/masks/cy3_shiv_shakti.json",
     "pad_json": "terrain/pad/cy3_shiv_shakti.json",
     "sigma_bin": null,
     "sigma_json": null
   },
-  "git_commit": "3893813395c2e5f764d79c9f93fddbc4c8d959ab",
-  "mask_available": false,
+  "git_commit": "fc3a7d3f5ae1d57a01cedd778cba64eb709d152d",
+  "mask_available": true,
   "near_field_res_m": 60.0,
   "pad_available": true,
   "pad_headline": {
@@ -21,12 +21,10 @@
     "uphill_az_deg": 190.64125965077343
   },
   "psr": null,
-  "run_timestamp_utc": "2026-11-14T23:47:24.597646Z",
+  "run_timestamp_utc": "2026-11-15T05:40:11.299032Z",
   "sigma_available": false,
   "site_id": "cy3_shiv_shakti",
-  "tier": "pending",
-  "unavailable": {
-    "mid": "Read failed. See previous exception for details."
-  },
+  "tier": "Tier A",
+  "unavailable": {},
   "version": "0.1.0"
 }
