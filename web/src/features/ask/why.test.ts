@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { ScenarioResult, Series } from '../../engine/types';
 import { clearanceRateDegPerH, detectWhy, explain, explainGeneric, hasTemplate, reasonNoPm, sigmaDeg } from './why';
@@ -179,5 +181,32 @@ describe('any MetricSet key is accepted (Nived’s onWhy hands us keyof MetricSe
     expect(t).toContain('dteMarginDeg: 3.00');
     expect(t).toContain('no written explanation for this number yet');
     expect(t).not.toMatch(/±\s*\d/);
+  });
+});
+
+describe('the “what it is” line is the RIGHT definition (regression: Earth elevation showed Libration’s)', () => {
+  const entries: KnowledgeEntry[] = JSON.parse(readFileSync(resolve(__dirname, '../../../public/content/knowledge.json'), 'utf8')).entries;
+  it('Earth elevation uses its own method text, never the Libration definition', () => {
+    const w = explain('earthElevationDeg', result(), entries);
+    const first = w.lines[0].text;
+    expect(first).toContain('Earth elevation is worked out');
+    expect(first).not.toContain('oscillation');
+  });
+  it('every templated metric either has a matching entry or says nothing — never an unrelated one', () => {
+    for (const k of ['sunElevationDeg', 'sunClearanceDeg', 'earthElevationDeg', 'sunlitPct', 'linkPct', 'longestNightH', 'opsHours', 'psrDistanceKm'] as const) {
+      const w = explain(k, result(), entries);
+      expect(w.lines[0].kind, k).toBe('what');
+      expect(w.sources.join(' '), k).not.toContain('Libration');
+    }
+  });
+});
+
+describe('mock data is flagged', () => {
+  it('says MOCK DATA in the context line when the result is mock', () => {
+    const r = result();
+    r.meta!.mock = true;
+    expect(explain('sunlitPct', r).context).toContain('MOCK DATA');
+    r.meta!.mock = false;
+    expect(explain('sunlitPct', r).context).not.toContain('MOCK');
   });
 });

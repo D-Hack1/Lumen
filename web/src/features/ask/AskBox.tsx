@@ -145,10 +145,10 @@ export function AskBox({ ports, sites, canSlip, slipRange, result, resultNote, l
   const items = useMemo<Item[]>(() => {
     const out: Item[] = [];
     const knowledge = index?.docs.map((d) => d.entry) ?? [];
-    const whyFor = (t: WhyRequest): Item => ({
+    const whyFor = (t: WhyRequest, alreadyShown: ReadonlySet<string> = new Set()): Item => ({
       id: `why:${t}`,
       kind: 'why',
-      why: !result ? { target: 'events', title: 'Explanation', context: null, lines: [{ kind: 'value', text: 'There is no result to explain yet.' }], sources: [] } : hasTemplate(t) ? explain(t, result, knowledge) : explainGeneric(t, result),
+      why: !result ? { target: 'events', title: 'Explanation', context: null, lines: [{ kind: 'value', text: 'There is no result to explain yet.' }], sources: [] } : hasTemplate(t) ? explain(t, result, knowledge.filter((k) => !alreadyShown.has(k.id))) : explainGeneric(t, result),
     });
 
     if (forced) out.push(whyFor(forced));
@@ -170,11 +170,15 @@ export function AskBox({ ports, sites, canSlip, slipRange, result, resultNote, l
       const strong = hits.filter((h) => h.confidence === 'strong').slice(0, 3);
       const weak = strong.length === 0 ? hits.slice(0, 2) : [];
       // "how is X calculated?" → the written method first, then the live numbers. "why is this ± so big?" → live numbers first.
-      const methodFirst = intentOf(q).method;
-      const whyItem = target ? whyFor(target) : null;
-      if (whyItem && !methodFirst) out.push(whyItem);
+      // The live numbers come first only when the question is about THIS number ("why is this ± so big?", "my sunlit %");
+      // a general question ("how is X calculated?", "why did you choose a ±?") gets the written answer first.
+      const aboutThisNumber = /\b(this|these|my|current|currently|now|here)\b/.test(q.toLowerCase());
+      const liveFirst = aboutThisNumber && !intentOf(q).method;
+      // If the written answer for this metric is already on screen as a card, the live card doesn't repeat it.
+      const whyItem = target ? whyFor(target, new Set(strong.map((h) => h.entry.id))) : null;
+      if (whyItem && liveFirst) out.push(whyItem);
       out.push(...strong.map((h) => toItem(h, false)));
-      if (whyItem && methodFirst) out.push(whyItem);
+      if (whyItem && !liveFirst) out.push(whyItem);
       if (weak.length > 0 && !whyItem) {
         out.push({ id: 'weak', kind: 'note', text: 'Closest I have — I’m not sure these answer your question:' });
         out.push(...weak.map((h) => toItem(h, true)));

@@ -37,6 +37,8 @@ export interface Intent {
   howto: boolean;
   method: boolean;
   decision: boolean;
+  /** "what is X" — wants a definition, not a decision record. */
+  define: boolean;
 }
 
 /** What kind of answer the question is asking for, from its wording. */
@@ -45,6 +47,7 @@ export function intentOf(query: string): Intent {
   return {
     howto: /\b(how (do|can|could|would|should|to) (i|we|you|one)|how to|where (do|can|is|are)|can i|button|navigate|click|open|switch|select|choose|change|find|use|using|help)\b/.test(q),
     method: /(calculat|comput|formula|work(s|ed)? out|derive|method|algorithm|how (is|are|was|does|do) .*(determin|measur|decid|work|come))/.test(q),
+    define: /^(what|who)( is| are| does| do)?\b|\bwhat('s| is| are) (a|an|the)?\b/.test(q) && !/\bwhat (do|does|can) (i|we|you)\b/.test(q),
     decision: /\b(why (did|do|does|is|are|was|were|would)|decid|chosen|choice|reason|rationale|trade.?off|affect|impact|influence|matter|difference)\b/.test(q),
   };
 }
@@ -54,6 +57,7 @@ const STOP = new Set([
   'what', 'why', 'how', 'does', 'do', 'did', 'so', 'me', 'my', 'about', 'mean', 'means', 'explain', 'tell', 'with', 'than', 'big', 'large', 'small',
   'much', 'can', 'could', 'would', 'should', 'i', 'you', 'we', 'your', 'our', 'us', 'there', 'any', 'some', 'get', 'got', 'want', 'need', 'please',
   'calculated', 'calculate', 'computed', 'compute', 'work', 'works', 'worked', 'thing', 'things', 'all', 'just', 'really', 'actually', 'show',
+  'who', 'whom', 'whose', 'which', 'when', 'where',
 ]);
 
 /** What people type → the words the knowledge file actually uses. Short on purpose, so it stays reviewable. */
@@ -117,9 +121,8 @@ const SYNONYMS: Record<string, string[]> = {
   difference: ['compare'],
   height: ['mast', 'height'],
   array: ['mast', 'array'],
-  time: ['time', 'scrub'],
   clock: ['time', 'scrub'],
-  date: ['time', 'slip'],
+  date: ['time'],
   menu: ['navigate', 'pages'],
   button: ['howto'],
   shortcut: ['keyboard', 'ask'],
@@ -192,6 +195,7 @@ const TAG_BOOST = 2;
 const TITLE_MATCH_BONUS = 1.5;
 const TAG_MATCH_BONUS = 0.8;
 const INTENT_BOOST = 1.4;
+const DEFINE_BOOST = 1.25;
 const FUZZY_WEIGHT = 0.6;
 /** Below this nothing is shown. Between this and STRONG_SCORE it is shown only as "closest I have". */
 export const MIN_SCORE = 1.5;
@@ -215,6 +219,7 @@ const KIND_FOR: Record<keyof Intent, readonly KnowledgeKind[]> = {
   howto: ['howto'],
   method: ['method', 'term'],
   decision: ['decision', 'concept'],
+  define: ['term', 'concept'],
 };
 
 export function searchKnowledge(index: KnowledgeIndex, query: string, limit = 3): KnowledgeHit[] {
@@ -236,8 +241,8 @@ export function searchKnowledge(index: KnowledgeIndex, query: string, limit = 3)
       score += s * weight;
     }
     if (score <= 0) continue;
-    for (const key of ['howto', 'method', 'decision'] as const) {
-      if (intent[key] && KIND_FOR[key].includes(d.entry.kind)) score *= INTENT_BOOST;
+    for (const key of ['howto', 'method', 'decision', 'define'] as const) {
+      if (intent[key] && KIND_FOR[key].includes(d.entry.kind)) score *= key === 'define' ? DEFINE_BOOST : INTENT_BOOST;
     }
     if (score >= MIN_SCORE) hits.push({ entry: d.entry, score, confidence: score >= STRONG_SCORE ? 'strong' : 'weak' });
   }

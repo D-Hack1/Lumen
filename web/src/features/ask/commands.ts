@@ -159,7 +159,12 @@ export function parseCommand(input: string, ctx: AskContext): ParseResult {
   const text = normalise(input);
   if (!text) return { kind: 'none' };
 
-  if (/^(help|\?|what can you do|commands|how do i)\b/.test(text)) return { kind: 'command', command: { kind: 'help' }, label: 'Show what I can do' };
+  // Only a bare request for help. ("how do i …" is a QUESTION about the interface — it goes to the knowledge search.)
+  if (/^(help|\?|what can you do|what can i (say|ask|type)|commands)\s*$/.test(text)) return { kind: 'command', command: { kind: 'help' }, label: 'Show what I can do' };
+
+  // A question is never a command: "how do I compare sites?", "what is the slip explorer?", "how many days can I slip?"
+  // mention page/site words but want an EXPLANATION. Commands are imperatives ("go to compare", "slip 9 days", "show IM-2").
+  if (/^(how|what|why|where|who|which|when|is|are|can|could|does|do|did|should|would|will)\b/.test(text)) return { kind: 'none' };
 
   const slipMin = ctx.slipMin ?? -SLIP_LIMIT_DAYS;
   const slipMax = ctx.slipMax ?? SLIP_LIMIT_DAYS;

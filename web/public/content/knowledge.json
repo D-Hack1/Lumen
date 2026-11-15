@@ -856,8 +856,6 @@
     "longest night",
     "dark",
     "darkness",
-    "eclipse",
-    "shadow",
     "longest dark stretch",
     "battery",
     "survive the night"
@@ -1197,19 +1195,21 @@
    ]
   },
   {
-   "id": "help:how-are-the-results-calculated-overall",
+   "id": "help:how-does-lumen-work-and-how-are-the-results-calculated-overall",
    "kind": "method",
-   "title": "How are the results calculated, overall?",
+   "title": "How does LUMEN work, and how are the results calculated overall?",
    "summary": "In short: the heavy work is done once, ahead of time, and the app only does light vector maths. Ahead of time, LUMEN computes the Sun's and Earth's positions from NASA ephemeris data (SPICE kernels) and turns terrain elevation maps into horizon masks — the height of the skyline in every compass direction — for each site. In the browser, for any site and time, it interpolates the Sun and Earth positions, rotates them into the site's frame, compares them with the horizon mask, works out how much of each disk is visible, finds the exact moments things change, and then adds up windows, percentages and a ± from the horizon's uncertainty. A verdict is the last step. Every browser calculation has a Python twin, and the two are checked against each other with golden test cases.",
    "body": "In short: the heavy work is done once, ahead of time, and the app only does light vector maths. Ahead of time, LUMEN computes the Sun's and Earth's positions from NASA ephemeris data (SPICE kernels) and turns terrain elevation maps into horizon masks — the height of the skyline in every compass direction — for each site. In the browser, for any site and time, it interpolates the Sun and Earth positions, rotates them into the site's frame, compares them with the horizon mask, works out how much of each disk is visible, finds the exact moments things change, and then adds up windows, percentages and a ± from the horizon's uncertainty. A verdict is the last step. Every browser calculation has a Python twin, and the two are checked against each other with golden test cases.",
    "source": "PLAN_FINAL §3, §4, §5",
-   "anchor": "how-are-the-results-calculated-overall",
+   "anchor": "how-does-lumen-work-and-how-are-the-results-calculated-overall",
    "metrics": [],
    "tags": [
+    "lumen",
     "overview",
     "pipeline",
-    "how does it work",
-    "how it works",
+    "how does lumen work",
+    "how lumen works",
+    "explain lumen",
     "process",
     "steps",
     "summary",
@@ -1347,13 +1347,13 @@
    ]
   },
   {
-   "id": "help:what-is-the-deep-space-network-dsn",
+   "id": "help:what-is-the-deep-space-network-dsn-and-what-is-a-dsn-station",
    "kind": "concept",
-   "title": "What is the Deep Space Network (DSN)?",
+   "title": "What is the Deep Space Network (DSN), and what is a DSN station?",
    "summary": "The Deep Space Network is the set of large ground antennas that talk to spacecraft. LUMEN uses its three complexes — Goldstone, Canberra and Madrid — placed around the world so that one is usually facing the Moon. With DSN awareness on, the link only counts as up when Earth is visible from the site AND at least one of those complexes can see the Moon above its own horizon (default 10°).",
    "body": "The Deep Space Network is the set of large ground antennas that talk to spacecraft. LUMEN uses its three complexes — Goldstone, Canberra and Madrid — placed around the world so that one is usually facing the Moon. With DSN awareness on, the link only counts as up when Earth is visible from the site AND at least one of those complexes can see the Moon above its own horizon (default 10°).",
    "source": "PLAN_FINAL §4 (P3b), §5.5",
-   "anchor": "what-is-the-deep-space-network-dsn",
+   "anchor": "what-is-the-deep-space-network-dsn-and-what-is-a-dsn-station",
    "metrics": [],
    "tags": [
     "dsn",

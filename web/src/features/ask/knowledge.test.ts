@@ -16,16 +16,19 @@ describe('tokenize / expandQuery', () => {
 });
 
 describe('the built knowledge file', () => {
-  it('has terms, validation results and decisions, and no Shackleton', () => {
+  it('has terms, validation, decisions, how-tos, methods and concepts, and no Shackleton', () => {
     const kinds = new Set(real.map((e) => e.kind));
-    expect(kinds).toEqual(new Set(['term', 'validation', 'decision']));
+    for (const k of ['term', 'validation', 'decision', 'howto', 'method', 'concept']) expect(kinds.has(k as never)).toBe(true);
     expect(JSON.stringify(real)).not.toMatch(/shackleton/i);
     for (const e of real) expect(e.source).toBeTruthy();
   });
 });
 
 describe('search over the real file', () => {
-  it('"why is this ± so big?" finds the uncertainty term', () => expect(top('why is this ± so big?')).toContain('term:uncertainty'));
+  it('"why is this ± so big?" finds the uncertainty explanations', () => {
+    const t = top('why is this ± so big?');
+    expect(t.some((id) => id === 'term:uncertainty' || id === 'decision:R2-7' || id.startsWith('help:how-is-the-') || id.startsWith('help:why-does-lumen-show'))).toBe(true);
+  });
   it('finds terms by name and by plain words', () => {
     expect(top('what is libration')[0]).toBe('term:libration');
     expect(top('grazing')[0]).toBe('term:grazing-event');

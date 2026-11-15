@@ -160,7 +160,7 @@ Range is the distance from the site to Earth, and light time is that range divid
 ## How is the longest night calculated?
 Kind: method
 Source: glossary (Longest night) and PLAN_FINAL §5.7
-Tags: longest night, dark, darkness, eclipse, shadow, longest dark stretch, battery, survive the night
+Tags: longest night, dark, darkness, longest dark stretch, battery, survive the night
 It is the longest continuous stretch in the window when the Sun is not available under the chosen definition. It matters because a lander's battery must carry it through; LUMEN can compare it with battery endurance (battery energy × usable depth of discharge ÷ load).
 
 ## How is the verdict (GO / MARGINAL / NO-GO) decided?
@@ -259,10 +259,10 @@ Source: live pages (Slip explorer) and Ask LUMEN
 Tags: on time, reset, undo, zero slip, no delay, back to start, clear slip, baseline, original date
 On the Slip explorer, choose the first bar (zero days) — the "on time" baseline is marked with a dashed line — or press / and type "slip 0" or "reset slip".
 
-## How are the results calculated, overall?
+## How does LUMEN work, and how are the results calculated overall?
 Kind: method
 Source: PLAN_FINAL §3, §4, §5
-Tags: overview, pipeline, how does it work, how it works, process, steps, summary, behind the scenes, engine, whole thing, results, how are results calculated
+Tags: lumen, overview, pipeline, how does lumen work, how lumen works, explain lumen, process, steps, summary, behind the scenes, engine, whole thing, results, how are results calculated
 In short: the heavy work is done once, ahead of time, and the app only does light vector maths. Ahead of time, LUMEN computes the Sun's and Earth's positions from NASA ephemeris data (SPICE kernels) and turns terrain elevation maps into horizon masks — the height of the skyline in every compass direction — for each site. In the browser, for any site and time, it interpolates the Sun and Earth positions, rotates them into the site's frame, compares them with the horizon mask, works out how much of each disk is visible, finds the exact moments things change, and then adds up windows, percentages and a ± from the horizon's uncertainty. A verdict is the last step. Every browser calculation has a Python twin, and the two are checked against each other with golden test cases.
 
 ## Where does LUMEN's data come from?
@@ -301,7 +301,7 @@ Source: glossary (DTE margin) and PLAN_FINAL §5.5
 Tags: dte, direct to earth, direct-to-earth, dte margin, earth contact, line of sight to earth, what is dte
 DTE means direct-to-Earth: a lander talking to Earth straight from the surface, with no relay. DTE margin is how far Earth's disk sits above the effective horizon in Earth's direction. LUMEN needs it to be at least a threshold (default 1°) before it treats Earth as usable for contact.
 
-## What is the Deep Space Network (DSN)?
+## What is the Deep Space Network (DSN), and what is a DSN station?
 Kind: concept
 Source: PLAN_FINAL §4 (P3b), §5.5
 Tags: dsn, deep space network, goldstone, canberra, madrid, ground station, antenna, station, dss
