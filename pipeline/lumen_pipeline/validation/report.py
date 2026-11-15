@@ -297,12 +297,14 @@ def _g7_gate(path: Path) -> dict[str, Any]:
             source_provenance_result=report["source_provenance_result"],
             value={
                 "computed_sun_elevation_deg": report["computed"]["sun_elevation_deg"],
-                "reference_sun_elevation_deg": report["reference"]["sun_elevation_deg"],
-                "absolute_error_deg": report["absolute_error_deg"],
+                "unverified_planned_comparison": {
+                    "reference_sun_elevation_deg": report["reference"]["sun_elevation_deg"],
+                    "recorded_tolerance_deg": report["reference"]["recorded_tolerance_deg"],
+                    "absolute_error_deg": report["absolute_error_deg"],
+                },
                 "timeline_status": report["qualitative_timeline_check"]["status"],
                 "im2_touchdown_conditions": report["im2_touchdown_conditions"],
             },
-            tolerances={"sun_elevation_deg": report["reference"]["tolerance_deg"]},
             timestamp_utc=report["timestamp_utc"],
             artifact_paths=[_relative(path)],
             provenance=report["reference"]["source_metadata"],

@@ -1,4 +1,4 @@
-"""Reproducible G7 Chandrayaan-3 touchdown Sun-elevation check."""
+"""Compute G7 geometry while preserving unresolved mission-evidence limits."""
 
 from __future__ import annotations
 
@@ -38,7 +38,8 @@ REFERENCE_SOURCE = {
     "research_note": (
         "No ISRO mission document or primary mission publication located during the R3 "
         "source review states a Chandrayaan-3 landing Sun elevation of 8.75 degrees, "
-        "an uncertainty of +/-0.25 degrees, or its limb convention."
+        "an uncertainty of +/-0.25 degrees, or its limb convention. The value must not "
+        "be used as a quantitative pass criterion."
     ),
     "sources_examined": [
         {
@@ -66,6 +67,20 @@ IM2_TOUCHDOWN_SOURCE = {
         "but this report has no independent primary source for a touchdown Sun or Earth condition."
     ),
 }
+CY3_OBSERVED_LANDING_FIX = {
+    "latitude_deg": -69.3741,
+    "longitude_deg_east": 32.32,
+    "source": "NASA/LROC image annotation",
+    "source_url": "https://lroc.im-ldi.com/images/1314",
+    "status": "OBSERVED_APPROXIMATE",
+}
+CY3_PLANNED_TARGET = {
+    "latitude_deg": -69.367621,
+    "longitude_deg_east": 32.348126,
+    "source": "ISRO Chandrayaan-3 Details, Landing Site (Prime)",
+    "source_url": "https://www.isro.gov.in/Chandrayaan3_Details.html",
+    "status": "PLANNED_TARGET_NOT_LANDING_FIX",
+}
 
 
 def default_output_path() -> Path:
@@ -85,7 +100,7 @@ def build_g7_report(
     ephemeris_path: str | Path | None = None,
     sites_path: str | Path | None = None,
 ) -> dict[str, Any]:
-    """Evaluate the plan's documented G7 reference using the locked ephemeris."""
+    """Compute G7 geometry without treating unsupported claims as validation criteria."""
     ephem_path = Path(ephemeris_path) if ephemeris_path is not None else default_ephemeris_path()
     site_path = Path(sites_path) if sites_path is not None else default_sites_path()
     site_rows = yaml.safe_load(site_path.read_text(encoding="utf-8"))["sites"]
@@ -147,31 +162,30 @@ def build_g7_report(
         )
 
     absolute_error = abs(sun.elevation_deg - REFERENCE_ELEVATION_DEG)
-    numerical_pass = absolute_error <= TOLERANCE_DEG
     provenance_pass = ephem_hash_matches and kernel_hashes_match
-    numerical_failures = [] if numerical_pass else ["touchdown_elevation_outside_tolerance"]
     provenance_failures = []
     if not ephem_hash_matches:
         provenance_failures.append("ephemeris_sha256_mismatch")
     if not kernel_hashes_match:
         provenance_failures.append("kernel_sha256_mismatch")
     timeline_failures = [] if timeline_pass else ["sun_below_ops_event_not_found"]
-    calculation_status = "PASS" if numerical_pass and timeline_pass else "FAIL"
-    status = calculation_status if REFERENCE_SOURCE["status"] == "VERIFIED" else "SOURCE_UNVERIFIED"
     return {
         "id": "G7",
         "check": "CY-3 Sun elevation at touchdown",
-        "status": status,
-        "calculation_status": calculation_status,
+        "status": "BLOCKED",
+        "calculation_status": "COMPUTED",
         "timestamp_utc": touchdown_utc,
         "timestamp_precision": site["touchdown_precision"],
         "coordinates": {
             "latitude_deg": latitude,
             "longitude_deg_east": longitude,
-            "source": landing["source"],
-            "source_url": site["source_url"],
+            "source": "catalog/model assumption",
+            "source_url": None,
+            "status": "SOURCE_UNVERIFIED",
             "coordinate_frame": metadata["spice_frame"],
             "height_m": 0.0,
+            "observed_landing_fix": CY3_OBSERVED_LANDING_FIX,
+            "planned_target": CY3_PLANNED_TARGET,
         },
         "ephemeris": {
             "path": _report_path(ephem_path),
@@ -192,26 +206,29 @@ def build_g7_report(
         },
         "reference": {
             "sun_elevation_deg": REFERENCE_SOURCE["reported_sun_elevation_deg"],
-            "source": "PLAN_FINAL_R3_DELTA.md, D-13 G7 planned comparison value",
+            "source": "PLAN_FINAL_R3_DELTA.md D-13 planned comparison input",
             "primary_source_status": REFERENCE_SOURCE["status"],
-            "tolerance_deg": TOLERANCE_DEG,
+            "recorded_tolerance_deg": TOLERANCE_DEG,
             "source_metadata": REFERENCE_SOURCE,
         },
         "absolute_error_deg": absolute_error,
-        "numerical_result": "PASS" if numerical_pass else "FAIL",
-        "source_provenance_result": REFERENCE_SOURCE["status"],
+        "numerical_result": "NOT_EVALUATED",
+        "source_provenance_result": "BLOCKED",
         "provenance_result": "PASS" if provenance_pass else "FAIL",
         "failure_reasons": {
-            "numerical": numerical_failures,
+            "numerical": ["unverified_mission_reference_not_a_pass_criterion"],
             "provenance": provenance_failures,
-            "timeline": timeline_failures,
+            "timeline": [
+                "unverified_operations_threshold_not_a_pass_criterion",
+                *timeline_failures,
+            ],
         },
         "qualitative_timeline_check": {
-            "status": "PASS" if timeline_pass else "FAIL",
+            "status": "SOURCE_UNVERIFIED",
             "sun_below_6_deg_utc": below_ops_utc,
             "expected_window_start_utc": SHUTDOWN_WINDOW_START_UTC,
             "expected_window_end_exclusive_utc": SHUTDOWN_WINDOW_END_UTC,
-            "criterion": "The 6-degree crossing falls within the reported 2-4 September shutdown dates.",
+            "criterion": "Recorded 6-degree crossing under an unverified operations threshold; not a pass criterion.",
         },
         "im2_touchdown_conditions": {
             "status": IM2_TOUCHDOWN_SOURCE["status"],
@@ -220,7 +237,8 @@ def build_g7_report(
             "coordinates": {
                 "latitude_deg": im2_latitude,
                 "longitude_deg_east": im2_longitude,
-                "source": im2_landing["source"],
+                "source": "catalog/model assumption",
+                "status": "SOURCE_UNVERIFIED",
                 "coordinate_frame": metadata["spice_frame"],
                 "height_m": 0.0,
             },
@@ -245,7 +263,7 @@ def build_g7_report(
                 "longitude_deg_east": longitude,
                 "height_m": 0.0,
                 "status": "SOURCE_UNVERIFIED",
-                "basis": "PLAN_FINAL_R3_DELTA.md D-12 landing-coordinate input; ISRO page examined does not state this landing fix.",
+                "basis": "PLAN_FINAL_R3_DELTA.md D-12 landing-coordinate input; the NASA/LROC observed fix and ISRO planned target are recorded separately.",
             },
             "reference_frame": {
                 "value": metadata["spice_frame"],

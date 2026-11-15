@@ -320,10 +320,10 @@
       "artifact_paths": [
         "pipeline/reports/g7_cy3.json"
       ],
-      "calculation_status": "PASS",
+      "calculation_status": "COMPUTED",
       "description": "Chandrayaan-3 touchdown Sun elevation and timeline",
       "id": "G7",
-      "numerical_result": "PASS",
+      "numerical_result": "NOT_EVALUATED",
       "provenance": {
         "document_title": null,
         "page_or_section": null,
@@ -331,7 +331,7 @@
         "quoted_numerical_claim": null,
         "reported_sun_elevation_deg": 8.75,
         "reported_uncertainty_deg": 0.25,
-        "research_note": "No ISRO mission document or primary mission publication located during the R3 source review states a Chandrayaan-3 landing Sun elevation of 8.75 degrees, an uncertainty of +/-0.25 degrees, or its limb convention.",
+        "research_note": "No ISRO mission document or primary mission publication located during the R3 source review states a Chandrayaan-3 landing Sun elevation of 8.75 degrees, an uncertainty of +/-0.25 degrees, or its limb convention. The value must not be used as a quantitative pass criterion.",
         "source_url": null,
         "sources_examined": [
           {
@@ -353,17 +353,13 @@
         ],
         "status": "SOURCE_UNVERIFIED"
       },
-      "source_provenance_result": "SOURCE_UNVERIFIED",
-      "status": "SOURCE_UNVERIFIED",
+      "source_provenance_result": "BLOCKED",
+      "status": "BLOCKED",
       "test_commands": [
         "pytest tests/gowri/test_g7.py"
       ],
       "timestamp_utc": "2023-08-23T12:33:00Z",
-      "tolerances": {
-        "sun_elevation_deg": 0.25
-      },
       "value": {
-        "absolute_error_deg": 0.13785994964322157,
         "computed_sun_elevation_deg": 8.612140050356778,
         "im2_touchdown_conditions": {
           "computed": {
@@ -378,15 +374,20 @@
             "height_m": 0.0,
             "latitude_deg": -84.7906,
             "longitude_deg_east": 29.1957,
-            "source": "NASA and LROC landing-site release"
+            "source": "catalog/model assumption",
+            "status": "SOURCE_UNVERIFIED"
           },
           "limitation": "The catalog records the documented IM-2 touchdown timestamp and landing coordinates, but this report has no independent primary source for a touchdown Sun or Earth condition.",
           "status": "SOURCE_UNVERIFIED",
           "timestamp_precision": "second",
           "timestamp_utc": "2025-03-06T17:28:50Z"
         },
-        "reference_sun_elevation_deg": 8.75,
-        "timeline_status": "PASS"
+        "timeline_status": "SOURCE_UNVERIFIED",
+        "unverified_planned_comparison": {
+          "absolute_error_deg": 0.13785994964322157,
+          "recorded_tolerance_deg": 0.25,
+          "reference_sun_elevation_deg": 8.75
+        }
       }
     },
     {

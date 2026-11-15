@@ -43,13 +43,17 @@ Human-readable gate results, scope statement.
   evaluated in `MOON_ME_DE421`; this is a Sun-centre elevation above the local spherical
   horizontal, with no terrain horizon applied.
 - Calculated Sun-centre elevation: 8.612140050356778 degrees.
-- Planned numerical comparison: 8.75 +/- 0.25 degrees; absolute difference:
-  0.13785994964322157 degrees. Numerical result: PASS.
-- Source provenance result: SOURCE UNVERIFIED. The R3 plan records the 8.75-degree
-  comparison value but does not cite a primary source. Review of the ISRO mission and
-  mission-detail pages did not locate a statement of 8.75 degrees, +/-0.25 degrees, or a
-  Sun-centre/limb convention. G7 is not a complete independently sourced mission-value
-  validation until that document is identified.
+- Recorded, unverified comparison input: 8.75 +/- 0.25 degrees; the computed difference is
+  0.13785994964322157 degrees. This is not a numerical PASS criterion.
+- Result: BLOCKED. The R3 plan records the 8.75-degree comparison value but does not cite a
+  primary source. Review of the ISRO mission and mission-detail pages did not locate a
+  statement of 8.75 degrees, +/-0.25 degrees, or a Sun-centre/limb convention.
+- Coordinate provenance is deliberately distinct: the computation uses the catalog/model
+  assumption `69.373 S, 32.319 E`; NASA/LROC reports an observed approximate fix of
+  `69.3741 S, 32.32 E`; ISRO lists the planned target as `69.367621 S, 32.348126 E`.
+- The reported 6-degree threshold and the 2-4 September operations interpretation are also
+  source-unverified. The calculated crossing is retained as a model output, not a passed
+  timeline validation.
 
 ## G3b - DSN Moon elevation
 
@@ -64,9 +68,10 @@ Human-readable gate results, scope statement.
 
 - The G7 report deterministically evaluates Sun and Earth centre elevations at
   `2025-03-06T17:28:50Z`, `84.7906 S, 29.1957 E` using the catalog landing
-  coordinate. These are calculation outputs, not independently sourced mission
-  conditions; their status remains `SOURCE_UNVERIFIED` until primary evidence
-  establishes the timestamp, coordinate, and claimed touchdown conditions.
+  coordinate. These are calculation outputs, not independently sourced mission conditions.
+  NASA confirms an approximate touchdown around `17:30 UTC`, landing in a crater, the
+  lander on its side, and the inability to recharge solar cells; it does not establish the
+  catalog second, coordinates, or a numerical touchdown Sun/Earth elevation.
 
 ## Aggregate G0-G11 report
 
@@ -74,6 +79,6 @@ Human-readable gate results, scope statement.
 `lumen_pipeline.validation.report.write_validation_report()`. It only marks a gate PASS
 when its required measured evidence artifact is available. In particular, G5 remains
 BLOCKED without independent PGDA map-pixel references, G10 remains BLOCKED without terrain
-Monte Carlo sigma and Tier-B calibration artifacts, and G7 remains SOURCE UNVERIFIED despite
-its numerical PASS. The R3 near-zone helper now preserves the distant DEM horizon whenever
+Monte Carlo sigma and Tier-B calibration artifacts, and G7 remains BLOCKED because its
+mission comparisons are unsupported. The R3 near-zone helper now preserves the distant DEM horizon whenever
 the near-zone contribution is zero, including negative and unavailable values.
