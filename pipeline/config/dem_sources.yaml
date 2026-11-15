@@ -94,8 +94,20 @@ products:
       are uncertainty magnitudes; no sphere subtraction is applied to them.
       Effective LOLA support is not uniform across the nominal 10 m grid.
       Shackleton count-map inspection showed approximately 34 percent
-      directly supported pixels in the near-field crop. Formal vertical-datum
-      confirmation remains outstanding.
+      directly supported pixels in the near-field crop. Direct GDAL/rasterio
+      inspection of LDEM_83S_10MPP_ADJ.TIF confirms its CRS is IAU
+      authority code 30100 ("Moon (2015) - Sphere / Ocentric"), ellipsoid
+      radius exactly 1737400 m, flattening 0 -- the same sphere this
+      datum_reference names. Its embedded GMT processing history tag
+      ("gmt grdmath ldem_83s_final_adj_10mpp_surf.grd 1000.0 MUL") confirms
+      the stored z values are a *_surf.grd grid multiplied by 1000 (the
+      kilometre-to-metre conversion), consistent with height relative to
+      that same sphere. This is strong supporting evidence, not yet a
+      literal textual confirmation from the product's cited reference
+      (Barker et al. 2023, Planet. Sci. J. 4, 183, DOI 10.3847/PSJ/acf3e1):
+      that paper was not reachable from this environment to read directly.
+      Formal vertical-datum confirmation remains outstanding pending that
+      reading (or an equivalent authoritative source).
 
   polar_20m_lola_pgda_90:
     name: "Polar 20 m LOLA 80-90S mosaic"
@@ -109,7 +121,7 @@ products:
     error_url: "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDEM_80S_20MPP_ADJ_ERR.TIF"
     slope_url: "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDSM_80S_20MPP_ADJ.TIF"
     frame: "MOON_ME / DE421"
-    datum_reference: null
+    datum_reference: "1737400 m reference sphere"
     unit: "m"
     scale: 1.0
     offset: 0.0
@@ -133,8 +145,24 @@ products:
       conversion. ERR values are metre-scale uncertainty magnitudes.
       Shackleton radial geometric coverage was verified. Actual 1 km
       DemReader fallback-window read succeeded for both DEM and ERR with
-      100 percent valid pixels. Formal vertical-datum confirmation remains
-      outstanding.
+      100 percent valid pixels. Direct GDAL/rasterio inspection of
+      LDEM_80S_20MPP_ADJ.TIF confirms its CRS is IAU authority code 30100
+      ("Moon (2015) - Sphere / Ocentric"), ellipsoid radius exactly
+      1737400 m, flattening 0. Its embedded GMT processing history tag
+      ("gmt grdmath ldem_80s_final_adj_20mpp_surf.grd 1000.0 MUL") matches
+      the same conversion pattern confirmed for the 10 m and 240 m tiers
+      of this product family, supporting (not yet formally confirming via
+      Barker et al. 2023, Planet. Sci. J. 4, 183, DOI 10.3847/PSJ/acf3e1,
+      which was not reachable from this environment) that stored z values
+      are height relative to the same 1737400 m sphere. A full-window DEM
+      pixel-data read for this product (beyond the 1 km fallback window)
+      is currently blocked: GDAL's /vsicurl/ range-request reads for the
+      production crop window fail with a reproducible HTTP 403 after a
+      small number of successful 206 Partial Content reads (observed:
+      3 successful range reads then 403, repeatable). A lightweight
+      metadata-only open (no pixel data) succeeds in under 1 second.
+      Formal vertical-datum confirmation remains outstanding pending
+      reading the cited paper (or an equivalent authoritative source).
 
   polar_60m_lola_pgda_90:
     name: "Regional 60 m LOLA 60-90S mosaic"
@@ -148,7 +176,7 @@ products:
     error_url: "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDEM_60S_60MPP_ADJ_ERR.TIF"
     slope_url: "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDSM_60S_60MPP_ADJ.TIF"
     frame: "MOON_ME / DE421"
-    datum_reference: null
+    datum_reference: "1737400 m reference sphere"
     unit: "m"
     scale: 1.0
     offset: 0.0
@@ -170,8 +198,24 @@ products:
       CRS, resolution, source bounds and matching DEM/ERR grid metadata
       were inspected. CY-3 5-80 km radial geometric coverage was verified,
       and sampled DEM pixels were valid. The product describes mean value
-      per bin. Actual DemReader window validation remains pending.
-      Formal vertical-datum confirmation remains outstanding.
+      per bin. Actual DemReader near (168x167 px) and mid (2668x2667 px)
+      window reads succeeded against a verified-identical whole-file copy
+      (SHA-256 b03b5b3b3bf6a0eb8e871be7a7c04bcfa1f7d9c01c885db10655c9f26afc1f6a,
+      fetched via a single sequential download rather than many /vsicurl/
+      range requests, which are currently rate-limited for this product
+      family); the resulting CY-3 Tier-A mask passed structural
+      validation. Direct
+      GDAL/rasterio inspection of LDEM_60S_60MPP_ADJ.TIF confirms its CRS
+      ellipsoid radius is exactly 1737400 m (south-polar stereographic,
+      R=1737400). Its embedded GMT processing history tag ("gmt grdmath
+      ldem_60s_final_adj_60mpp_surf.grd 1000.0 MUL") matches the same
+      conversion pattern confirmed for the 10/20/240 m tiers of this
+      product family, supporting (not yet formally confirming via Barker
+      et al. 2023, Planet. Sci. J. 4, 183, DOI 10.3847/PSJ/acf3e1, which
+      was not reachable from this environment) that stored z values are
+      height relative to the same 1737400 m sphere. Formal vertical-datum
+      confirmation remains outstanding pending reading the cited paper
+      (or an equivalent authoritative source).
 
   regional_240m_lola_pgda_90:
     name: "Regional 240 m LOLA 60-90S mosaic"
@@ -185,7 +229,7 @@ products:
     error_url: "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDEM_60S_240MPP_ADJ_ERR.TIF"
     slope_url: "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDSM_60S_240MPP_ADJ.TIF"
     frame: "MOON_ME / DE421"
-    datum_reference: null
+    datum_reference: "1737400 m reference sphere"
     unit: "m"
     scale: 1.0
     offset: 0.0
@@ -225,8 +269,18 @@ products:
       extents.
       Shackleton radial geometric coverage was verified. Actual 1 km
       DemReader fallback-window read succeeded for both DEM and ERR with
-      100 percent valid pixels. Formal vertical-datum confirmation remains
-      outstanding.
+      100 percent valid pixels. Direct GDAL/rasterio inspection of
+      LDEM_60S_240MPP_ADJ.TIF confirms its CRS is IAU authority code 30100
+      ("Moon (2015) - Sphere / Ocentric"), ellipsoid radius exactly
+      1737400 m, flattening 0. Its embedded GMT processing history tag
+      ("gmt grdmath ldem_60s_final_adj_240mpp_surf.grd 1000.0 MUL") matches
+      the same conversion pattern confirmed for the 10 m and 20 m tiers of
+      this product family, supporting (not yet formally confirming via
+      Barker et al. 2023, Planet. Sci. J. 4, 183, DOI 10.3847/PSJ/acf3e1,
+      which was not reachable from this environment) that stored z values
+      are height relative to the same 1737400 m sphere. Formal
+      vertical-datum confirmation remains outstanding pending reading the
+      cited paper (or an equivalent authoritative source).
 
   chandrayaan3_lroc_vikramsite_dtm:
     name: "LROC pre-landing Vikram-site DTM"
