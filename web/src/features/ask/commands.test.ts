@@ -66,11 +66,17 @@ describe('slip', () => {
     ['slip back 2 days', -2],
     ['slip -4', -4],
     ['postpone by 12 days', 12],
+    ['move front 2 days', 2],
+    ['move 5 days later', 5],
+    ['shift forward 4 days', 4],
+    ['push back 3 days', 3],
+    ['land 2 days earlier', -2],
+    ['defer by a week 7 days', 7],
   ])('%s → %i', (text, days) => expect(cmd(text)).toMatchObject({ kind: 'slip', days }));
   it('clamps to ±30 and says so', () => {
     const r = parseCommand('slip 45 days', ctx);
     expect(r).toMatchObject({ kind: 'command', command: { kind: 'slip', days: 30, clamped: true } });
-    expect(r.kind === 'command' && r.label).toContain('limit');
+    expect(r.kind === 'command' && r.label).toContain('allowed: -30 to 30 d');
   });
   it('reset', () => expect(cmd('reset slip')).toMatchObject({ kind: 'slip', days: 0 }));
   it('is honest when the live pages cannot slip yet', () => {
@@ -78,8 +84,42 @@ describe('slip', () => {
   });
 });
 
+describe('slip range of the live pages (0…27)', () => {
+  const live: AskContext = { ...ctx, slipMin: 0, slipMax: 27 };
+  it('accepts values inside the range unchanged', () => expect(cmd('slip 9 days', live)).toMatchObject({ kind: 'slip', days: 9, clamped: false }));
+  it('clamps a too-large slip and says the allowed range', () => {
+    const r = parseCommand('slip 40 days', live);
+    expect(r).toMatchObject({ kind: 'command', command: { kind: 'slip', days: 27, clamped: true } });
+    expect(r.kind === 'command' && r.label).toContain('allowed: 0 to 27 d');
+  });
+  it('"slip back 2 days" cannot go below on time — clamped to 0 and said so, never silently', () => {
+    const r = parseCommand('slip back 2 days', live);
+    expect(r).toMatchObject({ kind: 'command', command: { kind: 'slip', days: 0, clamped: true } });
+    expect(r.kind === 'command' && r.label).toContain('allowed: 0 to 27 d');
+  });
+});
+
+describe('weak slip verbs need an explicit "N days"', () => {
+  it('does not treat ordinary phrases as a slip', () => {
+    expect(parseCommand('move 2', ctx).kind).toBe('none');
+    expect(parseCommand('go to compare', ctx).kind).toBe('command');
+    expect(cmd('go to compare')).toEqual({ kind: 'go', route: 'compare' });
+  });
+});
+
 describe('help and non-commands', () => {
-  it('help', () => expect(cmd('help')).toEqual({ kind: 'help' }));
+  it('help', () => {
+    expect(cmd('help')).toEqual({ kind: 'help' });
+    expect(cmd('what can you do')).toEqual({ kind: 'help' });
+  });
+  it('"how do i …" is a question about the interface, not the help command', () => {
+    expect(parseCommand('how do i compare two sites', ctx).kind).toBe('none');
+    expect(parseCommand('how do i drop a pin', ctx).kind).toBe('none');
+  });
+  it('questions that mention pages, sites or slip are never run as commands', () => {
+    for (const q of ['what is the slip explorer', 'how many days can i slip', 'where is compare', 'is malapert good', 'can i slip 9 days']) expect(parseCommand(q, ctx).kind, q).toBe('none');
+    expect(cmd('slip 9 days')).toMatchObject({ kind: 'slip', days: 9 });
+  });
   it('questions are not commands', () => {
     expect(parseCommand('why is this ± so big?', ctx).kind).toBe('none');
     expect(parseCommand('', ctx).kind).toBe('none');

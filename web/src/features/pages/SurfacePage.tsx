@@ -15,10 +15,11 @@ import {
   until,
   type Site,
 } from '../orbit/orbitModel';
-import { showsSampleValues } from '../orbit/realModel';
 import { useLumenContext } from './usePages';
 import { PANO_H, PANO_W, azToX, compassPoint, horizonPath, skyTrack, skyY, xToAz } from './pagesModel';
 import { go } from './nav';
+import { standHereView, useEngineResult, useSkyline } from './engineBindings';
+import { StandHereNumbers } from './StandHereNumbers';
 
 const QUICK = SITES.slice(0, 4);
 const SHORT: Record<string, string> = { im2: 'IM-2', shack: 'Ridge', malapert: 'Malapert', haworth: 'Haworth' };
@@ -31,13 +32,20 @@ export function SurfacePage() {
   const cross = useRef<SVGLineElement>(null);
   const readout = useRef<HTMLDivElement>(null);
 
-  const m = useMemo(() => model(t, site, mast), [t, site, mast]);
-  const path = useMemo(() => horizonPath(site, mast), [site, mast]);
-  const sunTrack = useMemo(() => skyTrack('sun', site, mast), [site, mast]);
-  const earthTrack = useMemo(() => skyTrack('earth', site, mast), [site, mast]);
-  const lit = m.frac > 0.5;
-  const sunChange = until(t, site, mast, (q) => (lit ? q.frac <= 0.5 : q.frac > 0.5));
-  const earthChange = until(t, site, mast, (q) => (m.earthUp ? !q.earthUp : q.earthUp));
+  // Real engine values when the data mode is real and the result has arrived; otherwise the design's sample model (the fallback).
+  const eng = useEngineResult(site, mast);
+  const sky = useSkyline(site, mast);
+  const v = useMemo(() => (eng ? standHereView(eng, sky, t) : null), [eng, sky, t]);
+  const sample = useMemo(() => model(t, site, mast), [t, site, mast]);
+  const m = v ? { ...sample, sunAz: v.sunAz, sunEl: v.sunEl, earthAz: v.earthAz, earthEl: v.earthEl, earthUp: v.earthUp } : sample;
+  const path = useMemo(() => v?.path ?? horizonPath(site, mast), [v, site, mast]);
+  const sunTrack = useMemo(() => v?.sunTrack ?? skyTrack('sun', site, mast), [v, site, mast]);
+  const earthTrack = useMemo(() => v?.earthTrack ?? skyTrack('earth', site, mast), [v, site, mast]);
+  const yOf = v?.y ?? skyY;
+  const hAt = (az: number) => (sky ? sky.elevationAt(az) : horizon(az, site, mast));
+  const lit = v ? v.lit : sample.frac > 0.5;
+  const sunChange = v ? v.sunChangeH : until(t, site, mast, (q) => (lit ? q.frac <= 0.5 : q.frac > 0.5));
+  const earthChange = v ? v.earthChangeH : until(t, site, mast, (q) => (m.earthUp ? !q.earthUp : q.earthUp));
 
   useEffect(() => {
     if (!playing) return;
@@ -47,9 +55,9 @@ export function SurfacePage() {
 
   const options: Site[] = QUICK.some((s) => s.id === site.id) ? [...QUICK] : [...QUICK, site];
   const sunX = azToX(m.sunAz);
-  const sunY = skyY(m.sunEl);
+  const sunY = yOf(m.sunEl);
   const earthX = azToX(m.earthAz);
-  const earthY = skyY(m.earthEl);
+  const earthY = yOf(m.earthEl);
 
   const onMove = (e: React.PointerEvent<SVGSVGElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
@@ -63,7 +71,7 @@ export function SurfacePage() {
     line.style.display = 'block';
     box.style.display = 'block';
     box.style.left = `${Math.min(Math.max(x / PANO_W, 0.1), 0.9) * 100}%`;
-    box.textContent = `Bearing ${Math.round(az)}° ${compassPoint(az)} · skyline ${horizon(az, site, mast).toFixed(1)}° high`;
+    box.textContent = `Bearing ${Math.round(az)}° ${compassPoint(az)} · skyline ${hAt(az).toFixed(1)}° high`;
   };
   const onLeave = () => {
     if (cross.current) cross.current.style.display = 'none';
@@ -126,7 +134,9 @@ export function SurfacePage() {
             EARTH
           </text>
         </svg>
-        {showsSampleValues() && <div className="lm-overlay lm-overlay--tl lm-overlay--soft">Design preview · sample values</div>}
+        <div className="lm-overlay lm-overlay--tl lm-overlay--soft">
+          {v ? (v.source === 'terrain' ? 'Real engine · terrain mask' : 'Real engine · smooth Moon, no terrain data for this site / array height') : 'Design preview · sample values'}
+        </div>
         <div ref={readout} className="lm-pano__read" role="status" />
         <div className="lm-pano__axis" aria-hidden="true">
           {COMPASS.map((c, i) => (
@@ -153,10 +163,10 @@ export function SurfacePage() {
             <div className="lm-bigcard__k">SUN</div>
             <div className="lm-bigcard__v">{lit ? 'Above the ridge' : 'Behind terrain'}</div>
             <div className="lm-bigcard__m">
-              Elevation {m.sunEl.toFixed(2)}° · horizon {horizon(m.sunAz, site, mast).toFixed(2)}°
+              Elevation {m.sunEl.toFixed(2)}° · horizon {hAt(m.sunAz).toFixed(2)}°
             </div>
             <div className="lm-bigcard__n">
-              {lit ? 'Sets' : 'Rises'} in {fmtHours(sunChange)}
+              {lit ? 'Sets' : 'Rises'} in {fmtHours(sunChange)}{v && sunChange === null ? ' (not within this month)' : ''}
             </div>
           </div>
           <div className={`lm-bigcard ${m.earthUp ? 'lm-bigcard--sage' : ''}`}>
@@ -166,7 +176,7 @@ export function SurfacePage() {
               Elevation {m.earthEl.toFixed(2)}° · azimuth {Math.round(m.earthAz)}°
             </div>
             <div className="lm-bigcard__n">
-              {m.earthUp ? 'Sets' : 'Rises'} in {fmtHours(earthChange)}
+              {m.earthUp ? 'Sets' : 'Rises'} in {fmtHours(earthChange)}{v && earthChange === null ? ' (not within this month)' : ''}
             </div>
           </div>
         </div>
@@ -184,6 +194,8 @@ export function SurfacePage() {
           <div className="lm-hint">Taller masts see over nearby terrain. Watch the horizon line drop.</div>
         </div>
       </div>
+
+      {eng && v && <StandHereNumbers result={eng} terrain={v.source === 'terrain'} windowLabel="30 days from 8 Feb 2027" />}
 
       <section aria-label="Time" className="lm-box lm-box--row">
         <button

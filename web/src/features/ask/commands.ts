@@ -24,6 +24,9 @@ export interface AskContext {
   sites: readonly AskSite[];
   /** False until the live pages expose a slip state — then "slip 9 days" answers honestly that it can't act yet. */
   canSlip: boolean;
+  /** The range the live slip state accepts (the Slip explorer is 0…27 d). Defaults to ±30 d. Out-of-range input is clamped AND SAID. */
+  slipMin?: number;
+  slipMax?: number;
 }
 
 export type AskCommand =
@@ -123,14 +126,24 @@ export function matchSites(query: string, sites: readonly AskSite[]): AskSite[] 
   return exact.length ? exact : fuzzy;
 }
 
-function parseSlip(text: string): { days: number; clamped: boolean } | 'reset' | null {
-  if (!/\b(slip|delay|postpone|push|launch delay)\b/.test(text)) return null;
-  if (/\b(reset|clear|no slip|on time|zero)\b/.test(text)) return 'reset';
-  const m = text.match(/([+-]?)\s*(\d{1,3})\s*(?:d\b|day|days)?/);
+/** Verbs that mean "change the landing date". Weak verbs need an explicit "N days" so ordinary phrases aren't misread. */
+const SLIP_STRONG = /\b(slip|slipping|delay|delayed|postpone|defer)\b/;
+const SLIP_WEAK = /\b(move|shift|push|pushed|land|landing|launch|launching|go)\b/;
+
+function parseSlip(text: string, min: number, max: number): { days: number; clamped: boolean } | 'reset' | null {
+  const strong = SLIP_STRONG.test(text);
+  const weak = SLIP_WEAK.test(text);
+  if (!strong && !weak) return null;
+  if (strong && /\b(reset|clear|no slip|on time|zero)\b/.test(text)) return 'reset';
+  const m = text.match(/([+-]?)\s*(\d{1,3})\s*(d\b|day|days)?/);
   if (!m) return null;
+  if (!strong && !m[3]) return null; // "move 2" alone is not a slip; "move 2 days" is
   let days = parseInt(m[2], 10);
-  if (m[1] === '-' || /\b(back|earlier|sooner|forward by)\b/.test(text)) days = -days;
-  const clampedDays = Math.max(-SLIP_LIMIT_DAYS, Math.min(SLIP_LIMIT_DAYS, days));
+  // Direction. "push back 2 days" means DELAY in everyday speech; "slip/move back" and "earlier" mean sooner.
+  const later = /\b(later|forward|front|ahead|after|delay|delayed|postpone|defer|push|pushed)\b/.test(text);
+  const sooner = /\b(earlier|sooner|before|backward|backwards|back)\b/.test(text) && !/\bpush(ed)? back\b/.test(text) && !/\blater\b/.test(text);
+  if (m[1] === '-' || (sooner && !later)) days = -days;
+  const clampedDays = Math.max(min, Math.min(max, days));
   return { days: clampedDays, clamped: clampedDays !== days };
 }
 
@@ -146,14 +159,22 @@ export function parseCommand(input: string, ctx: AskContext): ParseResult {
   const text = normalise(input);
   if (!text) return { kind: 'none' };
 
-  if (/^(help|\?|what can you do|commands|how do i)\b/.test(text)) return { kind: 'command', command: { kind: 'help' }, label: 'Show what I can do' };
+  // Only a bare request for help. ("how do i …" is a QUESTION about the interface — it goes to the knowledge search.)
+  if (/^(help|\?|what can you do|what can i (say|ask|type)|commands)\s*$/.test(text)) return { kind: 'command', command: { kind: 'help' }, label: 'Show what I can do' };
 
-  const slip = parseSlip(text);
+  // A question is never a command: "how do I compare sites?", "what is the slip explorer?", "how many days can I slip?"
+  // mention page/site words but want an EXPLANATION. Commands are imperatives ("go to compare", "slip 9 days", "show IM-2").
+  if (/^(how|what|why|where|who|which|when|is|are|can|could|does|do|did|should|would|will)\b/.test(text)) return { kind: 'none' };
+
+  const slipMin = ctx.slipMin ?? -SLIP_LIMIT_DAYS;
+  const slipMax = ctx.slipMax ?? SLIP_LIMIT_DAYS;
+  const slip = parseSlip(text, slipMin, slipMax);
   if (slip) {
     if (!ctx.canSlip) return { kind: 'unavailable', reason: 'Slip can’t be set from here yet — open the Slip explorer page and use its slider.' };
     const days = slip === 'reset' ? 0 : slip.days;
     const clamped = slip === 'reset' ? false : slip.clamped;
-    const label = days === 0 ? 'Reset slip to on time' : `Slip ${days > 0 ? '+' : ''}${days} d${clamped ? ` (limit ±${SLIP_LIMIT_DAYS} d)` : ''}`;
+    const sign = days > 0 ? '+' : '';
+    const label = clamped ? `Slip ${sign}${days} d (allowed: ${slipMin} to ${slipMax} d)` : days === 0 ? 'Reset slip to on time' : `Slip ${sign}${days} d`;
     return { kind: 'command', command: { kind: 'slip', days, clamped }, label };
   }
 

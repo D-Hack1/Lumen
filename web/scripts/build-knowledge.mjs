@@ -3,6 +3,7 @@
 // Sources (all already in the repo, nothing invented here):
 //   • web/public/content/glossary.json          terms (definition, formula, impact, uncertainty)
 //   • docs/validation.md, docs/limitations.md   gate results and known limits (split on "## ")
+//   • docs/ask_help.md                          plain-language how-to / how-it's-calculated / why-we-decided answers
 //   • plan/PLAN_FINAL*.md "Revision 2 changelog" the decision log: what changed and WHY
 // Excluded on purpose: anything that mentions Shackleton (its mask/coordinates are under review — Nived, Nov 15).
 // Run from web/:  node scripts/build-knowledge.mjs        (re-run whenever those sources change)
@@ -52,6 +53,39 @@ function sections(file, kind, sourceName) {
 }
 sections('validation.md', 'validation', 'docs/validation.md');
 sections('limitations.md', 'limitation', 'docs/limitations.md');
+
+// ---- docs/ask_help.md: "## Question" + Kind:/Source:/Tags: lines + the answer
+const KINDS = new Set(['howto', 'method', 'decision', 'concept', 'status']);
+{
+  const p = join(repo, 'docs', 'ask_help.md');
+  if (existsSync(p)) {
+    for (const part of readFileSync(p, 'utf8').split(/^## /m).slice(1)) {
+      const [head, ...lines] = part.split(/\r?\n/);
+      const meta = {};
+      const body = [];
+      for (const ln of lines) {
+        const m = ln.match(/^(Kind|Source|Tags):\s*(.*)$/);
+        if (m && body.length === 0) meta[m[1].toLowerCase()] = m[2].trim();
+        else body.push(ln);
+      }
+      const answer = clean(body.join(' '));
+      const kind = KINDS.has(meta.kind) ? meta.kind : 'howto';
+      if (!answer) continue;
+      const slug = clean(head).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 70);
+      add({
+        id: `help:${slug}`,
+        kind,
+        title: clean(head),
+        summary: answer,
+        body: answer,
+        source: meta.source ?? 'docs/ask_help.md',
+        anchor: slug,
+        metrics: [],
+        tags: (meta.tags ?? '').split(',').map((t) => t.trim()).filter(Boolean),
+      });
+    }
+  }
+}
 
 // ---- decision log: the plan's Revision 2 changelog table  |R2-n| Change | Why | Where |
 const planFile = readdirSync(join(repo, 'plan')).find((f) => /^PLAN_FINAL.*\.md$/.test(f));

@@ -7,6 +7,7 @@ import { buildScenarioResult, type ScenarioRequest } from './core/buildResult';
 import { loadDsnOrNull } from './data/dsn';
 import { loadEphem } from './data/ephem';
 import { loadMaskOrNull, loadMasksFor } from './data/masks';
+import { loadSigmaOrNull } from './data/sigma';
 import { setDataMode, type DataMode } from './data/source';
 import { refineCandidate, scanStage1, stage1ForOffsets, type ScanInput } from './compare/scanEngine';
 import type { ScanCandidate, ScenarioResult } from './types';
@@ -22,7 +23,7 @@ const api: EngineApi = {
   async evaluateScenario(mode, req) {
     setDataMode(mode); // the worker has its own module state; mirror the main thread's mock/real choice
     const eph = await loadEphem();
-    return buildScenarioResult(eph, { ...req, dataVersions: { ...req.dataVersions, ephem: eph.mock ? 'mock' : 'real' } }, await loadDsnOrNull(), await loadMaskOrNull(req.siteId));
+    return buildScenarioResult(eph, { ...req, dataVersions: { ...req.dataVersions, ephem: eph.mock ? 'mock' : 'real' } }, await loadDsnOrNull(), await loadMaskOrNull(req.siteId), await loadSigmaOrNull(req.siteId));
   },
   async scanStage1(mode, input) {
     setDataMode(mode);
@@ -34,7 +35,7 @@ const api: EngineApi = {
   },
   async refineCandidate(mode, req, candidate) {
     setDataMode(mode);
-    return refineCandidate(await loadEphem(), req, candidate, await loadDsnOrNull(), await loadMaskOrNull(req.siteId));
+    return refineCandidate(await loadEphem(), req, candidate, await loadDsnOrNull(), await loadMaskOrNull(req.siteId), await loadSigmaOrNull(req.siteId));
   },
 };
 

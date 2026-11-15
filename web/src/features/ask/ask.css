@@ -174,3 +174,13 @@
   font-size: 11.5px;
   color: var(--mut3, #7c7468);
 }
+.ask__group + .ask__group {
+  margin-top: 10px;
+}
+.ask__card--weak {
+  opacity: 0.8;
+  border-style: dashed;
+}
+.ask__text {
+  white-space: pre-line;
+}
