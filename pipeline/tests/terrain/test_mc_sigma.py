@@ -286,3 +286,35 @@ def test_read_sigma_rejects_a_corrupted_file(tmp_path, monkeypatch):
     artifact.binary_path.write_bytes(corrupted)
     with pytest.raises(SigmaValidationError, match="file length"):
         read_sigma(artifact.binary_path)
+
+
+def test_write_sigma_extra_fields_are_included_in_the_sidecar(tmp_path, monkeypatch):
+    monkeypatch.setattr("lumen_pipeline.terrain.mc_sigma._git_commit", lambda: "e" * 40)
+    sigma, valid = _all_valid_sigma()
+    artifact = write_sigma(
+        "im2_athena",
+        sigma,
+        mask_valid=valid,
+        source="monte_carlo",
+        clone_count=30,
+        output_root=tmp_path / "terrain",
+        extra={"correlation_lengths_tested_m": [50.0, 150.0], "preliminary": True},
+    )
+    assert artifact.sidecar["correlation_lengths_tested_m"] == [50.0, 150.0]
+    assert artifact.sidecar["preliminary"] is True
+
+
+def test_write_sigma_extra_fields_cannot_collide_with_contract_fields(tmp_path, monkeypatch):
+    monkeypatch.setattr("lumen_pipeline.terrain.mc_sigma._git_commit", lambda: "f" * 40)
+    sigma, valid = _all_valid_sigma()
+    with pytest.raises(SigmaValidationError, match="collide"):
+        write_sigma(
+            "im2_athena",
+            sigma,
+            mask_valid=valid,
+            source="default",
+            output_root=tmp_path / "terrain",
+            extra={"unit": "rad"},
+        )
+    # Nothing should have been written.
+    assert not (tmp_path / "terrain" / "sigma" / "im2_athena.bin").exists()

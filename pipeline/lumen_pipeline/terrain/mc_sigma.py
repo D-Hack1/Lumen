@@ -46,6 +46,24 @@ HEADER_SIZE = 64
 HEADER_STRUCT = "<8sHHIIfffIIIIIIQ"
 
 _VALID_SOURCES = ("default", "monte_carlo", "calibrated")
+_CONTRACT_SIDECAR_FIELDS = frozenset(
+    {
+        "version",
+        "producer",
+        "created_utc",
+        "git_commit",
+        "site_id",
+        "shape",
+        "height_order_m",
+        "bin_width_deg",
+        "ray_range_km",
+        "unit",
+        "source",
+        "binary",
+        "clone_count",
+        "notes",
+    }
+)
 
 
 class SigmaValidationError(ValueError):
@@ -205,6 +223,7 @@ def write_sigma(
     notes: str | None = None,
     output_root: Path | None = None,
     producer: str = "lumen_pipeline.terrain.mc_sigma",
+    extra: dict[str, Any] | None = None,
 ) -> SigmaArtifact:
     """Validate and publish one sigma artifact per contract §4/§8/§10.
 
@@ -213,10 +232,22 @@ def write_sigma(
     and serializes the array it is given, matching it against
     ``mask_valid`` (the corresponding mask's own per-bin validity, shape
     ``(4, 3600)``).
+
+    ``extra`` adds caller-supplied sidecar fields beyond the contract's
+    required minimum (e.g. Monte-Carlo provenance: source DEM/_ERR paths
+    and hashes, correlation lengths tested, seeds, the 20-vs-30-clone
+    comparison, cross-length sensitivity, and preliminary-status
+    caveats). Keys must not collide with a contract-required field name.
     """
 
     _validate_source_metadata(source, clone_count=clone_count, notes=notes)
     validate_sigma_array(sigma_deg, mask_valid)
+    if extra:
+        colliding = sorted(set(extra) & _CONTRACT_SIDECAR_FIELDS)
+        if colliding:
+            raise SigmaValidationError(
+                f"extra sidecar fields collide with contract-required fields: {colliding}"
+            )
 
     git_commit = _git_commit()
     if not isinstance(git_commit, str) or re.fullmatch(r"[0-9a-fA-F]{40}", git_commit) is None:
@@ -263,6 +294,8 @@ def write_sigma(
         sidecar["clone_count"] = clone_count
     if notes is not None:
         sidecar["notes"] = notes
+    if extra:
+        sidecar.update(extra)
 
     sidecar_path.parent.mkdir(parents=True, exist_ok=True)
     sidecar_path.write_text(json.dumps(sidecar, indent=2, sort_keys=True) + "\n", encoding="utf-8")
