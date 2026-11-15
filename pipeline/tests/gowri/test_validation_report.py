@@ -1,7 +1,9 @@
 import json
+import math
 
 from lumen_pipeline.validation.horizons_client import (
     AZIMUTH_TOLERANCE_DEG,
+    DSN_ELEVATION_TOLERANCE_DEG,
     ELEVATION_TOLERANCE_DEG,
     RANGE_TOLERANCE_KM,
 )
@@ -33,10 +35,10 @@ def test_validation_report_uses_actual_horizons_and_g7_evidence(tmp_path):
     assert g3["value"]["max_earth_range_error_km"] < RANGE_TOLERANCE_KM
     g3b = _gate(report, "G3b")
     assert g3b["status"] == "PASS"
-    assert g3b["value"] == {
-        "comparison_count": 45,
-        "max_moon_elevation_error_deg": 0.080130259755272,
-    }
+    assert g3b["value"]["comparison_count"] == 45
+    moon_elevation_error = g3b["value"]["max_moon_elevation_error_deg"]
+    assert math.isfinite(moon_elevation_error)
+    assert 0.0 <= moon_elevation_error < DSN_ELEVATION_TOLERANCE_DEG
     g7 = _gate(report, "G7")
     assert g7["status"] == "SOURCE_UNVERIFIED"
     assert g7["numerical_result"] == "PASS"

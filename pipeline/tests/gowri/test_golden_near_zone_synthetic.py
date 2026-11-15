@@ -1,4 +1,3 @@
-
 import json
 import math
 
@@ -20,6 +19,10 @@ def _fixture() -> dict[str, object]:
     return json.loads(default_synthetic_output_path().read_text(encoding="utf-8"))
 
 
+def _json_normalized(payload):
+    return json.loads(json.dumps(payload), parse_constant=lambda _: None)
+
+
 def test_near_zone_synthetic_fixture_is_deterministic_and_committed(tmp_path):
     first = tmp_path / "first.json"
     second = tmp_path / "second.json"
@@ -30,13 +33,13 @@ def test_near_zone_synthetic_fixture_is_deterministic_and_committed(tmp_path):
     # Repeated generation must produce identical bytes.
     assert first.read_bytes() == second.read_bytes()
 
-    # Normalize checkout line endings for cross-platform comparison.
-    generated = first.read_bytes().replace(b"\r\n", b"\n")
-    committed = default_synthetic_output_path().read_bytes().replace(
+    # Normalize line endings for cross-platform comparison.
+    generated_bytes = first.read_bytes().replace(b"\r\n", b"\n")
+    committed_bytes = default_synthetic_output_path().read_bytes().replace(
         b"\r\n", b"\n"
     )
 
-    assert generated == committed
+    assert generated_bytes == committed_bytes
 
     # Verify canonical JSON serialization with an LF terminator.
     expected_bytes = (
@@ -48,13 +51,15 @@ def test_near_zone_synthetic_fixture_is_deterministic_and_committed(tmp_path):
         + "\n"
     ).encode("utf-8")
 
-    assert generated == expected_bytes
+    assert generated_bytes == expected_bytes
 
-    # Verify the decoded fixture matches the reference payload.
+    # Compare decoded payloads safely, treating NaN as null.
+    generated = json.loads(first.read_text(encoding="utf-8"))
+
     assert (
-        json.loads(first.read_text(encoding="utf-8"))
-        == payload
-        == synthetic_near_zone_payload()
+        _json_normalized(generated)
+        == _json_normalized(payload)
+        == _json_normalized(synthetic_near_zone_payload())
     )
 
     assert payload["array_initialization"] == {
