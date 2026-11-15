@@ -13,6 +13,8 @@ import { FINE_STEP_MS, refineTransition } from './events';
 import { energyPerDayWh, powerSeries, type PowerConfig } from './padPower';
 import type { DsnSeries } from '../data/dsn';
 import { Horizon } from './visibility';
+import { horizonFromMask } from './terrainHorizon';
+import type { Mask } from '../data/masks';
 import { toWindowRecord } from './windows';
 
 /** Everything the worker needs, as plain serialisable data (no store, no catalog objects). */
@@ -71,15 +73,16 @@ function buildSeries(ev: Evaluation, power: PowerConfig | null): Series {
   return s;
 }
 
-export function buildScenarioResult(eph: Ephemeris, req: ScenarioRequest, dsn: DsnSeries | null = null): ScenarioResult {
+export function buildScenarioResult(eph: Ephemeris, req: ScenarioRequest, dsn: DsnSeries | null = null, mask: Mask | null = null): ScenarioResult {
   const endMs = req.startMs + req.durationDays * DAY;
   if (!inEphemerisRange(eph, req.startMs) || !inEphemerisRange(eph, endMs)) {
     return emptyError(`The ephemeris covers ${new Date(eph.startMs).toISOString().slice(0, 10)} to ${new Date(eph.endMs).toISOString().slice(0, 10)}; this window is outside it.`);
   }
-  // No terrain mask is available yet for any site: every site is evaluated on the smooth-Moon horizon (an optimistic
-  // bound, labelled as such), including curated Tier-A sites whose masks are still pending.
+  // A site with a usable terrain mask (right height, no gaps) is evaluated on it. Everything else keeps the smooth-Moon horizon
+  // (an optimistic bound, labelled as such). Either way no sigma exists yet, so there are never +/- values and a pass stays PENDING.
   const site = makeSite(req.latDeg, req.lonDegEast, req.heightM, req.rotation ?? undefined);
-  const horizon = new Horizon({ observerHeightM: req.heightM });
+  const terrainHorizon = horizonFromMask(mask, req.heightM);
+  const horizon = terrainHorizon ?? new Horizon({ observerHeightM: req.heightM });
   const d = req.definitions;
   const ev = evaluate({ eph, site, horizon, startMs: req.startMs, durationDays: req.durationDays, definitions: d, dsn });
   const series = buildSeries(ev, req.power ?? null);
@@ -123,15 +126,15 @@ export function buildScenarioResult(eph: Ephemeris, req: ScenarioRequest, dsn: D
     psrDistanceKm: req.psr ? { km: req.psr.distanceKm, bearingDeg: req.psr.bearingDeg, areaKm2: req.psr.areaKm2, source: req.psr.source } : null,
   };
 
-  // No terrain yet => every value is a smooth-Moon best case: a failure is certain, a pass is only PENDING (see verdict.ts).
-  const verdict = evaluateVerdict({ metrics, windowHours: req.durationDays * 24, profile: req.profile, weights: req.weights, boundsKind: 'optimistic' });
+  // No sigma yet => the values are nominal on the mask (or a smooth-Moon best case without one): a failure is certain, a pass is only PENDING (see verdict.ts).
+  const verdict = evaluateVerdict({ metrics, windowHours: req.durationDays * 24, profile: req.profile, weights: req.weights, boundsKind: 'optimistic', basis: terrainHorizon ? 'mask' : 'smooth-moon' });
 
   return {
     status: 'ready', error: null,
     meta: {
       siteId: req.siteId ?? 'custom', tier: req.tier,
-      tierBadge: 'Smooth-Moon horizon · terrain pending',
-      sigmaSource: 'smooth-Moon bound', snapDistanceKm: null,
+      tierBadge: terrainHorizon ? 'Terrain mask · σ pending' : 'Smooth-Moon horizon · terrain pending',
+      sigmaSource: terrainHorizon ? 'terrain mask, σ pending' : 'smooth-Moon bound', snapDistanceKm: null,
       definitionsSummary: `Sun available = ≥${Math.round(d.sunDiskThreshold * 100)}% disk above the horizon${d.minSunElevationOpsDeg > 0 ? ` and ≥${d.minSunElevationOpsDeg}° elevation` : ''} @${req.heightM} m · Link = Earth ≥${d.earthMarginDeg}° above the horizon${ev.dsnApplied ? ` + DSN ≥${d.dsnMaskDeg}°` : ' (DSN not applied)'}`,
       dataVersions: req.dataVersions, mock: eph.mock,
     },

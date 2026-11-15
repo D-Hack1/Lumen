@@ -23,6 +23,42 @@ OPS_ELEVATION_DEG = 6.0
 SHUTDOWN_WINDOW_START_UTC = "2023-09-02T00:00:00Z"
 SHUTDOWN_WINDOW_END_UTC = "2023-09-05T00:00:00Z"
 
+# R3 retains this planned comparison value, but D-16 requires a primary source
+# before it can be represented as an independently verified mission result.
+REFERENCE_SOURCE = {
+    "status": "SOURCE_UNVERIFIED",
+    "reported_sun_elevation_deg": REFERENCE_ELEVATION_DEG,
+    "reported_uncertainty_deg": TOLERANCE_DEG,
+    "source_url": None,
+    "document_title": None,
+    "publication_date": None,
+    "page_or_section": None,
+    "quoted_numerical_claim": None,
+    "research_note": (
+        "No ISRO mission document or primary mission publication located during the R3 "
+        "source review states a Chandrayaan-3 landing Sun elevation of 8.75 degrees, "
+        "an uncertainty of +/-0.25 degrees, or its limb convention."
+    ),
+    "sources_examined": [
+        {
+            "url": "https://www.isro.gov.in/Chandrayaan3.html",
+            "document_title": "Chandrayaan-3",
+            "publication_date": "not stated; dated mission updates span 2023-07-06 to 2023-09-22",
+            "page_or_section": "August 23, 2023 update",
+            "quoted_claim": "Chandrayaan-3 has successfully soft-landed on the moon.",
+            "supports_8_75_degree_claim": False,
+        },
+        {
+            "url": "https://www.isro.gov.in/Chandrayaan3_Details.html",
+            "document_title": "Chandrayaan-3 Details",
+            "publication_date": "not stated",
+            "page_or_section": "Overall specifications, Landing Site (Prime)",
+            "quoted_claim": "4 km x 2.4 km 69.367621 S, 32.348126 E",
+            "supports_8_75_degree_claim": False,
+        },
+    ],
+}
+
 
 def default_output_path() -> Path:
     """Return the standalone G7 report path."""
@@ -98,11 +134,13 @@ def build_g7_report(
     if not kernel_hashes_match:
         provenance_failures.append("kernel_sha256_mismatch")
     timeline_failures = [] if timeline_pass else ["sun_below_ops_event_not_found"]
-    status = "PASS" if numerical_pass and timeline_pass else "FAIL"
+    calculation_status = "PASS" if numerical_pass and timeline_pass else "FAIL"
+    status = calculation_status if REFERENCE_SOURCE["status"] == "VERIFIED" else "SOURCE_UNVERIFIED"
     return {
         "id": "G7",
         "check": "CY-3 Sun elevation at touchdown",
         "status": status,
+        "calculation_status": calculation_status,
         "timestamp_utc": touchdown_utc,
         "timestamp_precision": site["touchdown_precision"],
         "coordinates": {
@@ -131,13 +169,15 @@ def build_g7_report(
             "et_seconds": touchdown_et,
         },
         "reference": {
-            "sun_elevation_deg": REFERENCE_ELEVATION_DEG,
-            "source": "PLAN_FINAL_R3_DELTA.md, D-13 G7 (mission-team value)",
-            "primary_source_status": "UNVERIFIED: primary citation is not recorded in the repository",
+            "sun_elevation_deg": REFERENCE_SOURCE["reported_sun_elevation_deg"],
+            "source": "PLAN_FINAL_R3_DELTA.md, D-13 G7 planned comparison value",
+            "primary_source_status": REFERENCE_SOURCE["status"],
             "tolerance_deg": TOLERANCE_DEG,
+            "source_metadata": REFERENCE_SOURCE,
         },
         "absolute_error_deg": absolute_error,
         "numerical_result": "PASS" if numerical_pass else "FAIL",
+        "source_provenance_result": REFERENCE_SOURCE["status"],
         "provenance_result": "PASS" if provenance_pass else "FAIL",
         "failure_reasons": {
             "numerical": numerical_failures,
@@ -150,6 +190,39 @@ def build_g7_report(
             "expected_window_start_utc": SHUTDOWN_WINDOW_START_UTC,
             "expected_window_end_exclusive_utc": SHUTDOWN_WINDOW_END_UTC,
             "criterion": "The 6-degree crossing falls within the reported 2-4 September shutdown dates.",
+        },
+        "calculation_assumptions": {
+            "touchdown_time": {
+                "value_utc": touchdown_utc,
+                "precision": site["touchdown_precision"],
+                "status": "SOURCE_UNVERIFIED",
+                "basis": "PLAN_FINAL_R3_DELTA.md D-12; no primary seconds-level source located.",
+            },
+            "landing_location": {
+                "latitude_deg": latitude,
+                "longitude_deg_east": longitude,
+                "height_m": 0.0,
+                "status": "SOURCE_UNVERIFIED",
+                "basis": "PLAN_FINAL_R3_DELTA.md D-12 landing-coordinate input; ISRO page examined does not state this landing fix.",
+            },
+            "reference_frame": {
+                "value": metadata["spice_frame"],
+                "status": "VERIFIED_COMPUTATION_CONFIGURATION",
+                "basis": "R3 D-3 locked MOON_ME_DE421 frame; ephemeris sidecar requires this frame.",
+            },
+            "sun_elevation_definition": {
+                "calculated_value": "Sun-centre apparent topocentric elevation above the local spherical horizontal",
+                "calculation_status": "VERIFIED_IMPLEMENTATION",
+                "reported_claim_limb_convention": "SOURCE_UNVERIFIED",
+                "basis": "Ephemeris.body_at subtracts the site vector from the interpolated Sun-centre vector before site-frame elevation conversion.",
+            },
+            "observation_geometry": {
+                "observer": "spherical lunar surface site at 0 m height",
+                "topocentric_direction": "LT+S apparent Moon-centred Sun vector minus site vector",
+                "terrain_horizon": "not applied",
+                "status": "VERIFIED_COMPUTATION_CONFIGURATION",
+                "basis": "R3 D-3 and D-8 smooth-sphere geometry lock.",
+            },
         },
     }
 

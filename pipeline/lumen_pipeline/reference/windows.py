@@ -8,6 +8,22 @@ from dataclasses import dataclass
 
 from lumen_pipeline.reference.events import Event
 
+ISRO_VIKRAM_OPS_PRESET = "isroVikramOps"
+ISRO_VIKRAM_OPS_ELEVATION_DEG = 6.0
+
+
+def resolve_min_sun_elevation_ops(
+    min_sun_elevation_ops_deg: float = 0.0, definitions_preset: str | None = None
+) -> float:
+    """Resolve the R3 operations elevation from explicit definitions or a preset."""
+    if definitions_preset == ISRO_VIKRAM_OPS_PRESET:
+        return ISRO_VIKRAM_OPS_ELEVATION_DEG
+    if definitions_preset is not None:
+        raise ValueError(f"unsupported definitions preset: {definitions_preset}")
+    if not math.isfinite(min_sun_elevation_ops_deg) or min_sun_elevation_ops_deg < 0.0:
+        raise ValueError("min_sun_elevation_ops_deg must be finite and non-negative")
+    return min_sun_elevation_ops_deg
+
 
 @dataclass(frozen=True)
 class Window:

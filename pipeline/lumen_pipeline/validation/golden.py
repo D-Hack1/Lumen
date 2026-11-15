@@ -8,11 +8,11 @@ from pathlib import Path
 
 from lumen_pipeline.common.timeutil import et_to_utc, utc_to_et
 from lumen_pipeline.ephem.kernels import loaded_kernels
-from lumen_pipeline.reference.events import detect_events, sample_times
+from lumen_pipeline.reference.events import EnvelopeBounds, detect_events, sample_times
 from lumen_pipeline.reference.interp import Ephemeris
 from lumen_pipeline.reference.metrics import first_pass_metrics
 from lumen_pipeline.reference.visibility import Horizon, availability
-from lumen_pipeline.reference.windows import merge_windows
+from lumen_pipeline.reference.windows import merge_windows, resolve_min_sun_elevation_ops
 
 IM2_LATITUDE_DEG = -84.7906
 IM2_LONGITUDE_DEG_EAST = 29.1957
@@ -33,19 +33,26 @@ def _iso(et: float) -> str:
 
 
 def build_golden_set(
-    output_path: str | Path | None = None, ephemeris_path: str | Path | None = None
+    output_path: str | Path | None = None,
+    ephemeris_path: str | Path | None = None,
+    *,
+    min_sun_elevation_ops_deg: float = 0.0,
+    definitions_preset: str | None = None,
 ) -> dict[str, object]:
     """Write G-8's reproducible IM-2 smooth-sphere baseline, without terrain or DSN claims."""
     output = Path(output_path) if output_path is not None else default_output_path()
     ephem_path = Path(ephemeris_path) if ephemeris_path is not None else default_ephemeris_path()
     ephemeris = Ephemeris.from_file(ephem_path)
     horizon = Horizon(observer_height_m=2.0)
+    resolved_ops_elevation = resolve_min_sun_elevation_ops(
+        min_sun_elevation_ops_deg, definitions_preset
+    )
     definitions = {
         "sun_disk_threshold": 0.5,
         "earth_disk_threshold": 0.5,
         "earth_margin_deg": 1.0,
-        "minSunElevationOps": 0.0,
-        "definitionsPreset": None,
+        "minSunElevationOps": resolved_ops_elevation,
+        "definitionsPreset": definitions_preset,
     }
     with loaded_kernels():
         start_et = utc_to_et(IM2_TOUCHDOWN_UTC)
@@ -57,7 +64,8 @@ def build_golden_set(
             earth = ephemeris.body_at("earth", et, IM2_LATITUDE_DEG, IM2_LONGITUDE_DEG_EAST, 2.0)
             sun_disk, sun_clearance, sun_up = availability(
                 "sun", sun.elevation_deg, sun.azimuth_deg, sun.distance_km, horizon,
-                disk_threshold=definitions["sun_disk_threshold"], min_sun_elevation_ops_deg=0.0,
+                disk_threshold=definitions["sun_disk_threshold"],
+                min_sun_elevation_ops_deg=resolved_ops_elevation,
             )
             earth_disk, earth_clearance, earth_up = availability(
                 "earth", earth.elevation_deg, earth.azimuth_deg, earth.distance_km, horizon,
@@ -70,8 +78,27 @@ def build_golden_set(
             }
 
         samples = [state(et) for et in times]
-        sun_events = detect_events(start_et, end_et, lambda et: bool(state(et)["sun_up"]), down="sunset", up="shadowExit")
-        earth_events = detect_events(start_et, end_et, lambda et: bool(state(et)["earth_up"]), down="earthset", up="earthrise")
+        # Smooth-sphere geometry has no caller-proven interval envelope, so this
+        # guard intentionally forces R3's safe two-minute refinement fallback.
+        unproven_envelope = lambda _left, _right: EnvelopeBounds(-90.0, 90.0, 0.0, 180.0, 90.0, False)
+        sun_events = detect_events(
+            start_et,
+            end_et,
+            lambda et: bool(state(et)["sun_up"]),
+            down="sunset",
+            up="shadowExit",
+            horizon=horizon,
+            envelope_bounds=unproven_envelope,
+        )
+        earth_events = detect_events(
+            start_et,
+            end_et,
+            lambda et: bool(state(et)["earth_up"]),
+            down="earthset",
+            up="earthrise",
+            horizon=horizon,
+            envelope_bounds=unproven_envelope,
+        )
         sun_visible = [bool(sample["sun_up"]) for sample in samples]
         earth_visible = [bool(sample["earth_up"]) for sample in samples]
         sun_elevation = [sample["sun"].elevation_deg for sample in samples]  # type: ignore[union-attr]

@@ -17,6 +17,7 @@ import requests
 from lumen_pipeline.common.constants import AU_KM
 from lumen_pipeline.common.frames import site_position_km, site_up_vector, true_north_vector
 from lumen_pipeline.common.timeutil import utc_to_et
+from lumen_pipeline.ephem.dsn import STATIONS, Station, station_elevations_deg
 from lumen_pipeline.ephem.ephemeris import ABERRATION_CORRECTION
 from lumen_pipeline.ephem.kernels import MOON_FRAME, loaded_kernels
 
@@ -28,6 +29,7 @@ EPOCHS_PER_SITE = 20
 ELEVATION_TOLERANCE_DEG = 0.01
 AZIMUTH_TOLERANCE_DEG = 0.01
 RANGE_TOLERANCE_KM = 1.0
+DSN_ELEVATION_TOLERANCE_DEG = 0.1
 
 
 @dataclass(frozen=True)
@@ -64,6 +66,30 @@ class Comparison:
     range_error_km: float
 
 
+@dataclass(frozen=True)
+class DsnEpochWindow:
+    label: str
+    start_time: str
+    stop_time: str
+    step_size: str
+    expected_records: int
+
+
+# Ten historical and five future samples. The endpoint is aligned to the
+# requested cadence so each cached Horizons response has a fixed record count.
+DSN_EPOCH_WINDOWS = (
+    DsnEpochWindow("historical_2023_2024", "2023-01-01", "2024-09-22", "70d", 10),
+    DsnEpochWindow("future_2029_2030", "2029-01-01", "2030-08-24", "150d", 5),
+)
+
+
+@dataclass(frozen=True)
+class DsnComparison:
+    station_id: str
+    utc: str
+    elevation_error_deg: float
+
+
 def default_fixture_dir() -> Path:
     """Return the checked-in, offline G3 fixture directory."""
     return Path(__file__).resolve().parents[2] / "tests" / "gowri" / "fixtures" / "horizons"
@@ -82,6 +108,25 @@ def horizons_parameters(site: SiteCase, body: str) -> dict[str, str]:
         "START_TIME": f"'{START_TIME}'",
         "STOP_TIME": f"'{STOP_TIME}'",
         "STEP_SIZE": f"'{STEP_SIZE}'",
+        "QUANTITIES": "'4,20'",
+        "CSV_FORMAT": "'YES'",
+        "ANG_FORMAT": "'DEG'",
+        "APPARENT": "'AIRLESS'",
+        "EXTRA_PREC": "'YES'",
+    }
+
+
+def dsn_horizons_parameters(station: Station, window: DsnEpochWindow) -> dict[str, str]:
+    """Build the R3 G3b Horizons request for Moon-centre elevation at one DSS station."""
+    return {
+        "format": "text",
+        "COMMAND": "'301'",
+        "MAKE_EPHEM": "'YES'",
+        "EPHEM_TYPE": "'OBSERVER'",
+        "CENTER": f"'{station.id}'",
+        "START_TIME": f"'{window.start_time}'",
+        "STOP_TIME": f"'{window.stop_time}'",
+        "STEP_SIZE": f"'{window.step_size}'",
         "QUANTITIES": "'4,20'",
         "CSV_FORMAT": "'YES'",
         "ANG_FORMAT": "'DEG'",
@@ -150,10 +195,61 @@ def cache_all_fixtures(directory: str | Path | None = None) -> tuple[Path, ...]:
     return tuple(cache_fixture(site, body, directory) for site in SITE_CASES for body in ("sun", "earth"))
 
 
+def dsn_fixture_path(station: Station, directory: str | Path | None = None) -> Path:
+    """Return the traceable offline G3b fixture path for one station."""
+    base = Path(directory) if directory is not None else default_fixture_dir()
+    return base / f"{station.id.lower()}_moon.json"
+
+
+def cache_dsn_fixture(station: Station, directory: str | Path | None = None) -> Path:
+    """Fetch G3b's genuine historical and future Moon-elevation reference records."""
+    queries: list[dict[str, object]] = []
+    for window in DSN_EPOCH_WINDOWS:
+        parameters = dsn_horizons_parameters(station, window)
+        response = requests.get(HORIZONS_API_URL, params=parameters, timeout=60)
+        response.raise_for_status()
+        records = parse_horizons_response(response.text)
+        if len(records) != window.expected_records:
+            raise ValueError(
+                f"expected {window.expected_records} Horizons epochs for {station.id} {window.label}, got {len(records)}"
+            )
+        queries.append(
+            {
+                "window": asdict(window),
+                "request_url": response.url,
+                "request_parameters": parameters,
+                "response": response.text,
+            }
+        )
+    path = dsn_fixture_path(station, directory)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "source": "NASA/JPL Horizons API",
+                "fetched_utc": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+                "station": asdict(station),
+                "target": "Moon centre (301)",
+                "queries": queries,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+def cache_all_dsn_fixtures(directory: str | Path | None = None) -> tuple[Path, ...]:
+    """Fetch all G3b station fixtures; callers run this deliberately, never CI."""
+    return tuple(cache_dsn_fixture(station, directory) for station in STATIONS)
+
+
 def load_fixture(path: str | Path) -> tuple[SiteCase, str, tuple[HorizonsRecord, ...]]:
     """Load and validate a cached response without making a network request."""
     payload: dict[str, Any] = json.loads(Path(path).read_text(encoding="utf-8"))
-    if payload.get("source") != "NASA/JPL Horizons API" or not payload.get("request_url"):
+    if payload.get("source") != "NASA/JPL Horizons API" or not payload.get("request_url") or not payload.get("fetched_utc"):
         raise ValueError(f"fixture lacks Horizons provenance: {path}")
     site = SiteCase(**payload["site"])
     body = payload["body"]
@@ -165,6 +261,35 @@ def load_fixture(path: str | Path) -> tuple[SiteCase, str, tuple[HorizonsRecord,
     if len(records) != EPOCHS_PER_SITE:
         raise ValueError(f"fixture has {len(records)} epochs instead of {EPOCHS_PER_SITE}: {path}")
     return site, body, records
+
+
+def load_dsn_fixture(path: str | Path) -> tuple[Station, tuple[HorizonsRecord, ...]]:
+    """Load one genuine G3b fixture without making a network request."""
+    payload: dict[str, Any] = json.loads(Path(path).read_text(encoding="utf-8"))
+    if payload.get("source") != "NASA/JPL Horizons API" or not payload.get("fetched_utc"):
+        raise ValueError(f"fixture lacks Horizons provenance: {path}")
+    station = Station(**payload["station"])
+    if station not in STATIONS or payload.get("target") != "Moon centre (301)":
+        raise ValueError(f"fixture station or target does not match G3b: {path}")
+    queries = payload.get("queries")
+    if not isinstance(queries, list) or len(queries) != len(DSN_EPOCH_WINDOWS):
+        raise ValueError(f"fixture lacks G3b query windows: {path}")
+    records: list[HorizonsRecord] = []
+    for query, window in zip(queries, DSN_EPOCH_WINDOWS, strict=True):
+        if query.get("window") != asdict(window):
+            raise ValueError(f"fixture window does not match G3b query: {path}")
+        if query.get("request_parameters") != dsn_horizons_parameters(station, window):
+            raise ValueError(f"fixture request does not match the R3 G3b query: {path}")
+        if not query.get("request_url"):
+            raise ValueError(f"fixture lacks Horizons request URL: {path}")
+        response = query.get("response")
+        if not isinstance(response, str) or "Atmos refraction: NO (AIRLESS)" not in response:
+            raise ValueError(f"fixture is not airless apparent Horizons output: {path}")
+        window_records = parse_horizons_response(response)
+        if len(window_records) != window.expected_records:
+            raise ValueError(f"fixture has wrong record count for {window.label}: {path}")
+        records.extend(window_records)
+    return station, tuple(records)
 
 
 def _angular_difference_deg(left: float, right: float) -> float:
@@ -213,3 +338,44 @@ def run_g3(fixtures_dir: str | Path | None = None) -> tuple[Comparison, ...]:
                         )
                     )
     return tuple(comparisons)
+
+
+def run_g3b(fixtures_dir: str | Path | None = None) -> tuple[DsnComparison, ...]:
+    """Compare offline Horizons station fixtures against R3's DSN geometry."""
+    directory = Path(fixtures_dir) if fixtures_dir is not None else default_fixture_dir()
+    comparisons: list[DsnComparison] = []
+    with loaded_kernels():
+        for station in STATIONS:
+            fixture_station, records = load_dsn_fixture(dsn_fixture_path(station, directory))
+            if fixture_station != station:
+                raise ValueError(f"fixture identity mismatch for {station.id}")
+            ets = np.asarray([utc_to_et(record.utc) for record in records])
+            elevations = station_elevations_deg(ets, station)
+            comparisons.extend(
+                DsnComparison(station.id, record.utc, abs(float(elevation) - record.elevation_deg))
+                for record, elevation in zip(records, elevations, strict=True)
+            )
+    return tuple(comparisons)
+
+
+def assert_g3_tolerances(comparisons: tuple[Comparison, ...]) -> None:
+    """Raise when an offline G3 result reaches or exceeds its locked tolerance."""
+    if not comparisons:
+        raise ValueError("G3 comparisons are missing")
+    if any(result.elevation_error_deg >= ELEVATION_TOLERANCE_DEG for result in comparisons):
+        raise AssertionError("G3 elevation tolerance failed")
+    if any(result.range_error_km >= RANGE_TOLERANCE_KM for result in comparisons if result.body == "earth"):
+        raise AssertionError("G3 Earth-range tolerance failed")
+    if any(
+        result.azimuth_error_deg is not None and result.azimuth_error_deg >= AZIMUTH_TOLERANCE_DEG
+        for result in comparisons
+    ):
+        raise AssertionError("G3 azimuth tolerance failed")
+
+
+def assert_g3b_tolerances(comparisons: tuple[DsnComparison, ...]) -> None:
+    """Raise when an offline G3b result reaches or exceeds its locked tolerance."""
+    if not comparisons:
+        raise ValueError("G3b comparisons are missing")
+    if any(result.elevation_error_deg >= DSN_ELEVATION_TOLERANCE_DEG for result in comparisons):
+        raise AssertionError("G3b station-elevation tolerance failed")

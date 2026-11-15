@@ -4,7 +4,7 @@ import math
 import numpy as np
 import pytest
 
-from lumen_pipeline.reference.bounds import WindowSpec, evaluate_with_bounds
+from lumen_pipeline.reference.bounds import WindowSpec, disk_fraction_visible, evaluate_with_bounds
 from lumen_pipeline.reference.dsn import DsnSeries, evaluate_link_windows
 from lumen_pipeline.reference.events import (
     EnvelopeBounds,
@@ -22,8 +22,12 @@ from lumen_pipeline.reference.uncertainty import (
     three_pass_bounds,
     total_clearance_rate_deg_per_hour,
 )
-from lumen_pipeline.reference.visibility import Horizon, availability
-from lumen_pipeline.reference.windows import merge_windows, windows_from_events
+from lumen_pipeline.reference.visibility import Horizon, availability, disk_fraction
+from lumen_pipeline.reference.windows import (
+    merge_windows,
+    resolve_min_sun_elevation_ops,
+    windows_from_events,
+)
 from lumen_pipeline.validation.golden_synthetic import (
     build_synthetic_golden_set,
     synthetic_golden_payload,
@@ -74,6 +78,30 @@ def test_synthetic_golden_vectors_match_reference_primitives():
     assert limb_offset_deg(0.5, 0.25) == limbs["disk_50_pct"]
     assert limb_offset_deg(1.0, 0.25) == limbs["disk_100_pct"]
 
+    span = _case(payload, "synthetic_disk_span_extrema")
+    span_input = span["input"]
+    mask = np.zeros(3600)
+    mask[-1] = span_input["spike_elevation_deg"]
+    assert disk_fraction(
+        "sun",
+        span_input["sun_elevation_deg"],
+        span_input["centre_azimuth_deg"],
+        149597870.7,
+        Horizon(mask),
+    ) < span["expected"]["disk_fraction_lt"]
+
+    nan_wrap = _case(payload, "synthetic_nan_wraparound_extrema")
+    nan_input = nan_wrap["input"]
+    elevations = np.array([np.nan if value is None else value for value in nan_input["elevations_deg"]])
+    assert Horizon(elevations, bin_width_deg=nan_input["bin_width_deg"]).extrema(0.0, 180.0) == pytest.approx(
+        (nan_wrap["expected"]["minimum_deg"], nan_wrap["expected"]["maximum_deg"])
+    )
+
+    thresholds = _case(payload, "synthetic_disk_event_thresholds")["expected"]
+    assert disk_fraction_visible(0.0, 0.0) is thresholds["zero_visible_at_zero"]
+    assert disk_fraction_visible(0.5, 0.5) is thresholds["half_visible_at_half"]
+    assert disk_fraction_visible(1.0, 1.0) is thresholds["full_visible_at_full"]
+
 
 def test_synthetic_golden_events_uncertainty_and_slope_edges():
     payload = synthetic_golden_payload()
@@ -117,6 +145,7 @@ def test_synthetic_golden_ops_elevation_definition():
     expected = _case(synthetic_golden_payload(), "synthetic_min_sun_elevation_ops")["expected"]
     _, _, visible = availability("sun", 5.0, 0.0, 149597870.7, Horizon(np.zeros(3600)), disk_threshold=0.5, min_sun_elevation_ops_deg=6.0)
     assert visible is expected["visible"]
+    assert resolve_min_sun_elevation_ops(0.0, expected["definitions_preset"]) == 6.0
 
 
 def test_synthetic_golden_power_eclipse_soc_vector():
