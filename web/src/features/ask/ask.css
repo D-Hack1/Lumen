@@ -142,6 +142,8 @@
   font: 500 10.5px 'JetBrains Mono', monospace;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  white-space: nowrap;
+  flex-shrink: 0;
   color: var(--sageT, #9acdbb);
 }
 .ask__cardtitle {
