@@ -23,13 +23,13 @@ describe('S-7 layer index and loader integration', () => {
     expect(res.extents?.['80S']).toBeDefined();
     expect(res.extents?.['85S']).toBeDefined();
 
-    const ext80 = res.extents!['80S'];
+    const ext80 = res.extents!['80S']!;
     expect(ext80.latLimitDeg).toBe(-80);
     expect(ext80.halfExtentKm).toBeCloseTo(304.0056, 4);
     expect(ext80.centrePx).toEqual([1267, 1267]);
     expect(ext80.metresPerPx).toBe(240);
 
-    const ext85 = res.extents!['85S'];
+    const ext85 = res.extents!['85S']!;
     expect(ext85.latLimitDeg).toBe(-85);
     expect(ext85.halfExtentKm).toBeCloseTo(151.7130, 4);
     expect(ext85.centrePx).toEqual([633, 633]);
@@ -303,7 +303,7 @@ describe('S-7 layer index and loader integration', () => {
       expect(res.layers.length).toBe(1);
       expect(res.extents?.['80S']).toBeDefined();
       expect(res.extents?.['85S']).toBeUndefined();
-      expect(res.extents?.['80S'].latLimitDeg).toBe(-80);
+      expect(res.extents?.['80S']?.latLimitDeg).toBe(-80);
     } finally {
       globalThis.fetch = originalFetch;
     }

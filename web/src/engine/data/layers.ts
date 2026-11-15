@@ -65,7 +65,7 @@ const isPair = (v: unknown): v is [number, number] =>
  * A layer is usable only if it declares a complete, valid projection
  * and a raster file. Never reads fields of a null projection.
  */
-function usableProjection(e: RawLayer): RawProjection | null {
+function usableProjection(e: RawLayer): Required<RawProjection> | null {
   if (
     e.available === false ||
     typeof e.filename !== 'string' ||
@@ -97,7 +97,14 @@ function usableProjection(e: RawLayer): RawProjection | null {
     return null;
   }
 
-  return p;
+  // Rebuilt from the validated values so the result is fully typed (the guards above narrow the fields, but not the object).
+  return {
+    size_px: p.size_px,
+    centre_px: p.centre_px,
+    lat_limit_deg: p.lat_limit_deg,
+    half_extent_km: p.half_extent_km,
+    metres_per_px: p.metres_per_px,
+  };
 }
 
 /**
