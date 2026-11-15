@@ -5,7 +5,7 @@
 // a bus subscriber.
 //
 //   crosshairBus  { tHover, tScrub, source }       — shared crosshair (PLAN §8.12)
-//   slipBus       { slipDays, dragging }           — Slip Bar drag (live), committed via store.setSlip
+//   slipBus       { slipDays, dragging, rowId }    — Slip drag (live), committed via store.setSlip / setRowSlip
 //   padDragBus    { tiltMagDeg, tiltDirDeg, yawDeg, dragging } — Touchdown Pad drags, committed via store
 //   siteHoverBus  { siteId }                       — site-card hover → map pin pulse (Phase 3)
 import { frameBus } from './frameBus';
@@ -82,6 +82,8 @@ export interface CrosshairValue {
 export interface SlipValue {
   slipDays: number;
   dragging: boolean;
+  /** Compare view, "selected row" mode: the row being slipped (its own slip). null = global slip (every row + Cockpit). */
+  rowId: 'A' | 'B' | 'C' | 'D' | null;
 }
 
 export interface PadDragValue {
@@ -92,7 +94,7 @@ export interface PadDragValue {
 }
 
 export const crosshairBus = createBus<CrosshairValue>('crosshairBus', { tHover: null, tScrub: 0, source: null });
-export const slipBus = createBus<SlipValue>('slipBus', { slipDays: 0, dragging: false });
+export const slipBus = createBus<SlipValue>('slipBus', { slipDays: 0, dragging: false, rowId: null });
 export const padDragBus = createBus<PadDragValue>('padDragBus', {
   tiltMagDeg: 0,
   tiltDirDeg: 0,

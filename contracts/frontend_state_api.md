@@ -1,6 +1,6 @@
 # frontend_state_api.md
 
-_Owner: Abhinav_ · Status: **implemented (Phase 1)**. Any change goes through `#lumen-changes` before the code changes.
+_Owner: Abhinav_ · Status: **implemented (Phase 1; Phase 4 additions marked P4)**. Any change goes through `#lumen-changes` before the code changes.
 Source of truth (if this file and the code disagree, the code wins and this file gets fixed):
 `web/src/state/scenarioStore.ts`, `buses.ts`, `frameBus.ts`, `crosshairStore.ts`, `urlSync.ts`, `copy.ts`.
 
@@ -58,10 +58,17 @@ release. **Never call `setState` (React or the store) from a bus subscriber or a
 | `minSunElevationOps` | `0` (off) | **D-10**: when > 0, Sun available also requires Sun elevation ≥ this |
 
 **`ProfileThresholds`:** `surfaceDurationDays 14`, `minSunlitPct 50`, `minLinkHours 100`, `maxLongestNightH 72`,
-`maxPadSlopeDeg 10`, `batteryWh 2000`, `loadW 60`.
+`maxPadSlopeDeg 10`, `batteryWh 2000`, `usableDodPct 80` **(P4)**, `loadW 60`. Battery endurance (advisory, not in the
+engine verdict yet) = `batteryWh × usableDodPct/100 ÷ loadW` hours, checked against the longest night's upper bound.
 
-**`CompareRow`:** `{ id: 'A'|'B'|'C'|'D'; site: SiteRef; landingUtc; panelPreset; yawDeg; tilt; heightM; baseline: boolean }`.
-Rows inherit `definitions`, `durationDays` and `profile` from the scenario. Exactly one row is the baseline whenever any rows exist.
+**`CompareRow`:** `{ id: 'A'|'B'|'C'|'D'; site: SiteRef; landingUtc; slipDays?; panelPreset; yawDeg; tilt; heightM; baseline: boolean }`.
+Rows inherit `definitions`, `durationDays` and `profile` from the scenario. Exactly one row is the baseline whenever any rows
+exist (enforced by every action and by `hydrate`). **P4:** `slipDays` (integer −30…+30, optional = 0) is the row's own slip
+on top of the global `slipDays`: **effective landing = `landingUtc + (scenario.slipDays + row.slipDays) × 1 d`**
+(`rowLandingUtc(row, globalSlip)`).
+
+| `compareSelected` **P4** | `'A' \| 'B' \| 'C' \| 'D' \| null` | `null` | selected Compare row (Windows Table, "selected row" slip). Always a valid row id, or null with no rows |
+| `compareSlipTarget` **P4** | `'all' \| 'selected'` | `'all'` | what the Compare Slip slider moves: every row (global `slipDays`) or only the selected row (`row.slipDays`) |
 
 Exported constants: `DEFAULT_SCENARIO`, `DEFAULT_DEFINITIONS`, `DEFINITIONS_PRESETS`, `DEFAULT_LANDING_UTC`,
 `SCENARIO_KEYS`, `MAX_COMPARE_ROWS (4)`, and `pickScenario(state)` (data fields only, no actions).
@@ -82,11 +89,15 @@ Exported constants: `DEFAULT_SCENARIO`, `DEFAULT_DEFINITIONS`, `DEFINITIONS_PRES
 | `setDefinitions(patch)` | merges the patch. `definitionsPreset` becomes the matching preset id if the result equals one, else `'custom'` |
 | `applyDefinitionsPreset('default' \| 'isroVikramOps')` | replaces `definitions` with the preset (ISRO: `minSunElevationOps = 6`) |
 | `setProfile(patch)`, `setWeights(patch)` | merges |
-| `addCompareRow(partial?) → id \| null` | next free id A–D, copying the current site, landing and attitude unless overridden. The first row becomes the baseline. Returns `null` when 4 rows exist |
+| `addCompareRow(partial?) → id \| null` | next free id A–D, copying the current site, landing and attitude unless overridden. The first row becomes the baseline; `{ baseline: true }` moves the baseline to the new row. The first row added is selected. Returns `null` when 4 rows exist |
 | `duplicateCompareRow(id) → id \| null` | copy as a non-baseline row |
 | `updateCompareRow(id, patch)` | |
-| `removeCompareRow(id)` | if the baseline is removed, the first remaining row becomes the baseline |
-| `setBaseline(id)` | |
+| `removeCompareRow(id)` | if the baseline is removed, the first remaining row becomes the baseline; if the selected row is removed, the first remaining row is selected |
+| `setBaseline(id)` | that row becomes the only baseline (an unknown id is ignored; the baseline cannot be unset) |
+| `selectCompareRow(id)` **P4** | sets `compareSelected` (ignored if no such row) |
+| `setCompareSlipTarget('all' \| 'selected')` **P4** | |
+| `setRowSlip(id, days)` **P4** | commit one row's own slip (clamped integer); resets `slipBus` to the global slip, `rowId: null` |
+| `loadRowIntoCockpit(id)` **P4** | copies the row's site, **effective** landing (scrub = landing), panel preset, yaw, tilt and height into the scenario, sets `slipDays = 0`, switches to the Cockpit and resyncs the buses |
 | `setLayers(patch)` | merges into `layers` |
 | `setAnalysisTab(t)`, `setCompareTab(t)` | |
 | `hydrate(partial)` | `DEFAULT_SCENARIO` + partial (URL decode, Quick-Start load). Recomputes `definitionsPreset` and resyncs all three buses |
@@ -109,7 +120,7 @@ interface TransientBus<T> {
 | Bus | Value | Writers | Committed by |
 |---|---|---|---|
 | `crosshairBus` | `{ tHover: number \| null; tScrub: number; source: string \| null }` | charts, Windows Table rows, Ribbon tracks, scrub bar | `commitScrub(t)` |
-| `slipBus` | `{ slipDays: number; dragging: boolean }` | Slip Bar during a drag | `setSlip(d)` on release |
+| `slipBus` | `{ slipDays: number; dragging: boolean; rowId: 'A'\|'B'\|'C'\|'D'\|null }` | Slip Bar / Compare Slip during a drag | `setSlip(d)` on release (`rowId: null`), or `setRowSlip(id, d)` when the Compare slip targets one row (`rowId` = that row) |
 | `padDragBus` | `{ tiltMagDeg; tiltDirDeg; yawDeg; dragging: boolean }` | Touchdown Pad tilt and yaw drags | `setTilt(t)` / `setYaw(d)` on release |
 | `siteHoverBus` | `{ siteId: string \| null }` | Site Explorer cards (pointer enter/leave) — Phase 3 | never (hover only). The Basemap pin pulse reads it; until Nived's pins carry `data-site`, `features/sidebar/pinPulse.ts` toggles `.is-card-hover` on the matching pin |
 
@@ -159,6 +170,9 @@ https://<host>/<path>?s=<version>.<base64url(JSON of pickScenario(state))>
   - `site` must be a valid `SiteRef`;
   - compare rows need an id in A–D and are capped at 4;
   - `slipDays` is clamped to an integer in −30…+30.
+  - **P4:** compare rows: duplicate ids keep the first; `slipDays` clamped (missing = 0); invalid `panelPreset` /
+    `heightM` fall back to defaults. `compareSelected` must be A–D or null; `compareSlipTarget` must be `all|selected`.
+    `profile.usableDodPct` missing (old links) = 80. `hydrate` then guarantees one baseline and a valid selection.
 - Other query parameters are preserved (for example `fixture=worst-case`, used by e2e only).
 - **Read on boot:** `hydrate({ ...readScenarioFromUrl() })`.
 - **Write:** `startUrlSync()` calls `history.replaceState` 250 ms after the last committed-store change. Buses never touch the URL.
@@ -171,6 +185,22 @@ https://<host>/<path>?s=<version>.<base64url(JSON of pickScenario(state))>
 syntax are in `frontend_content.md`.
 
 ## 9. Open points
+
+**Phase 4 (raised in `#lumen-changes`):**
+- **Nived — per-row slip in the engine.** `compareStore.run()` passes `landingUtc: r.landingUtc`; it should pass
+  `rowLandingUtc(r, 0)` (i.e. `r.landingUtc + (r.slipDays ?? 0) × 1 d`) — `makeRequest` already adds the global slip.
+  Until then a "selected row" slip is stored, shown in the row and shared in the URL, but not yet evaluated.
+- **Nived — `mockCompare` ignores the rows.** It always returns sites[0..2] as A–C with baseline A, so in mock mode a
+  4th row has no result, a baseline swap does not move the Delta Table's ★, and per-row changes do not show.
+- **Nived — scan stage.** Please call `reportScanStage(stage, done)` (`state/scanStatus.ts`) from ScanPanel's
+  `onUpdate`; CompareView bridges it from the panel's `data-stage` attribute until then.
+- **Nived — requirements + battery in the result.** Expose `evaluateVerdict(...).requirements` on `ScenarioResult`
+  (the popover re-runs the same pure rule today) and decide whether the battery check joins the verdict.
+- **Ebin — per-row Windows Table.** `WindowsTable` reads `useResult()`; the Compare right column needs
+  `WindowsTable({ result })` (or a row id) for the selected row. The caption says "Cockpit scenario" until then.
+- **Ebin — live slip in Compare visuals.** `AlignedBarcodes` subscribes to `crosshairBus` only; it should also window
+  its rows from `slipBus` (`rowId` null = every row, else only that row) during a drag (Fast Lane rule 5).
+
 1. **`useResult()` input:** Nived's engine should read `site`, `landingUtc + slipDays × 1 day` (effective landing), `durationDays`, `heightM`,
    `panelPreset`, `yawDeg`, `tilt` and `definitions` from this store. `scrubUtc` drives `answer`. Confirm that
    slip is applied engine-side as an offset (proposal), not by rewriting `landingUtc`.

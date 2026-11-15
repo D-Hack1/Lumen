@@ -64,7 +64,9 @@ const ENUMS: Partial<Record<keyof Scenario, readonly unknown[]>> = {
   definitionsPreset: ['default', 'isroVikramOps', 'custom'],
   analysisTab: ['power', 'windows', 'pointing'],
   compareTab: ['aligned', 'season', 'calendar'],
+  compareSlipTarget: ['all', 'selected'],
 };
+const ROW_ID_LIST = ['A', 'B', 'C', 'D'];
 
 // ---------- encode / decode ----------
 
@@ -91,12 +93,18 @@ export function decodeScenario(token: string): Partial<Scenario> | null {
     if (!(k in raw)) continue;
     const allowed = ENUMS[k];
     if (allowed && !allowed.includes(raw[k])) continue;
+    if (k === 'compareSelected') {
+      // nullable string enum (conform() only knows nullable numbers)
+      if (raw[k] === null || ROW_ID_LIST.includes(raw[k] as string)) out.compareSelected = raw[k] as Scenario['compareSelected'];
+      continue;
+    }
     (out as Record<string, unknown>)[k] = conform(DEFAULT_SCENARIO[k], raw[k]);
   }
   if (out.compareRows) {
     const rowRef = {
       site: DEFAULT_SCENARIO.site,
       landingUtc: DEFAULT_SCENARIO.landingUtc,
+      slipDays: 0,
       panelPreset: DEFAULT_SCENARIO.panelPreset,
       yawDeg: DEFAULT_SCENARIO.yawDeg,
       tilt: DEFAULT_SCENARIO.tilt,
@@ -104,8 +112,15 @@ export function decodeScenario(token: string): Partial<Scenario> | null {
       baseline: false,
     };
     out.compareRows = (out.compareRows as unknown[])
-      .filter((r): r is Record<string, unknown> => isObj(r) && ['A', 'B', 'C', 'D'].includes(r.id as string))
-      .map((r) => ({ ...conform(rowRef, r), id: r.id as Scenario['compareRows'][number]['id'] }))
+      .filter((r): r is Record<string, unknown> => isObj(r) && ROW_ID_LIST.includes(r.id as string))
+      .filter((r, i, all) => all.findIndex((x) => x.id === r.id) === i) // duplicate ids: keep the first
+      .map((r) => {
+        const row = { ...conform(rowRef, r), id: r.id as Scenario['compareRows'][number]['id'] };
+        if (!ENUMS.panelPreset!.includes(row.panelPreset)) row.panelPreset = rowRef.panelPreset;
+        if (!ENUMS.heightM!.includes(row.heightM)) row.heightM = rowRef.heightM;
+        row.slipDays = Math.max(-30, Math.min(30, Math.round(row.slipDays ?? 0)));
+        return row;
+      })
       .slice(0, MAX_COMPARE_ROWS);
   }
   if (out.slipDays != null) out.slipDays = Math.max(-30, Math.min(30, Math.round(out.slipDays)));

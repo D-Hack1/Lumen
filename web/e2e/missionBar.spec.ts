@@ -117,7 +117,7 @@ test('verdict chip crossfades on change and opens the Mission Profile popover', 
   await chip.click();
   const pop = page.getByRole('dialog', { name: 'Mission Profile' });
   await expect(pop).toBeVisible();
-  await expect(pop).toContainText('Hard thresholds');
+  await expect(pop).toContainText('Hard requirements');
   await page.screenshot({
     path: 'e2e/screens/phase-2/verdict-popover.png',
     clip: { x: 1300, y: 0, width: 620, height: 520 },

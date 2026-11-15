@@ -47,6 +47,12 @@ export const color = {
   marginal: '#d8b23a',
   nogo: '#f0605a',
   pending: '#8a95a8',
+
+  // Compare scenario tags A–D (always shown with the row letter; hues kept clear of Sun/Earth/both/verdict)
+  rowA: '#a48bff', // violet
+  rowB: '#ef7ac8', // pink
+  rowC: '#c6cfdb', // pale steel
+  rowD: '#c49a6c', // bronze
 } as const;
 
 /** Hatch / dot pattern geometry shared by CSS and Canvas (see ui/patterns.ts). */
@@ -155,7 +161,7 @@ export const sideBudget = {
     compareRows: 264,
     deltaTable: 172,
     compareTabs: 28,
-    compareWindows: 220,
+    compareWindows: 300,
   },
   d2: {
     search: 92,
@@ -166,7 +172,7 @@ export const sideBudget = {
     compareRows: 236,
     deltaTable: 150,
     compareTabs: 26,
-    compareWindows: 190,
+    compareWindows: 250,
   },
   d4: {
     search: 84,
@@ -177,7 +183,7 @@ export const sideBudget = {
     compareRows: 208,
     deltaTable: 128,
     compareTabs: 24,
-    compareWindows: 160,
+    compareWindows: 200,
   },
 } as const satisfies Record<Density, Record<string, number>>;
 

@@ -8,7 +8,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { colBudget, pickCols, pickDensity, sideBudget, slotBudget } from '../src/ui/tokens';
 
-const PHASE = 3;
+const PHASE = 4;
 const VIEWPORTS = [
   { name: 'V1', width: 1920, height: 960 },
   { name: 'V2', width: 1536, height: 754 },

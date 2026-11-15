@@ -53,8 +53,15 @@ this file gets fixed.
 
 ## 3. Current Educator overrides
 
-128 keys (full wording in §4): `mb.*` (16), `verdict.*` (10), `profile.*` (10), `answer.*` (31), `metric.*` (4),
+181 keys (full wording in §4): `mb.*` (16), `verdict.*` (10), `profile.*` (10), `answer.*` (31), `metric.*` (4),
 `sb.*` (21), `def.*` (32), `gloss.*` (4).
+
+Phase 4 added the Compare left column and the battery check: `rows.*` (scenario rows A–D: baseline, duplicate,
+remove, load into Cockpit, attitude summary), `battery.*` (Profile & Battery accordion + battery line: "Survives
+longest night ✓ with {h} h margin"), the Mission Profile form fields + validation messages (`profile.*`, incl.
+`profile.usableDodPct` and `profile.err.*`), the requirement list in the verdict popover (`profile.req.*`,
+`profile.provisional.scan`), the Compare slip target (`slip.target.*`, `slip.chip`) and the Windows caption
+(`compare.windows.*`). Educator wording is included for all of them except the `*.long` field tooltips.
 
 Phase 3 added plain-language Educator wording for the Definitions Bar line and every ✎ popover field (PLAN §8.3
 "Educator persona shows a plain-language version"), the site cards, and the tooltip headings.
@@ -68,7 +75,7 @@ state has a Planner string and a different Educator string, and that Educator ke
 **To do (Phase 5, A-12):** Educator wording for the remaining Metric Deck, map and Scan keys, plus the
 "What am I seeing?" callouts.
 
-## 4. Key reference (283 keys, generated from `personaCopy.ts`)
+## 4. Key reference (365 keys, generated from `personaCopy.ts`)
 
 ### `app.*` · App · used by Abhinav
 
@@ -143,8 +150,12 @@ state has a Planner string and a different Educator string, and that Educator ke
 | `verdict.NO-GO.long` | NO-GO — at least one hard threshold fails | Not viable — at least one must-have fails |
 | `verdict.PENDING.long` | PENDING — cannot be judged yet (missing data or only a smooth-Moon bound); see reasons | Not sure yet — some data is still missing, so this cannot be judged |
 | `verdict.provisional.long` | Provisional — uncertainty bounds still computing; GO needs the conservative bound | First guess — the give-or-take is still being worked out |
+| `verdict.headline.GO` | Meets the profile | Looks promising |
+| `verdict.headline.MARGINAL` | Borderline | Close call |
+| `verdict.headline.NO-GO` | Does not meet the profile | Not a good fit |
+| `verdict.headline.PENDING` | Needs terrain data | We can’t be sure yet |
 
-### `profile.*` · Mission Profile popover (verdict chip) · used by Abhinav
+### `profile.*` · Mission Profile form + verdict popover (requirement list) · used by Abhinav
 
 | Key | Planner | Educator override |
 |---|---|---|
@@ -156,12 +167,39 @@ state has a Planner string and a different Educator string, and that Educator ke
 | `profile.minLinkHours` | Min link | Radio contact needed |
 | `profile.maxLongestNightH` | Max longest night | Longest dark spell allowed |
 | `profile.maxPadSlopeDeg` | Max pad slope | Steepest ground allowed |
-| `profile.batteryWh` | Battery |  |
-| `profile.loadW` | Load |  |
+| `profile.batteryWh` | Battery | Battery size |
+| `profile.loadW` | Load | Power used |
 | `profile.edit` | Edit in Compare | Change in Compare |
 | `profile.placeholder` | The editable profile form arrives with the Compare view. | You will be able to change these in the Compare view. |
 | `profile.noReasons` | No reasons reported yet. | No explanation yet. |
 | `profile.close` | Close |  |
+| `profile.usableDodPct` | Usable DoD | Battery you can use |
+| `profile.surfaceDurationDays.long` | Surface duration (days) — the evaluated mission length for the profile |  |
+| `profile.minSunlitPct.long` | Hard minimum: share of the window with the Sun available |  |
+| `profile.minLinkHours.long` | Hard minimum: hours of Earth link over the window |  |
+| `profile.maxLongestNightH.long` | Hard maximum: longest continuous run without Sun |  |
+| `profile.maxPadSlopeDeg.long` | Hard maximum: pad slope |  |
+| `profile.batteryWh.long` | Battery capacity (Wh) |  |
+| `profile.usableDodPct.long` | Usable depth of discharge (%) — share of the battery the mission may draw |  |
+| `profile.loadW.long` | Average load during the night (W) |  |
+| `profile.form.hint` | Applies to every row and the Cockpit · recomputes as you type | Used for every plan · updates as you type |
+| `profile.err.number` | enter a number | type a number |
+| `profile.err.range` | must be {min}–{max} {unit} | pick {min}–{max} {unit} |
+| `profile.err.int` | whole days only | whole days only |
+| `profile.err.linkExceeds` | more than the {h} h on the surface | longer than the {h} h on the surface |
+| `profile.short.sunlit` | sunlit | sun |
+| `profile.short.link` | link | radio |
+| `profile.short.night` | night | dark |
+| `profile.short.slope` | slope | slope |
+| `profile.req.title` | Hard requirements · conservative bound | Must-haves · cautious case |
+| `profile.req.pass` | pass | ok |
+| `profile.req.marginal` | marginal | borderline |
+| `profile.req.fail` | fail | no |
+| `profile.req.unknown` | no data | unknown |
+| `profile.req.battery` | Battery vs longest night | Battery lasts the night |
+| `profile.req.valueHint` | Conservative bound (nominal in brackets) |  |
+| `profile.req.legend` | Limit · conservative bound (nominal). GO needs every requirement to pass on the conservative bound. | Limit · cautious value (best guess). “Looks good” needs every must-have to pass even in the cautious case. |
+| `profile.provisional.scan` | Scan results are stage 1 only — verdicts stay provisional until bounded rows arrive. | The search has only first guesses so far — answers firm up when the careful results arrive. |
 
 ### `slot.*` · Slot labels (placeholders, accessible names) · used by Abhinav
 
@@ -196,10 +234,13 @@ state has a Planner string and a different Educator string, and that Educator ke
 | `right.metrics` | Metrics |  |
 | `right.touchdown` | Touchdown |  |
 
-### `compare.*` · Compare centre toggle · used by Abhinav
+### `compare.*` · Compare centre toggle + Windows caption · used by Abhinav
 
 | Key | Planner | Educator override |
 |---|---|---|
+| `compare.windows.cockpit` | Windows — Cockpit scenario | Time windows — Cockpit plan |
+| `compare.windows.pending` | row {id} view pending | plan {id} coming soon |
+| `compare.windows.pending.long` | The Windows Table shows the Cockpit result until it accepts a per-row result. Load the row into the Cockpit (↗) to see its windows. |  |
 | `compare.aligned` | Aligned Barcodes |  |
 | `compare.season` | Season Strip |  |
 | `compare.calendar` | Calendar |  |
@@ -256,6 +297,7 @@ state has a Planner string and a different Educator string, and that Educator ke
 | `metric.psrDerived` | derived |  |
 | `metric.psrWording` | permanently shadowed region (a cold trap that may host ice) |  |
 | `metric.empty` | No result yet |  |
+| `metric.more` | +{n} more |  |
 
 ### `map.*` · Basemap · used by Nived
 
@@ -270,9 +312,10 @@ state has a Planner string and a different Educator string, and that Educator ke
 | `map.layer.psr` | PSR (derived) |  |
 | `map.layer.psr_distance` | Distance to PSR |  |
 | `map.opacity` | Layer opacity |  |
-| `map.schematic` | schematic relief |  |
-| `map.cursor` | Move over the map |  |
-| `map.offMap` | {name} → {lat}, {lon} · {km} km |  |
+| `map.towardEarth` | toward Earth |  |
+| `map.outside` | {name} is outside this view |  |
+| `map.show` | Show {extent} |  |
+| `map.notOnMap` | {name} is not on the south-pole maps ({lat}, {lon} · {km} km from the pole) |  |
 | `map.inset.landing` | Landing |  |
 | `map.inset.target` | Target |  |
 | `map.inset.scale` | 100 m |  |
@@ -322,10 +365,20 @@ state has a Planner string and a different Educator string, and that Educator ke
 | `analysis.windows` | Windows Table |  |
 | `analysis.pointing` | Pointing & Link |  |
 
-### `slip.*` · Slip Bar · used by Ebin
+### `slip.*` · Slip Bar (Ebin) + Compare slip (Abhinav)
 
 | Key | Planner | Educator override |
 |---|---|---|
+| `slip.target.label` | Slip applies to | Move landing for |
+| `slip.target.all` | All rows | All plans |
+| `slip.target.row` | Row {id} | Plan {id} |
+| `slip.target.selected` | Selected row | Picked plan |
+| `slip.target.noRows` | Add a row first |  |
+| `slip.minus` | −1 day |  |
+| `slip.plus` | +1 day |  |
+| `slip.reset` | reset |  |
+| `slip.chip` | slipped {d} d | moved {d} d |
+| `slip.none` | no slip | on time |
 | `slip.label` | Landing slip (days) |  |
 
 ### `touchdown.*` · Touchdown Pad · used by Ebin
@@ -463,6 +516,56 @@ state has a Planner string and a different Educator string, and that Educator ke
 |---|---|---|
 | `credit.prefix` | Credit |  |
 
+### `battery.*` · Battery verdict + Profile & Battery accordion (Phase 4) · used by Abhinav
+
+| Key | Planner | Educator override |
+|---|---|---|
+| `battery.title` | Profile & Battery | Plan & Battery |
+| `battery.survives` | Survives longest night ✓ with {h} h margin | Battery lasts the longest night ✓ with {h} h to spare |
+| `battery.short` | Short of the longest night ✗ by {h} h | Battery runs out ✗ {h} h before sunrise |
+| `battery.unknown` | Battery check waits for longest-night data | Battery check waits for the night length |
+| `battery.endurance` | endurance {h} h | lasts {h} h |
+| `battery.night` | night {h} h ({bound}) |  |
+| `battery.bound.conservative` | upper bound | cautious case |
+| `battery.bound.nominal` | nominal | best guess |
+| `battery.advisory` | advisory | guide |
+| `battery.advisory.long` | Advisory: battery endurance (Wh × DoD ÷ load) vs the longest night — not part of the engine verdict yet |  |
+| `battery.source.cockpit` | Cockpit scenario |  |
+| `battery.source.row` | row {id} |  |
+
+### `rows.*` · Compare scenario rows A–D (Phase 4) · used by Abhinav
+
+| Key | Planner | Educator override |
+|---|---|---|
+| `rows.title` | Scenarios | Plans |
+| `rows.add` | + Add |  |
+| `rows.add.long` | Add the Cockpit scenario as a new row | Add the plan from the Cockpit |
+| `rows.full` | Compare holds up to 4 rows — remove one first. | You can compare up to 4 plans — remove one first. |
+| `rows.empty` | No scenarios yet. Add the Cockpit scenario, use “+ Compare” on a site card, or Shift-click a map pin. | No plans yet. Add the Cockpit plan, press “+ Compare” on a site, or Shift-click a pin on the map. |
+| `rows.makeBaseline` | Make row {id} the baseline | Compare everything against plan {id} |
+| `rows.isBaseline` | Row {id} is the baseline | Plan {id} is the one others are compared with |
+| `rows.select` | Select row {id} | Pick plan {id} |
+| `rows.duplicate` | Duplicate row {id} | Copy plan {id} |
+| `rows.duplicated` | Row {id} duplicated as row {n}. | Plan {id} copied as plan {n}. |
+| `rows.remove` | Remove row {id} | Remove plan {id} |
+| `rows.load` | Load row {id} into the Cockpit | Open plan {id} in the Cockpit |
+| `rows.loaded` | Row {id} loaded into the Cockpit. | Plan {id} opened in the Cockpit. |
+| `rows.custom` | Custom point {coords} |  |
+| `rows.slip` | slip {d} d | moved {d} d |
+| `rows.tilt` | tilt {m}° @ {d}° |  |
+| `rows.noTilt` | no tilt |  |
+| `rows.preset.fourSide` | 4 side panels |  |
+| `rows.preset.singleHeading` | 1 panel |  |
+| `rows.preset.horizontalDeck` | deck |  |
+| `rows.preset.trackingMast` | tracking mast |  |
+
+### `state.*` · used by Abhinav
+
+| Key | Planner | Educator override |
+|---|---|---|
+| `state.loading` | Calculating… |  |
+| `state.error` | Can’t compute this scenario |  |
+| `state.errorUnknown` | Something went wrong. Try changing the date or the site. |  |
 
 ## 5. `web/public/content/quickstart.json` (draft, built in Phase 5)
 
