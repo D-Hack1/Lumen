@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import json
+import math
 import re
 from pathlib import Path
 from typing import Any
 
+from lumen_pipeline.validation.frame_check import DIRECTION_TOLERANCE_RAD, MATRIX_TOLERANCE
 from lumen_pipeline.validation.horizons_client import (
     AZIMUTH_TOLERANCE_DEG,
     DSN_ELEVATION_TOLERANCE_DEG,
@@ -37,6 +39,11 @@ def default_g7_report_path() -> Path:
     return Path(__file__).resolve().parents[2] / "reports" / "g7_cy3.json"
 
 
+def default_g1_report_path() -> Path:
+    """Return the checked-in G1 frame-validation artifact."""
+    return Path(__file__).resolve().parents[2] / "reports" / "g1_lunar_frames.json"
+
+
 def default_validation_doc_path() -> Path:
     """Return the checked-in document containing the G2 measurement."""
     return Path(__file__).resolve().parents[3] / "docs" / "validation.md"
@@ -63,14 +70,6 @@ def _pending_gates() -> list[dict[str, Any]]:
             criterion="< 0.01 deg",
             reason="No persisted terrain-owner G0 measurement artifact is available to this reporter.",
             artifact_paths=["pipeline/tests/terrain/test_horizon_synthetic.py"],
-        ),
-        _gate(
-            "G1",
-            "SpiceyPy versus Skyfield MOON_ME_DE421 frame",
-            "PENDING",
-            criterion="matrix < 1e-9; direction < 1e-6 rad",
-            reason="The G1 implementation exists, but no persisted run result records its measured residuals.",
-            artifact_paths=["pipeline/lumen_pipeline/validation/frame_check.py"],
         ),
         _gate(
             "G4",
@@ -293,15 +292,104 @@ def _g7_gate(path: Path) -> dict[str, Any]:
         )
 
 
+def _g1_gate(path: Path) -> dict[str, Any]:
+    description = "PA/ME frame transformations versus independent Skyfield reference"
+    if not path.exists():
+        return _gate("G1", description, "BLOCKED", reason="G1 frame-validation evidence is missing.", artifact_paths=[_relative(path)])
+    try:
+        report = json.loads(path.read_text(encoding="utf-8"))
+        if report["id"] != "G1" or report["schema_version"] != 1:
+            raise ValueError("unsupported G1 evidence schema")
+        if report["criteria"]["matrix_max_abs_error"] != {"operator": "<", "value": MATRIX_TOLERANCE}:
+            raise ValueError("G1 matrix criterion does not match the R3 tolerance")
+        if report["criteria"]["direction_max_angular_error_rad"] != {
+            "operator": "<",
+            "value": DIRECTION_TOLERANCE_RAD,
+        }:
+            raise ValueError("G1 direction criterion does not match the R3 tolerance")
+        if report["reference"]["independent_implementation"] != "Skyfield":
+            raise ValueError("G1 evidence lacks the independent Skyfield comparison")
+        if report["frames"]["principal_axis"]["name"] != "MOON_PA_DE421":
+            raise ValueError("G1 principal-axis frame does not match DE421")
+        if (
+            report["frames"]["mean_earth"]["name"] != "MOON_ME_DE421"
+            or report["frames"]["mean_earth"]["relative_to"] != "MOON_PA_DE421"
+        ):
+            raise ValueError("G1 mean-Earth frame definition does not match DE421")
+        if len(report["epochs_utc"]) < 2:
+            raise ValueError("G1 evidence must include multiple UTC epochs")
+        if not report["kernels"] or any(len(kernel["sha256"]) != 64 for kernel in report["kernels"]):
+            raise ValueError("G1 evidence lacks SHA-256 kernel identifiers")
+
+        metrics = report["metrics"]
+        matrix_error = float(metrics["max_matrix_error"])
+        direction_error = float(metrics["max_direction_error_rad"])
+        orthogonality_error = float(metrics["orthogonality_error_max_abs"])
+        minimum_determinant = float(metrics["minimum_determinant"])
+        measured_status = (
+            "PASS"
+            if (
+                all(
+                    math.isfinite(value) and value >= 0.0
+                    for value in (matrix_error, direction_error, orthogonality_error)
+                )
+                and math.isfinite(minimum_determinant)
+                and matrix_error < MATRIX_TOLERANCE
+                and direction_error < DIRECTION_TOLERANCE_RAD
+                and orthogonality_error <= MATRIX_TOLERANCE
+                and minimum_determinant > 0.0
+            )
+            else "FAIL"
+        )
+        if report["status"] != measured_status:
+            raise ValueError("G1 status does not match its measured residuals")
+        return _gate(
+            "G1",
+            description,
+            measured_status,
+            criterion="matrix < 1e-9; direction < 1e-6 rad",
+            value=metrics,
+            tolerances={
+                "matrix_max_abs_error": MATRIX_TOLERANCE,
+                "direction_max_angular_error_rad": DIRECTION_TOLERANCE_RAD,
+                "orthogonality_error_max_abs": MATRIX_TOLERANCE,
+                "determinant": "positive",
+            },
+            epochs_utc=report["epochs_utc"],
+            frames=report["frames"],
+            provenance={"reference": report["reference"], "kernels": report["kernels"]},
+            artifact_paths=[_relative(path)],
+            test_commands=[
+                "pytest tests/gowri/test_frames_spice.py",
+                "python -m lumen_pipeline.validation.frame_check",
+            ],
+        )
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+        return _gate(
+            "G1",
+            description,
+            "BLOCKED",
+            reason=f"Invalid G1 report artifact: {error}",
+            artifact_paths=[_relative(path)],
+        )
+
+
 def build_validation_report(
     *, fixtures_dir: str | Path | None = None, g7_report_path: str | Path | None = None,
-    validation_doc_path: str | Path | None = None,
+    validation_doc_path: str | Path | None = None, g1_report_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """Assemble report data from checked-in artifacts without network access."""
     fixture_directory = Path(fixtures_dir) if fixtures_dir is not None else default_fixture_dir()
     g7_path = Path(g7_report_path) if g7_report_path is not None else default_g7_report_path()
+    g1_path = Path(g1_report_path) if g1_report_path is not None else default_g1_report_path()
     g2_path = Path(validation_doc_path) if validation_doc_path is not None else default_validation_doc_path()
-    gates = _pending_gates() + [_g2_gate(g2_path), _g3_gate(fixture_directory), _g3b_gate(fixture_directory), _g7_gate(g7_path)]
+    gates = _pending_gates() + [
+        _g1_gate(g1_path),
+        _g2_gate(g2_path),
+        _g3_gate(fixture_directory),
+        _g3b_gate(fixture_directory),
+        _g7_gate(g7_path),
+    ]
     gates.sort(key=lambda gate: (int(gate["id"][1:]) if gate["id"] != "G3b" else 3, gate["id"]))
     non_pass = [gate["id"] for gate in gates if gate["status"] != "PASS"]
     return {
