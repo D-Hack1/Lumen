@@ -3,6 +3,7 @@
 // Routes are hash links so the preview needs no router; the real app would swap these for its own navigation.
 import type { ReactNode } from 'react';
 import { timeLabel } from '../orbit/orbitModel';
+import { OPEN_EVENT } from '../ask/askWhy';
 import type { LumenState } from '../orbit/lumenState';
 
 export type Route = 'orbit' | 'stand-here' | 'compare' | 'slip';
@@ -42,6 +43,15 @@ export function Shell({ route, lumen, children }: { route: Route; lumen: LumenSt
         </nav>
         <span className="lm-grow" />
         {showClock && <div className="lm-clock">{timeLabel(lumen.t)}</div>}
+        <button
+          type="button"
+          className="lm-btn lm-btn--ghost"
+          aria-keyshortcuts="/"
+          title="Ask LUMEN (press /)"
+          onClick={() => window.dispatchEvent(new CustomEvent(OPEN_EVENT))}
+        >
+          Ask <kbd>/</kbd>
+        </button>
         <button type="button" className="lm-btn lm-btn--ghost" onClick={lumen.toggleTheme} aria-pressed={lumen.light}>
           {lumen.light ? 'Dark mode' : 'Light mode'}
         </button>

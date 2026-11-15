@@ -2,6 +2,7 @@
 // The four Lumen pages behind one shell, routed by URL hash (#orbit, #stand-here, #compare, #slip). Theme, selected site,
 // array height, clock and compare list are shared, so a choice made on one page carries to the others.
 import { useEffect, useState } from 'react';
+import { AskLumen } from '../ask';
 import { OrbitPage } from '../orbit/OrbitPage';
 import { LumenContext, useLumenState } from '../orbit/lumenState';
 import { ComparePage } from './ComparePage';
@@ -56,6 +57,7 @@ export function PagesApp() {
         {route === 'compare' && <ComparePage />}
         {route === 'slip' && <SlipPage />}
       </Shell>
+      <AskLumen />
     </LumenContext.Provider>
   );
 }

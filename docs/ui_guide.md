@@ -98,3 +98,5 @@ Open `/?fixture=worst-case` to fill every slot with worst-case content: Educator
 
 ## 9. Keyboard map
 Phase 1 provides arrow-key navigation inside segmented controls and tabs. The full map (1/2/3, S/E/X/T, Q, ←/→, Space, Esc) arrives in Phase 5.
+
+**Ask LUMEN** (`features/ask`, mounted in `PagesApp`): `/` opens the box; ignored while typing in an input, textarea, select or editable field, and with Ctrl/Cmd/Alt held. `Esc` closes it. Avoid `/` and the backtick (Perf HUD) for other shortcuts.
