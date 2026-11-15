@@ -35,7 +35,7 @@ import {
 import { PolarStage, type PolarStats } from './PolarStage';
 import { usePolarTerrain } from './polarAssets';
 import { keyRows, layerDescription, lightDirection, LAYER_LABELS } from './polarCopy';
-import { showsSampleValues, usesTerrain } from './realModel';
+import { realSiteTag, showsSampleValues, usesTerrain } from './realModel';
 import { phaseAt, polarSunAzimuthDeg } from './ephemeris';
 import type { PolarLayer } from './polarTerrain';
 import './orbit.css';
@@ -251,7 +251,18 @@ export function OrbitPage({ onStandHere, onAddToCompare }: OrbitPageProps) {
                   <span className="lm-site__name">{s.name}</span>
                   <span className="lm-site__group">{s.group}</span>
                 </span>
-                {s.tone && <span className={`lm-tag lm-tag--${TONES[s.tone]}`}>{s.tag}</span>}
+                {showsSampleValues() ? (
+                  s.tone && <span className={`lm-tag lm-tag--${TONES[s.tone]}`}>{s.tag}</span>
+                ) : (
+                  (() => {
+                    const g = realSiteTag(s, mast);
+                    return (
+                      <span className={`lm-tag lm-tag--${g.tone}`} title={g.reason}>
+                        {g.label}
+                      </span>
+                    );
+                  })()
+                )}
               </button>
             ))}
           </section>
