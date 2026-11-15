@@ -64,6 +64,7 @@ def write_terrain_summary(
     output_root: Path | None = None,
     tier: str = "Tier A",
     pad_headline: dict[str, Any] | None = None,
+    pad_json_path: Path | None = None,
     psr: dict[str, Any] | None = None,
 ) -> Path:
     """Write one actual-output summary and preserve all prior manifest entries."""
@@ -80,7 +81,7 @@ def write_terrain_summary(
         "mask_json": _served_path(mask.sidecar_path, terrain_root) if mask else None,
         "sigma_bin": None,
         "sigma_json": None,
-        "pad_json": None,
+        "pad_json": _served_path(pad_json_path, terrain_root) if pad_json_path else None,
         "dispersion_bin": None,
         "dispersion_json": None,
     }
@@ -126,17 +127,25 @@ def write_terrain_summary(
         "files": {},
     }
     if mask is not None:
-        entry["files"] = {
-            "mask_bin": {
-                "path": files_present["mask_bin"],
-                "version": mask.metadata["version"],
-                "sha256": _sha256(mask.binary_path),
-            },
-            "mask_json": {
-                "path": files_present["mask_json"],
-                "version": mask.metadata["version"],
-                "sha256": _sha256(mask.sidecar_path),
-            },
+        entry["files"].update(
+            {
+                "mask_bin": {
+                    "path": files_present["mask_bin"],
+                    "version": mask.metadata["version"],
+                    "sha256": _sha256(mask.binary_path),
+                },
+                "mask_json": {
+                    "path": files_present["mask_json"],
+                    "version": mask.metadata["version"],
+                    "sha256": _sha256(mask.sidecar_path),
+                },
+            }
+        )
+    if pad_json_path is not None:
+        entry["files"]["pad_json"] = {
+            "path": files_present["pad_json"],
+            "version": json.loads(Path(pad_json_path).read_text(encoding="utf-8"))["version"],
+            "sha256": _sha256(Path(pad_json_path)),
         }
     entry["sources"] = {
         name: _source_manifest(crop)

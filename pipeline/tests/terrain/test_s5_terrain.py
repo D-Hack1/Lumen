@@ -79,7 +79,11 @@ def test_cy3_ladder_prefers_dedicated_then_mid_then_regional():
     """Use explicitly marked synthetic products; this does not verify production sources."""
 
     specs = _crop_specs("cy3_shiv_shakti")
-    assert specs[0].source_keys == ("chandrayaan3_lroc_vikramsite_dtm",)
+    assert specs[0].source_keys == (
+        "chandrayaan3_lroc_vikramsite_dtm",
+        "polar_60m_lola_pgda_90",
+        "regional_240m_lola_pgda_90",
+    )
     assert specs[1].source_keys == (
         "polar_60m_lola_pgda_90",
         "regional_240m_lola_pgda_90",
@@ -143,8 +147,11 @@ def test_shackleton_ladder_prefers_ten_metre_near_source():
     assert all(crop.dem.provenance["synthetic"] for crop in (crops.near, crops.mid, crops.far))
 
 
-def test_cy3_ladder_falls_back_to_regional_only_when_verified():
-    """Regional 240m can serve mid/far, never the CY-3 near field."""
+def test_cy3_ladder_falls_back_to_regional_240m_as_near_field_last_resort():
+    """PLAN_FINAL §4.1 ladder item (3): the 240 m product is explicitly
+    "guaranteed" as the CY-3 near-field fallback of last resort, selected
+    only once both the DTM (item 1) and the 60 m source (item 2) are
+    unavailable. It also serves mid/far as before."""
 
     products = {
         "regional_240m_lola_pgda_90": _product("regional_240m_lola_pgda_90", 240.0, "60S-90S")
@@ -158,11 +165,51 @@ def test_cy3_ladder_falls_back_to_regional_only_when_verified():
         allow_unavailable=True,
     )
 
-    assert crops.near is None
+    assert crops.near is not None
+    assert crops.near.source_key == "regional_240m_lola_pgda_90"
     assert crops.mid is not None
     assert crops.mid.source_key == "regional_240m_lola_pgda_90"
     assert crops.far is not None
     assert crops.far.source_key == "regional_240m_lola_pgda_90"
+
+
+def test_cy3_ladder_near_field_exhausted_when_no_source_is_registered():
+    """With none of the three ladder items registered, CY-3's near field
+    stays explicitly unavailable rather than fabricating a source."""
+
+    crops = build_crops(
+        "cy3_shiv_shakti",
+        latitude_deg=CY3_LATITUDE,
+        longitude_deg_east=CY3_LONGITUDE,
+        reader=_Reader(_dem()),
+        products={},
+        allow_unavailable=True,
+    )
+
+    assert crops.near is None
+    assert "near" in crops.unavailable
+
+
+def test_cy3_ladder_prefers_60m_over_240m_when_both_are_registered():
+    """PLAN_FINAL §4.1 ladder item (2) outranks item (3): when both the 60 m
+    and 240 m sources are verified and available, the finer 60 m source is
+    selected for the near field, and the 240 m last resort is never reached."""
+
+    products = {
+        "polar_60m_lola_pgda_90": _product("polar_60m_lola_pgda_90", 60.0, "60S-90S"),
+        "regional_240m_lola_pgda_90": _product("regional_240m_lola_pgda_90", 240.0, "60S-90S"),
+    }
+    crops = build_crops(
+        "cy3_shiv_shakti",
+        latitude_deg=CY3_LATITUDE,
+        longitude_deg_east=CY3_LONGITUDE,
+        reader=_Reader(_dem()),
+        products=products,
+        allow_unavailable=True,
+    )
+
+    assert crops.near is not None
+    assert crops.near.source_key == "polar_60m_lola_pgda_90"
 
 
 def test_registered_sites_use_authoritative_coordinates_and_no_invented_artemis_region_id():
@@ -247,23 +294,36 @@ def test_production_dem_registry_blocks_unresolved_s5_sources():
     assert "polar_5m_lola_pgda_81" not in products
 
 
-@pytest.mark.parametrize(
-    ("site_id", "latitude", "longitude"),
-    [
-        ("shackleton_ridge", -89.54, 129.0),
-        ("cy3_shiv_shakti", CY3_LATITUDE, CY3_LONGITUDE),
-    ],
-)
-def test_s5_production_crops_remain_blocked_without_verified_sources(site_id, latitude, longitude):
+def test_s5_production_crops_remain_blocked_without_verified_sources():
+    """Shackleton has no verified source yet; untouched by the CY-3 S-6 fix."""
+
     crops = build_crops(
-        site_id,
-        latitude_deg=latitude,
-        longitude_deg_east=longitude,
+        "shackleton_ridge",
+        latitude_deg=-89.54,
+        longitude_deg_east=129.0,
         reader=_Reader(_dem()),
         products=load_products(),
     )
     assert crops.near is None
-    if site_id == "cy3_shiv_shakti":
-        assert set(crops.unavailable) == {"near"}
-    else:
-        assert set(crops.unavailable) == {"near", "mid", "far"}
+    assert set(crops.unavailable) == {"near", "mid", "far"}
+
+
+def test_s5_production_cy3_near_field_falls_back_to_the_finest_verified_lola_product():
+    """PLAN_FINAL §4.1 ladder item (2): polar_60m_lola_pgda_90 is the finest
+    verified LOLA product covering 69.37°S, so it is the legitimate near-field
+    source while the LROC DTM (item 1) remains unverified."""
+
+    products = load_products()
+    assert "chandrayaan3_lroc_vikramsite_dtm" not in products
+
+    crops = build_crops(
+        "cy3_shiv_shakti",
+        latitude_deg=CY3_LATITUDE,
+        longitude_deg_east=CY3_LONGITUDE,
+        reader=_Reader(_dem()),
+        products=products,
+    )
+    assert "near" not in crops.unavailable
+    assert crops.near is not None
+    assert crops.near.source_key == "polar_60m_lola_pgda_90"
+    assert crops.near.source_url == products["polar_60m_lola_pgda_90"].url

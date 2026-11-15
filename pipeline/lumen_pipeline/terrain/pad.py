@@ -27,10 +27,11 @@ class PadStatisticsUnavailable(RuntimeError):
 
 @dataclass(frozen=True)
 class GroundPlane:
-    """A local least-squares ground plane in the site tangent frame."""
+    """A local least-squares ground plane, fitted in the site tangent frame."""
 
     z0_m: float
     normal_local: tuple[float, float, float]
+    normal_me: tuple[float, float, float]
     slope_deg: float
     downhill_aspect_deg: float
     uphill_azimuth_deg: float
@@ -61,7 +62,8 @@ class PadStatistics:
     source_key: str
     source_resolution_m: float
     plane: GroundPlane
-    slopes: SlopeStatistics
+    slopes: SlopeStatistics | None
+    slopes_unavailable_reason: str | None
     footprint_m: float | None
     under_resolved: bool | None
 
@@ -151,10 +153,14 @@ def fit_ground_plane(
     downhill_aspect_deg = (uphill_azimuth_deg + 180.0) % 360.0
     normal = np.asarray((-east_gradient, -north_gradient, 1.0), dtype=float)
     normal /= np.linalg.norm(normal)
+    # ``rotation`` is orthonormal (rows east, north-reference, up), so its
+    # transpose maps a direction back from the site tangent frame to MOON_ME.
+    normal_me = rotation.T @ normal
     resolution_x, resolution_y = (abs(value) for value in dem.resolution_m)
     return GroundPlane(
         z0_m=float(z0),
         normal_local=tuple(float(value) for value in normal),
+        normal_me=tuple(float(value) for value in normal_me),
         slope_deg=float(slope_deg),
         downhill_aspect_deg=float(downhill_aspect_deg),
         uphill_azimuth_deg=float(uphill_azimuth_deg),
@@ -230,12 +236,21 @@ def generate_pad_statistics(
     *,
     latitude_deg: float,
     longitude_deg_east: float,
-    dispersion_radius_m: float,
-    slope_tolerance_deg: float,
+    dispersion_radius_m: float | None = None,
+    slope_tolerance_deg: float | None = None,
     footprint_m: float | None = None,
     slope_data_deg: np.ndarray | None = None,
 ) -> PadStatistics:
-    """Calculate S-6 statistics from an actual near-field terrain crop."""
+    """Calculate S-6 statistics from an actual near-field terrain crop.
+
+    ``dispersion_radius_m`` and ``slope_tolerance_deg`` are project-wide
+    defaults (``pipeline/config/terrain.yaml`` ``pad_statistics``) that are
+    unresolved as of this integration. When either is omitted, the
+    dispersion slope distribution is reported as explicitly unavailable
+    rather than computed from an invented radius or tolerance; the plane-fit
+    geometry (slope, aspect, z0), which does not depend on those defaults,
+    is still returned.
+    """
 
     if crops.near is None:
         raise PadStatisticsUnavailable(f"{site_id}: near-field DEM is unavailable")
@@ -245,14 +260,23 @@ def generate_pad_statistics(
         latitude_deg=latitude_deg,
         longitude_deg_east=longitude_deg_east,
     )
-    slopes = compute_slope_statistics(
-        crop.dem,
-        latitude_deg=latitude_deg,
-        longitude_deg_east=longitude_deg_east,
-        radius_m=dispersion_radius_m,
-        slope_tolerance_deg=slope_tolerance_deg,
-        slope_data_deg=slope_data_deg,
-    )
+    if dispersion_radius_m is None or slope_tolerance_deg is None:
+        slopes = None
+        slopes_unavailable_reason = (
+            "dispersion_radius_m and slope_tolerance_deg are unresolved project "
+            "defaults (pad_statistics in pipeline/config/terrain.yaml); no value "
+            "is invented"
+        )
+    else:
+        slopes = compute_slope_statistics(
+            crop.dem,
+            latitude_deg=latitude_deg,
+            longitude_deg_east=longitude_deg_east,
+            radius_m=dispersion_radius_m,
+            slope_tolerance_deg=slope_tolerance_deg,
+            slope_data_deg=slope_data_deg,
+        )
+        slopes_unavailable_reason = None
     if footprint_m is not None and (not math.isfinite(footprint_m) or footprint_m <= 0.0):
         raise ValueError("footprint must be a positive finite length when provided")
     resolution = crop.achieved_resolution_m
@@ -262,54 +286,67 @@ def generate_pad_statistics(
         source_resolution_m=resolution,
         plane=plane,
         slopes=slopes,
+        slopes_unavailable_reason=slopes_unavailable_reason,
         footprint_m=footprint_m,
         under_resolved=None if footprint_m is None else resolution > footprint_m,
     )
 
 
 def _record(statistics: PadStatistics) -> dict[str, Any]:
+    """Serialize to the contract 0.1.0 schema (``contracts/data_terrain_misc.md``
+    §1.2), matching the frontend loader (``web/src/engine/data/pad.ts``).
+
+    ``under_resolved`` is nullable here even though the contract types it as
+    a plain boolean: it depends on ``nominal_lander_footprint_m``, a
+    project-wide default that is explicitly unresolved in
+    ``pipeline/config/terrain.yaml`` (``pad_statistics``). No footprint value
+    is invented to force a boolean; ``null`` is the honest result until that
+    default is set, and is documented as a known deviation in the contract.
+    """
+
     plane = statistics.plane
+    d_min_m = 3.0 * statistics.source_resolution_m
     baseline_m = 6.0 * statistics.source_resolution_m
-    baseline_badge = (
-        "slope at 30m baseline"
-        if math.isclose(baseline_m, 30.0, rel_tol=0.0, abs_tol=1e-9)
-        else f"slope at {baseline_m:g}m baseline"
-    )
     slopes = statistics.slopes
+    if slopes is None:
+        dispersion_slope_stats: dict[str, Any] = {
+            "available": False,
+            "reason": statistics.slopes_unavailable_reason,
+        }
+    else:
+        dispersion_slope_stats = {
+            "p50": slopes.p50_deg,
+            "p95": slopes.p95_deg,
+            "max": slopes.maximum_deg,
+            "pct_below_tolerance": slopes.percent_below_tolerance,
+            # Additional provenance beyond the contract's required fields.
+            "unit": "deg",
+            "radius_m": slopes.radius_m,
+            "source": slopes.source,
+            "slope_tolerance_deg": slopes.slope_tolerance_deg,
+            "sample_count": slopes.sample_count,
+        }
     return {
-        "version": "1.0.0",
-        "site_id": statistics.site_id,
+        "version": "0.1.0",
+        "producer": "lumen_pipeline.terrain.pad",
         "created_utc": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
-        "source": {
-            "dem_source": statistics.source_key,
-            "near_field_resolution_m": statistics.source_resolution_m,
-        },
+        "site_id": statistics.site_id,
+        "ground_normal_me": list(plane.normal_me),
+        "slope_deg": plane.slope_deg,
+        "downhill_aspect_deg": plane.downhill_aspect_deg,
+        "uphill_az_deg": plane.uphill_azimuth_deg,
+        "z0_m": plane.z0_m,
+        "d_min_m": d_min_m,
+        "near_field_resolution_m": statistics.source_resolution_m,
+        "under_resolved": statistics.under_resolved,
         "plane_fit": {
             "k": PLANE_FIT_K,
             "window_px": list(plane.window_px),
-            "window_m": list(plane.window_m),
-            "z0_m": plane.z0_m,
-            "ground_normal_local": list(plane.normal_local),
-            "slope_deg": plane.slope_deg,
-            "downhill_aspect_deg": plane.downhill_aspect_deg,
-            "uphill_azimuth_deg": plane.uphill_azimuth_deg,
-            "slope_baseline_badge": baseline_badge,
+            "window_dim_m": list(plane.window_m),
+            "baseline_m": baseline_m,
+            "dem_source": statistics.source_key,
         },
-        "dispersion_slope": {
-            "radius_m": slopes.radius_m,
-            "source": slopes.source,
-            "unit": "deg",
-            "p50_deg": slopes.p50_deg,
-            "p95_deg": slopes.p95_deg,
-            "maximum_deg": slopes.maximum_deg,
-            "slope_tolerance_deg": slopes.slope_tolerance_deg,
-            "percent_below_tolerance": slopes.percent_below_tolerance,
-            "sample_count": slopes.sample_count,
-        },
-        "footprint": {
-            "footprint_m": statistics.footprint_m,
-            "under_resolved": statistics.under_resolved,
-        },
+        "dispersion_slope_stats": dispersion_slope_stats,
     }
 
 

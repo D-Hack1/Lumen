@@ -33,6 +33,16 @@ def synthetic_golden_payload() -> dict[str, object]:
             "expected": {"limb_clearance_offset_deg": {"disk_0_pct": 0.25, "disk_50_pct": 0.0, "disk_100_pct": -0.25}},
         },
         {
+            "id": "synthetic_disk_span_extrema",
+            "input": {"site_id": "synthetic_disk_span", "time_scale": "ET seconds", "centre_azimuth_deg": 0.0, "off_centre_spike_azimuth_deg": 359.95, "spike_elevation_deg": 10.0, "sun_elevation_deg": 1.0},
+            "expected": {"disk_fraction_lt": 1.0},
+        },
+        {
+            "id": "synthetic_nan_wraparound_extrema",
+            "input": {"site_id": "synthetic_nan_wrap", "time_scale": "ET seconds", "bin_width_deg": 90.0, "elevations_deg": [1.0, None, -3.0, 4.0]},
+            "expected": {"minimum_deg": -3.0, "maximum_deg": 4.0},
+        },
+        {
             "id": "synthetic_event_at_window_start",
             "input": {"site_id": "synthetic_window_start", "time_scale": "ET seconds", "range_et": [0, 240], "visible_when": "et >= 0"},
             "expected": {"events": [], "window": {"partial_start": True, "start_et": 0.0, "end_et": 240.0}},
@@ -56,6 +66,11 @@ def synthetic_golden_payload() -> dict[str, object]:
             "id": "synthetic_exact_event_uncertainty",
             "input": {"site_id": "synthetic_exact", "time_scale": "ET seconds", "event_times_et": [80.0, 100.0, 120.0]},
             "expected": {"delta_t_seconds": 20.0, "dt_method": "exact", "grazing_reason": None},
+        },
+        {
+            "id": "synthetic_disk_event_thresholds",
+            "input": {"site_id": "synthetic_disk_events", "time_scale": "ET seconds", "thresholds": [0.0, 0.5, 1.0]},
+            "expected": {"zero_visible_at_zero": False, "half_visible_at_half": True, "full_visible_at_full": True},
         },
         {
             "id": "synthetic_grazing_rate",

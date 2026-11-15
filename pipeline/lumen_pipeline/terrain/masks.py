@@ -250,7 +250,11 @@ def _apply_near_zone(
             )
         )
         near_angle = np.maximum(0.0, near_angle)
-        take = np.isfinite(near_angle) & (
+        # R3 D-9 application rule: m_eff = m_dem wherever N+ = 0 (the clamp
+        # is never applied to m_dem itself, so a negative distant horizon
+        # must be preserved exactly); only a strictly positive near-zone
+        # contribution may replace the distant horizon/distance.
+        take = (near_angle > 0.0) & (
             ~np.isfinite(elevation[height_index]) | (near_angle > elevation[height_index])
         )
         elevation[height_index, take] = near_angle[take]
